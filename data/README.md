@@ -6,14 +6,9 @@
 
 #### demographic
 
-##### BE
-
 + `export.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its NIS code. Retrieved from: https://bestat.statbel.fgov.be/bestat/ > Population by place of residence, nationality (Belgian/non-Belgian), marital status, age and gender 
 
 + `BE0101N1_20230704-171432.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county. Retrieved from:
-
-##### SWE
-
 
 #### contacts
 
