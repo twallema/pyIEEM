@@ -42,7 +42,11 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 ### epi
 
-#### contacts
+#### demographic
+
++ `age_structure_BE.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its name. Cleaned version of raw demography. 
+
++ `age_structure_SWE.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county denoted by its name. Cleaned version of raw demography. 
 
 ##### proximity
 
