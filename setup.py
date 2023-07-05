@@ -12,7 +12,8 @@ setup(
         'pySODM',
         'pandas',
         'numpy',
-        'matplotlib'
+        'matplotlib',
+        'openpyxl'
     ],
     extras_require={
         "develop":  ["pytest",

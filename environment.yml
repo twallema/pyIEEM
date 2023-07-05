@@ -8,3 +8,5 @@ dependencies:
   - numpy  
   - xarray  
   - matplotlib
+  - openpyxl
+  - jupyter
