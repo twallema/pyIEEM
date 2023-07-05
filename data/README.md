@@ -34,6 +34,20 @@
 
 Underlying folder structure ommitted from this readme. Contains the interaction matrix (in the place and time suggested by the folder and spreadsheets names) based on the 2008 study by Joel Mossong for Belgium and Finland. The spreadsheet has several tabs to distinguish between the nature and duration of the contact. Data extracted using the social contact rates data tool made by Lander Willem, available at https://lwillem.shinyapps.io/socrates_rshiny/. During extraction of the data, weighing by age, weighing by week/weekend were used and reciprocity was assumed. Both physical and non-physical contacts were included.
 
+#### mobility
+
+##### BE
+
++ `Pop_LPW_NL_25FEB15.XLSX`: contains the working population of Belgium per sex, place of residence and place of work. Data retrieved from: https://census2011.fgov.be/download/downloads_nl.html
+
++ `active_population_2011.csv`: contains the 18-60 yo (active) population of Belgium per province. Per one year age groups.
+
+##### SWE
+
++ `AM0207AC_20230705-141955.csv`: Gainfully employed commuters in Sweden by county 16+ years by County of residence, County of work, sex and year. For 2018. Extracted from: https://www.statistikdatabasen.scb.se 
+
+
+
 ### eco
 
 + `employment_NACE64_2019.csv`: Number of employees per economic activity of NACE64 in Belgium (2019). Retrieved from NBB.stat > Population and Labour Market > Employment > Employment: annual detailed data > Domestic concept: A64.
@@ -44,9 +58,9 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 #### demographic
 
-+ `age_structure_BE.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its name. Cleaned version of raw demography. 
++ `age_structure_BE_2019.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its name. Cleaned version of raw demography. 
 
-+ `age_structure_SWE.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county denoted by its name. Cleaned version of raw demography. 
++ `age_structure_SWE_2019.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county denoted by its name. Cleaned version of raw demography. 
 
 ##### proximity
 
@@ -57,6 +71,26 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 + `pichler_table_5_NACE64.csv`: Remote Labor Index (RLI) of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) S94, S95, S96 equal to G47. 3) R90-92, R93: Set to 0.05 to obtain an employee-weighted average remote labor index of R90-92, R93, S94, S95, S96 (R_S) of 39, which is equal to the value used by Pichler. 4) T: Set to 0.05. Essentiality score of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) R90-92, R93 equal to I. 3) S94, S95, S96: Set to 63 to obtain an employee-weighted average essentiality score for R90-92, R93, S94, S95, S96 (R_S) of 47, which is equal to the value used by Pichler.
 
 `estimated_remote_labor.csv`: Estimated fraction of workers able to work from home. Primarily based on the reported fraction of workers working from home during the first COVID-19 lockdown in Belgium (`ermg-tables.xlsx`), when telework was mandated where possible. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when data was available. Assumptions listed in the data file.
+
+#### mobility
+
+##### BE
+
++ `active_population_2011_format.csv`: contains the 18-60 yo (active) population of Belgium per province. Summed from 18-60 years old.
+
++ `Pop_LPW_NL_25FEB15_delete_unknown.xlsx`: from the raw spreadsheet `Pop_LPW_NL_25FEB15.xlsx`, the columns denoting the inhabitants with an unkown location of work were removed.
+
++ `extract_recurrent_mobility.py`: script to extract and normalise the recurrent mobility matrix for Belgium.
+
++ `recurrent_mobility_BE.csv`: contains the recurrent mobility matrix between the Belgian provinces, obtained from the census of 2011. Note that the rows do not sum to one as not every inhabitant has a job. This effect is not minor, with as low as 52% (!) of the active population (18-60 yo) not having a job. The national average employment rate in Sweden is 68.7%.
+
+##### SWE
+
++ `AM0207AC_20230705-141955_format.csv`:  Gainfully employed commuters in 2018 by Swedish county 16+ years by County of residence, County of work, sex and year. For 2018. Formatted in an origin-destination style matrix. Raw data extracted from: https://www.statistikdatabasen.scb.se 
+
++ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-60 year old (active population) in 2019. Used to normalize the recurrent mobility matrix. Formatted from `age_structure_SWE_2019.csv`. 
+
++ `recurrent_mobility_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Note that the rows do not sum to one as not every inhabitant has a job. This effect is not minor, with as low as 52% (!) of the active population (18-60 yo) not having a job. The national average employment rate in Sweden is 84.5%.
 
 ### eco
 
