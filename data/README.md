@@ -4,6 +4,12 @@
 
 ### epi
 
+#### cases
+
++ `Statistikdatabasen_06_07_2023 20_57_17.csv`: Number of admissions to the hospital per month in the Swedish counties. Retrieved from: https://sdb.socialstyrelsen.se/if_par/val_eng.aspx
+
++ `41598_2021_3499_MOESM1_ESM.pdf`: Figure S2 contains the weekly number of COVID-19 hospital admission in the 20 regions of Sweden. Supplementary materials of: "Predicting regional COVID-19 hospital admissions in Sweden using mobility data."
+
 #### shape
 
 ##### SWE
@@ -166,8 +172,6 @@ sector_structure_by_work_SWE_2019.csv
 
 #### national_accounts
 
-`conversion_matrix.csv`: Convert from the Swedish version of NACE64 (only 57 out of 63 sectors available) to the Belgian version. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Belgian simulations must be aggregated before comparing them to Sweden.
-
 ##### BE
 
 + `IO_BE_NACE64.csv`: symmetric input-output table for Belgium, formatted to NACE 64 classification starting from `vR64_nl_20191213.xlsx`. Values from tab Tbl_8 "Symmetrische input-outputtabel (product x product)". Sector L68 is split in two in the raw IO table: '68_' (real estate minus rent) and '68a' (rent). In the formatted IO table, rent is ommitted for the following reason: Under a pandemic shock households will not stop paying rent, either because they retain their income, or because the govnerment furloughs them (in either case people didn't get thrown out of their houses during the COVID-19 crisis). Ommitting rent from L68 implies that L68 in our model represents the buying-a-house on-site consumption type of real estate activities.
@@ -190,4 +194,8 @@ sector_structure_by_work_SWE_2019.csv
 
 #### misc
 
-+ `conversion_matrices.xlsx` contains conversion matrices to aggregate data from different economic activity classifications. F.i. converting from NACE 64 to WIOD 55 classification. Only works for Belgium.
++ `conversion_matrix_BE_SWE.csv`: Convert from the Swedish version of NACE64 (only 57 out of 63 sectors available) to the Belgian version. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Belgian simulations must be aggregated before comparing them to Sweden.
+
++ `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the Swedish NACE 64 to NACE 21.
+
++ `conversion_matrix_NACE21_NACE10.csv`:  contains conversion matrices to aggregate data from NACE 21 to NACE 10.
