@@ -10,9 +10,13 @@
 
 + `BE0101N1_20230704-171432.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county. Retrieved from: https://www.statistikdatabasen.scb.se
 
-#### labor_market
+#### labor_market_composition
 
 + `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
+
++ `AM0207I6_20230706-115023.csv`: Gainfully employed 16+ years by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
+
++ `sector_structure_by_work_BE_raw.csv`: C19: Werkende bevolking volgens plaats van tewerkstelling (provincies/buitenland), geslacht, economische sector (C), opleidingsniveau, land van staatsburgerschap (A) en leeftijd (B). Data likely resulting from the 2011 Census, however the origins of these data are not clear from Statbel's website. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=f7fa1111-a328-454f-95f3-6c258f522754 
 
 #### contacts
 
@@ -50,10 +54,40 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 + `AM0207AC_20230705-141955.csv`: Gainfully employed commuters in Sweden by county 16+ years by County of residence, County of work, sex and year. For 2018. Extracted from: https://www.statistikdatabasen.scb.se 
 
-
 ### eco
 
+#### pichler
+
++ `table_ratio_inv_go.csv` contains, for every sector in the WIOD 55 classification, the number of days production can continue when no inputs are delivered (= stock). Retrieved from https://zenodo.figshare.com/articles/software/Production_networks_and_epidemic_spreading_How_to_restart_the_UK_economy_/12345527/1
+
++ `WIOD_shockdata.csv` contains estimated household and other demand shocks during an economic crisis. Retrieved from https://zenodo.figshare.com/articles/software/Production_networks_and_epidemic_spreading_How_to_restart_the_UK_economy_/12345527/1
+
++ `IHS_Markit_results_compact.csv` Criticality scores of IHS Markit analysts. The exact formulation of the question was as follows: “For each industry in WIOD 55, please rate whether each of its inputs are essential. We will present you with an industry X and ask you to rate each input Y. The key question is: Can production continue in industry X if input Y is not available for two months?” UK data, WIOD 55 classification. Retrieved from https://zenodo.figshare.com/articles/software/Production_networks_and_epidemic_spreading_How_to_restart_the_UK_economy_/12345527/1
+
+#### national_accounts
+
+##### BE
+
 + `employment_NACE64_2019.csv`: Number of employees per economic activity of NACE64 in Belgium (2019). Retrieved from NBB.stat > Population and Labour Market > Employment > Employment: annual detailed data > Domestic concept: A64.
+
++ `vR64_nl_20191213.xlsx`: Input-ouput tables for Belgium. NACE 64 classification. 2015. Retrieved from https://www.plan.be/databases/data-63-en-input_output_tables_2015
+
+##### SWE
+
+`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification. 2016. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
+
+#### calibration_data
+
+##### BE
+
+##### SWE
+
++ `AM04011G_20230706-132742.csv`: Unemployed persons aged 15-74 (LFS) in Sweden by month. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401L/
+
++ `AM0401UL_20230706-133417.csv`: Unemployed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
+
++ `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
+
 
 ## Interim
 
@@ -75,9 +109,14 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 `estimated_remote_labor.csv`: Estimated fraction of workers able to work from home. Primarily based on the reported fraction of workers working from home during the first COVID-19 lockdown in Belgium (`ermg-tables.xlsx`), when telework was mandated where possible. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when data was available. Assumptions listed in the data file.
 
-#### labor_market
+#### labor_market_composition
 
-+ `sector_structure_SWE_2019.csv`: Number (and fraction of the county's population) of gainfully employed by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I5_20230705-155636.csv`. I verified the relative fractions in every county sum to one.
++ `sector_structure_by_residence_SWE_2019.csv`: Number (and fraction of the county's population) of gainfully employed by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I5_20230705-155636.csv`. I verified the relative fractions in every county sum to one.
+sector_structure_by_work_SWE_2019.csv
+
++ `sector_structure_by_work_SWE_2019.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I6_20230706-115023.csv`. I verified the relative fractions in every county sum to one.
+
++ `sector_structure_by_work_BE.csv`: Cleaned version of `sector_structure_by_work_BE_raw.csv`.
 
 #### mobility
 
@@ -101,3 +140,30 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 ### eco
 
+#### national_accounts
+
+`conversion_matrix.csv`: Convert from the Swedish version of NACE64 (only 57 out of 63 sectors available) to the Belgian version. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Belgian simulations must be aggregated before comparing them to Sweden.
+
+##### BE
+
++ `IO_BE_NACE64.csv`: symmetric input-output table for Belgium, formatted to NACE 64 classification starting from `vR64_nl_20191213.xlsx`. Values from tab Tbl_8 "Symmetrische input-outputtabel (product x product)". Sector L68 is split in two in the raw IO table: '68_' (real estate minus rent) and '68a' (rent). In the formatted IO table, rent is ommitted for the following reason: Under a pandemic shock households will not stop paying rent, either because they retain their income, or because the govnerment furloughs them (in either case people didn't get thrown out of their houses during the COVID-19 crisis). Ommitting rent from L68 implies that L68 in our model represents the buying-a-house on-site consumption type of real estate activities.
+
+`other_accounts_BE_NACE64.csv`: All other variables from the Belgian national accounts `vR64_nl_20191213.xlsx` needed to initialize the model. 
+
+##### SWE
+
+`IO_SWE_NACE64.csv`: symmetric input-output table for Sweden, formatted to NACE 64 classification starting from `nrio_siot_181108.xlsx`. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Similarily to to the Belgian IO matrix, revenue from rent was removed from L68.
+
+`other_accounts_SWE.csv`: All other variables from the Swedish national accounts `nrio_siot_181108.xlsx` needed to initialize the model. 
+
+#### pichler
+
++ `IHS_critical_NACE64.csv` contains the IHS Market Analysts data (`IHS_Markit_results_compact.csv`), reformatted from WIOD 55 to the NACE 64 classification. Columns represent the critical inputs to a sector. Dependecy of L68 (real estate) on H53 (Postal services) was removed. The Real estate sector did not face a big decline in economic activity, as detailed in https://www.nbb.be/doc/ts/publications/economicreview/2021/ecorevii2021.pdf (chart 5). Dependecy of H49 (Land Transport) and H51 (Air Transport) on I55-56 (Accodomodation) was removed as the closure of Accomodation during the lockdown led to overly large declines in economic activity. Sector Rental and Leasing (N77) critically depends on C33 (Repair of Machinery) and G45 (Retail of vehicles) only. Travel agencies (N79) critically depend on Air, Water and Land transport (H49/H50/H51) and importantly depend on I55-56, N77/N78. All dependencies of Public Administration (O84) and Education (P85) were relaxed as the government sector didn't face any shocks during the COVID-19 pandemic (https://www.nbb.be/doc/ts/publications/economicreview/2021/ecorevii2021.pdf).
+
++ `desired_stock_NACE64.csv`: For every sector in the NACE 64 classification, the number of days production can continue when no inputs are delivered (= stock). Converted version of `table_ratio_inv_go.csv`.
+
++ `on_site_consumption_NACE64.csv`: For every sector in the NACE 64 classification, if the consumption happens on-site.
+
+#### misc
+
++ `conversion_matrices.xlsx` contains conversion matrices to aggregate data from different economic activity classifications. F.i. converting from NACE 64 to WIOD 55 classification. Only works for Belgium.
