@@ -4,11 +4,21 @@
 
 ### epi
 
+#### shape
+
++ `SWE.json`: geojson file containing shapes of Swedish counties. Retrieved from: https://geodata.lib.utexas.edu/catalog/stanford-gp821bc1566
+
++ `conversion_SWE.py`: Script to clean the raw geojson shape file for Sweden.
+
+
+
 #### demographic
 
 + `export.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its NIS code. Retrieved from: https://bestat.statbel.fgov.be/bestat/ > Population by place of residence, nationality (Belgian/non-Belgian), marital status, age and gender 
 
-+ `BE0101N1_20230704-171432.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county. Retrieved from: https://www.statistikdatabasen.scb.se
++ `BE0101N1_20230704-171432.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101C/
+
++ `BE0101U1_20230706-191203.csv`: Population, land area and population density per Swedish county in 2019. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101C/
 
 #### labor_market_composition
 
@@ -93,11 +103,17 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 ### epi
 
+#### shape
+
++ `SWE.json`: Cleaned shape file for Sweden, generated from `~/data/raw/epi/shape/SWE.json` using `~/data/raw/epi/shape/conversion_SWE.py`. Contains the population density per county.
+
 #### demographic
 
 + `age_structure_BE_2019.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its name. Cleaned version of raw demography. 
 
 + `age_structure_SWE_2019.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county denoted by its name. Cleaned version of raw demography. 
+
++ `population_density_SWE_2019.csv`: Population, land area and population density per Swedish county in 2019. Cleaned version of `BE0101U1_20230706-191203.csv`.
 
 ##### proximity
 
