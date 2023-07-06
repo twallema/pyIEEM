@@ -6,11 +6,17 @@
 
 #### shape
 
+##### SWE
+
 + `SWE.json`: geojson file containing shapes of Swedish counties. Retrieved from: https://geodata.lib.utexas.edu/catalog/stanford-gp821bc1566
 
 + `conversion_SWE.py`: Script to clean the raw geojson shape file for Sweden.
 
+##### BE
 
++ Shape files containing shapes of Belgian provinces. Retrieved from http://www.diva-gis.org/datadown
+
++ `conversion_BE.py`: Script to clean the raw shape file for Belgium. Limburg province was split in two for some weird reason so this had to be resolved.
 
 #### demographic
 
@@ -105,7 +111,9 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 #### shape
 
-+ `SWE.json`: Cleaned shape file for Sweden, generated from `~/data/raw/epi/shape/SWE.json` using `~/data/raw/epi/shape/conversion_SWE.py`. Contains the population density per county.
++ `SWE.json`: Cleaned shape file for Sweden, generated from `~/data/raw/epi/shape/SWE/SWE.json` using `~/data/raw/epi/shape/SWE/conversion_SWE.py`. Contains the population density per county.
+
++ `BE.json`: Cleaned shape file for Belgium, generated using `~/data/raw/epi/shape/BE/conversion_BE.py`. Contains the population density per province.
 
 #### demographic
 
