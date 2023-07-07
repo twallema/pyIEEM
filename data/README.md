@@ -10,6 +10,8 @@
 
 + `41598_2021_3499_MOESM1_ESM.pdf`: Figure S2 contains the weekly number of COVID-19 hospital admission in the 20 regions of Sweden. Supplementary materials of: "Predicting regional COVID-19 hospital admissions in Sweden using mobility data."
 
++ `COVID19BE_HOSP.csv`:  Hospitalisations for COVID-19 in Belgium by date and provinces. Retrieved from: https://epistat.sciensano.be/covid/
+
 #### shape
 
 ##### SWE
