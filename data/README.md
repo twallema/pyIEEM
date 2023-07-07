@@ -115,6 +115,10 @@ Underlying folder structure ommitted from this readme. Contains the interaction 
 
 ### epi
 
+#### cases
+
++ `hosp_incidence_SWE.csv`: Number of hospital admissions per Swedish county (except Gotland) and per week, extracted using WebPlotDigitizer from Figure S2 in `41598_2021_3499_MOESM1_ESM.pdf`. Missing column assumes missing data is 5 % of the available data in March/April 2020 and 3% from May 2020 onwards. These ratios have been computed using the monthly number of hospital admission per Swedish county and per month, available in `Statistikdatabasen_06_07_2023 20_57_17.csv`.
+
 #### shape
 
 + `SWE.json`: Cleaned shape file for Sweden, generated from `~/data/raw/epi/shape/SWE/SWE.json` using `~/data/raw/epi/shape/SWE/conversion_SWE.py`. Contains the population density per county.
