@@ -1,28 +1,31 @@
+""" A script to format the raw dataset by CoMEs-F in a more pleasant and easy-to-use format
+"""
+
 import os
 import sys
 import math
 import numpy as np
 import pandas as pd 
+from tqdm import tqdm
 
+# Define absolute paths only
 abs_dir = os.path.dirname(__file__)
 
 # Helper function
 def drop_duplicates(input_list):
     unique_tuples = set()
     result = []
-    
     for entry in input_list:
         key = (entry[0], entry[1], frozenset(entry[2]), frozenset(entry[3]))
         if key not in unique_tuples:
             unique_tuples.add(key)
             result.append(entry)
-    
     return result
 
 # Define desired age groups of final matrices
 age_classes = pd.IntervalIndex.from_tuples([(0,20),(20,40),(40,60),(60,80),(80,120)], closed='left')
 
-# Define locations, durations and professions of interest
+# Define names for locations, durations and professions of interest
 locations = ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor']
 durations = [2.5, 10, 37.5, 150, 240]
 
@@ -32,15 +35,15 @@ iterables = [locations, durations, age_classes, age_classes]
 df = pd.DataFrame(0, index=pd.MultiIndex.from_product(iterables, names=names), columns=["number_contacts", "number_survey_participants"])
 
 # Load dataset
-data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF.xlsx'), sheet_name="CONTACT", header=[0,1,2])
+data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF_extract.xlsx'), sheet_name="CONTACT", header=[0,1,2])
 
 # Drop columns containing NBcontacts
-data.drop(columns=['NBcontact1'], inplace=True)
+data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 
 dropped_count=0
-# Loop over all correspondents
-for i in range(len(data)):
-    print(f"{i/len(data)*100:.1f} % done")
+# Loop over the survey participants
+for i in tqdm(range(len(data))):
+
     # Determine the personal characteristics
     row = data.iloc[i]
     age = row['Q1']['Q3_1']["Age du sujet de l'enquête"]
@@ -64,40 +67,19 @@ for i in range(len(data)):
                 # Extract location, keep track of dropped contacts due to missing location
                 loc = contact_data.iloc[4:11].values
                 loc = loc!= 0
-
-                # if np.where(loc)[0][0] == 0:
-                #     location = 'home'
-                # elif np.where(loc)[0][0] == 1:
-                #     location = 'school'
-                # elif np.where(loc)[0][0] == 2:
-                #     location = 'work_indoor'
-                # elif np.where(loc)[0][0] == 3:
-                #     location = 'leisure_private'
-                # elif np.where(loc)[0][0] == 4:
-                #     location = 'leisure_public'   
-                # elif np.where(loc)[0][0] == 5:
-                #     location = 'transport'
-                # elif np.where(loc)[0][0] == 6:
-                #     location = 'work_leisure_outdoor'
-
                 location = locations[np.where(loc)[0][0]]
-
 
             # Assign data
             df.loc[(location, duration, age_x, age_y), 'number_contacts'] += 1
-            # Remember
+            # Keep track of the participants data
             participant_count.append((location, duration, age_x, age_y),)
 
+    # Drop the duplicate data
     for index in drop_duplicates(participant_count):
         df.loc[index, 'number_survey_participants'] += 1
 
-df['average_contacts'] = df['number_contacts']/df['number_survey_participants']
-
-print(df.loc[('home',10,slice(None),slice(None))])
-print(df.loc[('school',10,slice(None),slice(None))])
-print(df.loc[('leisure_private',10,slice(None),slice(None))])
-print(df.loc[('leisure_public',10,slice(None),slice(None))])
-print(df.loc[('work_indoor',10,slice(None),slice(None))])
-print(df.loc[('work_leisure_outdoor',10,slice(None),slice(None))])
-
+# Print the fraction of dropped contacts
 print(f"\n{100*dropped_count/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration or location was missing\n")
+
+# Save the resulting dataframe in a .csv
+df.to_csv('FormatData_ComesF.csv')
