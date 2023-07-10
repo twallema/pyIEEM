@@ -120,13 +120,6 @@ for i in tqdm(range(len(data))):
         # Drop the duplicate data
         unique_indices, contact_counts = drop_duplicates(contact_properties)
 
-        # Add a count of zero for all age_y not present
-        #age_y_present = [id[3] for id in unique_indices]
-        #for item in translations['age_y']:
-        #    if item not in age_y_present:
-        #        unique_indices.extend([(ID, age_x, sector, item, location, duration, daytype, vacation),])
-        #        contact_counts.extend([0,])
-
         # Append to output dictionary
         output['reported_contacts'].extend(contact_counts)
         for unique_index in unique_indices:
@@ -151,7 +144,20 @@ for id in tqdm(np.unique(output['ID'])):
 for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in tqdm(zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts'])):
     df.loc[(ID, age_y, location, duration, daytype, vacation),'reported_contacts'] = contacts
 
+# Remove daytypes and vacations not present
+df_no_index = df.reset_index()
+for id in tqdm(np.unique(output['ID'])):
+    dt_list = np.unique(np.array(output['daytype'])[output['ID']==id])
+    vctns_list = np.unique(np.array(output['vacation'])[output['ID']==id])
+    dt_list_complement = [d for d in translations['daytype'] if d not in dt_list]
+    vctns_list_complement = [d for d in translations['vacation'] if d not in vctns_list]
+    for dt in dt_list_complement: 
+        df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.type_day == dt)].index, inplace = True)
+    for vctns in vctns_list_complement:
+        df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.vacation == vctns)].index, inplace = True)
+
 # Save result
+df = df_no_index.set_index("ID")
 df.to_csv('FormatData_ComesF_2.csv')
 
 
