@@ -38,12 +38,15 @@ demo_df.index.name = 'age'
 demo_df = demo_df.rename(columns={'Total': 'count'})
 demo_df = demo_df.iloc[:-1]
 demo_df = demo_df.squeeze()
+desired_df = pd.DataFrame(0,index=range(121), columns=['count',])
+desired_df = desired_df.join(demo_df,lsuffix='_left', rsuffix='_right')
+demo_df = desired_df['count_right'].fillna(0)
 
 # Define absolute paths only
 abs_dir = os.path.dirname(__file__)
 
 # Load dataset
-data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF_extract.xlsx'), sheet_name="CONTACT", header=[0,1,2])
+data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF.xlsx'), sheet_name="CONTACT", header=[0,1,2])
 data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 
 # Translation
@@ -61,10 +64,13 @@ translations = {
 columns = ['ID', 'age_x', 'sector', 'age_y', 'location', 'duration', 'daytype', 'vacation', 'reported_contacts']
 output = {k: [] for k in columns}
 
+# TODO: PUT THE SPC CONTACTS IN A SEPERATE DATAFRAME BECAUSE THE ASSUMPTION THAT SPC CONTACTS OCCUR ONLY ON WEEKDAYS AND OUTSIDE HOLIDAYS INTRODUCES
+# ADDITIONAL DATAPOINTS WHEN PEOPLE ONLY REPORT IN WEEKENDS/HOLIDAYS
+# SO A NEW DATAFRAME MUST BE MADE WITH THE SPCS AND THEN MERGED WITH THE FINAL RESULT
+
 dropped_count=0
 for i in tqdm(range(len(data))):
-    # Keep track of all contact's properties
-    contact_properties=[]
+    
     # Assign ID to survey participant
     ID = i
     # Personal characteristics: age group
@@ -80,6 +86,8 @@ for i in tqdm(range(len(data))):
         sector = 'NA'
     # Personal characteristics: supplementary professional contacts
     SPC_data = row['SPC'].droplevel([0]).values
+    contact_properties_SPC = []
+    contact_count_SPC = []
     if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1)):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
             # Fix location and duration of SPC
@@ -87,17 +95,18 @@ for i in tqdm(range(len(data))):
             location = 'SPC'
             daytype = 'weekday' # DISTRIBUTE
             vacation = False # DISTRIBUTE
-            # Distribute contacts over age groups using demographic weighing
+            # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
             age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
-            print(pd.Series(SPC_data[1], index=age_groups_SPC))
-            out = convert_age_stratified_quantity(pd.Series(SPC_data[1], index=age_groups_SPC), age_classes, demo_df)
-            print(out)
-            sys.exit()
-                # Keep track of the contacts data so we can eliminate doubles
-                #contact_properties.append((ID, age_x, sector, age_y, location, duration, daytype, vacation),)
-
-            sys.exit()
-
+            d = pd.Series(SPC_data[1], index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
+            d = convert_age_stratified_quantity(d, age_groups_SPC, demo_df)
+            d = d/sum(d)*SPC_data[1]
+            # Convert to the desired age groups of the contact matrices
+            out = convert_age_stratified_quantity(d, age_classes, demo_df)
+            # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
+            for age_y in out.index:
+                # Keep track of the contacts data so we can eliminate doubles in the end
+                contact_properties_SPC.append((ID, age_x, sector, str(age_y), location, duration, daytype, vacation),)
+                contact_count_SPC.append(out[age_y])
     # Temporal characteristics: type of day
     days_of_week = row.loc['Jour1'].droplevel(0).values
     # Temporal characteristics: vacation or not
@@ -107,6 +116,8 @@ for i in tqdm(range(len(data))):
         dropped_count+=1
     else:
         # CONTACT LOOP
+        # Keep track of all contact's properties
+        contact_properties=[]
         for j in range(1,69):
             # Extract correct daytype/vacation
             if j <= 40:
@@ -152,13 +163,17 @@ for i in tqdm(range(len(data))):
         # Drop the duplicate data
         unique_indices, contact_counts = drop_duplicates(contact_properties)
 
+        # Extend with SPC
+        unique_indices.extend(contact_properties_SPC)
+        contact_counts.extend(contact_count_SPC)
+
         # Append to output dictionary
         output['reported_contacts'].extend(contact_counts)
         for unique_index in unique_indices:
             for i, key in enumerate(output.keys()):
                 if key != 'reported_contacts':
                     output[key].append(unique_index[i])
-
+                    
 # Print the fraction of dropped contacts
 print(f"\n{100*dropped_count/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration, daytype, or location was missing\n")
 

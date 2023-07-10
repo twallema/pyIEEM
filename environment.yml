@@ -11,3 +11,5 @@ dependencies:
   - openpyxl
   - jupyter
   - tqdm
+  - statsmodels
+  - seaborn

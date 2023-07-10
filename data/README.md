@@ -70,7 +70,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### FR
 
-+ `RawData_ComesF.xlsx`: contains the raw dataset from "The French Connection: The First Large Population-Based Contact Survey in France Relevant for the Spread of Infectious Diseases". Social contact data is available based on the place of work
++ `RawData_ComesF.xlsx`: contains the raw dataset from "The French Connection: The First Large Population-Based Contact Survey in France Relevant for the Spread of Infectious Diseases". Social contact data is available based on the place of work. Modifications: 1) Merge AS --> AY, rename 'SPC'. 2) Rename 'contacts  x' (double space is intentional!), going from 1 to 40 and then again from 1 to 29 --> 'contacts 1' --> 'contacts 69'. 
 
 + `S1_Fig.pdf`: questionnaire used by the authors to obtain the social contact data in `RawData_ComesF.xlsx`.
 
