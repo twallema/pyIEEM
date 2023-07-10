@@ -7,6 +7,7 @@ import math
 import numpy as np
 import pandas as pd 
 from tqdm import tqdm
+from pyIEEM.data.utils import convert_age_stratified_quantity
 
 # Define desired age groups of final matrices
 #age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
@@ -29,6 +30,15 @@ def drop_duplicates(input_list):
         duplicates_count.append(value)
     return result, duplicates_count
 
+# Format demography of France
+demo_df = pd.read_excel('pop-totale-france-metro.xlsx', skiprows=5)
+demo_df = demo_df.set_index('Age in completed years')
+demo_df = demo_df.drop(columns=['Year of birth','Males','Females'])
+demo_df.index.name = 'age'
+demo_df = demo_df.rename(columns={'Total': 'count'})
+demo_df = demo_df.iloc[:-1]
+demo_df = demo_df.squeeze()
+
 # Define absolute paths only
 abs_dir = os.path.dirname(__file__)
 
@@ -39,11 +49,12 @@ data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 # Translation
 translations = {
     'sector': ['A', 'C10-12', 'C', 'D', 'F', 'G', 'K', 'M', 'R, S, T', 'P, Q', 'O, N'],
-    'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor'],
+    'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor', 'SPC'],
     'duration': ['< 5 min', '5-15 min', '15-60 min', '60-240 min', '> 240 min'],
     'age_y': [str(a) for a in age_classes.values],
     'daytype': ['weekendday', 'weekday'],
-    'vacation': [True, False]
+    'vacation': [True, False],
+    'age_group_SPC': pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,18),(18,65),(65,120)], closed='left'),
 }
 
 # Pre-allocate dictionary for the output
@@ -52,6 +63,8 @@ output = {k: [] for k in columns}
 
 dropped_count=0
 for i in tqdm(range(len(data))):
+    # Keep track of all contact's properties
+    contact_properties=[]
     # Assign ID to survey participant
     ID = i
     # Personal characteristics: age group
@@ -65,6 +78,26 @@ for i in tqdm(range(len(data))):
         sector = translations['sector'][int(sector_n - 1)]
     else:
         sector = 'NA'
+    # Personal characteristics: supplementary professional contacts
+    SPC_data = row['SPC'].droplevel([0]).values
+    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1)):
+        if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
+            # Fix location and duration of SPC
+            duration = '< 5 min'
+            location = 'SPC'
+            daytype = 'weekday' # DISTRIBUTE
+            vacation = False # DISTRIBUTE
+            # Distribute contacts over age groups using demographic weighing
+            age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
+            print(pd.Series(SPC_data[1], index=age_groups_SPC))
+            out = convert_age_stratified_quantity(pd.Series(SPC_data[1], index=age_groups_SPC), age_classes, demo_df)
+            print(out)
+            sys.exit()
+                # Keep track of the contacts data so we can eliminate doubles
+                #contact_properties.append((ID, age_x, sector, age_y, location, duration, daytype, vacation),)
+
+            sys.exit()
+
     # Temporal characteristics: type of day
     days_of_week = row.loc['Jour1'].droplevel(0).values
     # Temporal characteristics: vacation or not
@@ -74,7 +107,6 @@ for i in tqdm(range(len(data))):
         dropped_count+=1
     else:
         # CONTACT LOOP
-        contact_properties=[]
         for j in range(1,69):
             # Extract correct daytype/vacation
             if j <= 40:

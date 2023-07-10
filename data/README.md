@@ -74,6 +74,8 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `S1_Fig.pdf`: questionnaire used by the authors to obtain the social contact data in `RawData_ComesF.xlsx`.
 
++ `pop-totale-france-metro.xlsx`: demography of metropolitan france per year of age and sex in 2019. Used to distribute the Supplementary Professional Contacts across the desired age groups of the contact matrices. Retrieved from: https://www.insee.fr/en/statistiques/2382599?sommaire=2382613. Modified: saved as .xlsx instead of .xls.
+
 #### mobility
 
 ##### BE
