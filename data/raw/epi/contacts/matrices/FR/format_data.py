@@ -10,9 +10,9 @@ from tqdm import tqdm
 from pyIEEM.data.utils import convert_age_stratified_quantity
 
 # Define desired age groups of final matrices
-#age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
-#age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
-age_classes = pd.IntervalIndex.from_tuples([(0,20),(20,40),(40,60),(60,80),(80,120)], closed='left')
+age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
+#age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,30),(30,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
+#age_classes = pd.IntervalIndex.from_tuples([(0,20),(20,40),(40,60),(60,80),(80,120)], closed='left')
 
 # Helper function
 def drop_duplicates(input_list):
@@ -51,7 +51,7 @@ data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 
 # Translation
 translations = {
-    'sector': ['A', 'C10-12', 'C', 'D', 'F', 'G', 'K', 'M', 'R, S, T', 'P, Q', 'O, N'],
+    'sector': ['A', 'C10-12', 'C', 'D', 'F', 'G', 'K', 'M', 'S, T', 'P, Q', 'O, N'],
     'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor', 'SPC'],
     'duration': ['< 5 min', '5-15 min', '15-60 min', '60-240 min', '> 240 min'],
     'age_y': [str(a) for a in age_classes.values],
@@ -64,9 +64,9 @@ translations = {
 columns = ['ID', 'age_x', 'sector', 'age_y', 'location', 'duration', 'daytype', 'vacation', 'reported_contacts']
 output = {k: [] for k in columns}
 
-# TODO: PUT THE SPC CONTACTS IN A SEPERATE DATAFRAME BECAUSE THE ASSUMPTION THAT SPC CONTACTS OCCUR ONLY ON WEEKDAYS AND OUTSIDE HOLIDAYS INTRODUCES
-# ADDITIONAL DATAPOINTS WHEN PEOPLE ONLY REPORT IN WEEKENDS/HOLIDAYS
-# SO A NEW DATAFRAME MUST BE MADE WITH THE SPCS AND THEN MERGED WITH THE FINAL RESULT
+# Pre-allocate dictionary for the SPC (no location, duration, daytype or vacation available)
+columns = ['ID', 'age_x', 'sector', 'age_y', 'reported_contacts']
+output_SPC = {k: [] for k in columns}
 
 dropped_count=0
 for i in tqdm(range(len(data))):
@@ -82,19 +82,17 @@ for i in tqdm(range(len(data))):
     sector_n = row['Q10']['Q7']["Dans quel secteur d'activité travaillez-vous"]
     if ((not math.isnan(sector_n)) & (sector_n >= 1) & (sector_n <= 11)):
         sector = translations['sector'][int(sector_n - 1)]
+        # aggregate the obserations of C10-12 into C
+        if sector == 'C10-12':
+            sector = 'C'
     else:
         sector = 'NA'
     # Personal characteristics: supplementary professional contacts
     SPC_data = row['SPC'].droplevel([0]).values
     contact_properties_SPC = []
     contact_count_SPC = []
-    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1)):
+    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1) & (sector != 'NA')):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
-            # Fix location and duration of SPC
-            duration = '< 5 min'
-            location = 'SPC'
-            daytype = 'weekday' # DISTRIBUTE
-            vacation = False # DISTRIBUTE
             # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
             age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
             d = pd.Series(SPC_data[1], index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
@@ -105,7 +103,7 @@ for i in tqdm(range(len(data))):
             # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
             for age_y in out.index:
                 # Keep track of the contacts data so we can eliminate doubles in the end
-                contact_properties_SPC.append((ID, age_x, sector, str(age_y), location, duration, daytype, vacation),)
+                contact_properties_SPC.append((ID, age_x, sector, str(age_y),),)
                 contact_count_SPC.append(out[age_y])
     # Temporal characteristics: type of day
     days_of_week = row.loc['Jour1'].droplevel(0).values
@@ -163,17 +161,20 @@ for i in tqdm(range(len(data))):
         # Drop the duplicate data
         unique_indices, contact_counts = drop_duplicates(contact_properties)
 
-        # Extend with SPC
-        unique_indices.extend(contact_properties_SPC)
-        contact_counts.extend(contact_count_SPC)
-
         # Append to output dictionary
         output['reported_contacts'].extend(contact_counts)
         for unique_index in unique_indices:
             for i, key in enumerate(output.keys()):
                 if key != 'reported_contacts':
                     output[key].append(unique_index[i])
-                    
+
+        # Append to SPC output dictionary
+        output_SPC['reported_contacts'].extend(contact_count_SPC)
+        for unique_index in contact_properties_SPC:
+            for i, key in enumerate(output_SPC.keys()):
+                if key != 'reported_contacts':
+                    output_SPC[key].append(unique_index[i])
+
 # Print the fraction of dropped contacts
 print(f"\n{100*dropped_count/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration, daytype, or location was missing\n")
 
@@ -188,7 +189,7 @@ for id in tqdm(np.unique(output['ID'])):
     df.loc[df.index.get_level_values('ID') == id, 'sector'] = str(np.unique(np.array(output['sector'])[output['ID']==id])[0])
 
 # Fill in present values
-for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in tqdm(zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts'])):
+for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts']):
     df.loc[(ID, age_y, location, duration, daytype, vacation),'reported_contacts'] = contacts
 
 # Remove daytypes and vacations not present
@@ -202,9 +203,13 @@ for id in tqdm(np.unique(output['ID'])):
         df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.type_day == dt)].index, inplace = True)
     for vctns in vctns_list_complement:
         df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.vacation == vctns)].index, inplace = True)
-
-# Save result
 df = df_no_index.set_index("ID")
-df.to_csv('FormatData_ComesF.csv')
+
+# Save normal contacts
+df.to_csv('comesf_contacts.csv')
+
+# Save SPC contacts
+df_SPC = pd.DataFrame(output_SPC).set_index('ID')
+df_SPC.to_csv('comesf_SPC.csv')
 
 
