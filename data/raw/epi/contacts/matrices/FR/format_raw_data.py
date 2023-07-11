@@ -10,8 +10,8 @@ from tqdm import tqdm
 from pyIEEM.data.utils import convert_age_stratified_quantity
 
 # Define desired age groups of final matrices
-#age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
-age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
+age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
+#age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,30),(30,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
 #age_classes = pd.IntervalIndex.from_tuples([(0,20),(20,40),(40,60),(60,80),(80,120)], closed='left')
 
 # Helper function
@@ -82,13 +82,16 @@ for i in tqdm(range(len(data))):
     sector_n = row['Q10']['Q7']["Dans quel secteur d'activité travaillez-vous"]
     if ((not math.isnan(sector_n)) & (sector_n >= 1) & (sector_n <= 11)):
         sector = translations['sector'][int(sector_n - 1)]
+        # aggregate the obserations of C10-12 into C
+        if sector == 'C10-12':
+            sector = 'C'
     else:
         sector = 'NA'
     # Personal characteristics: supplementary professional contacts
     SPC_data = row['SPC'].droplevel([0]).values
     contact_properties_SPC = []
     contact_count_SPC = []
-    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1)):
+    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1) & (sector != 'NA')):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
             # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
             age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
