@@ -52,7 +52,7 @@ data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 # Translation
 translations = {
     'sector': ['A', 'C10-12', 'C', 'D', 'F', 'G', 'K', 'M', 'S, T', 'P, Q', 'O, N'],
-    'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor', 'SPC'],
+    'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor'],
     'duration': ['< 5 min', '5-15 min', '15-60 min', '60-240 min', '> 240 min'],
     'age_y': [str(a) for a in age_classes.values],
     'daytype': ['weekendday', 'weekday'],
@@ -121,9 +121,9 @@ for i in tqdm(range(len(data))):
             if j <= 40:
                 vacation = is_vacation[0]
                 if vacation == 1:
-                    vacation = False
-                elif vacation == 2:
                     vacation = True
+                elif vacation == 2:
+                    vacation = False
                 daytype = days_of_week[0]
                 if daytype <= 5:
                     daytype = 'weekday'
@@ -132,9 +132,9 @@ for i in tqdm(range(len(data))):
             else:
                 vacation = is_vacation[1]
                 if vacation == 1:
-                    vacation = False
-                elif vacation == 2:
                     vacation = True
+                elif vacation == 2:
+                    vacation = False
                 daytype = days_of_week[1]
                 if daytype <= 5:
                     daytype = 'weekday'
