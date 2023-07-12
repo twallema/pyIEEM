@@ -57,7 +57,7 @@ translations = {
     'professional_situations': 6*['employed']+['student', 'retired', 'unemployed', 'unemployed'],
     'sexes': ['F', 'M'],
     'sector': ['A', 'C10-12', 'C', 'D', 'F', 'G', 'K', 'M', 'S, T', 'P, Q', 'O, N'],
-    'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor'],
+    'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor', 'SPC'],
     'duration': ['< 5 min', '5-15 min', '15-60 min', '60-240 min', '> 240 min'],
     'age_y': [str(a) for a in age_classes.values],
     'daytype': ['weekendday', 'weekday'],
@@ -71,7 +71,7 @@ columns = ['ID', 'sex', 'age_x', 'household_size', 'class_size', 'highest_educat
 output = {k: [] for k in columns}
 
 # Pre-allocate dictionary for the SPC (no location, duration, daytype or vacation available)
-columns = ['ID', 'sex', 'age_x', 'highest_education', 'sector', 'age_y', 'reported_contacts']
+columns = ['ID', 'sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector', 'age_y', 'reported_contacts']
 output_SPC = {k: [] for k in columns}
 
 ## PARTICIPANT LOOP
@@ -109,10 +109,11 @@ for i in tqdm(range(len(data))):
             (row['SPC']['Q9']["Nombre d'étudiants dans la classe"] >= 1)):
             class_size = translations['class_sizes'][int(row['SPC']['Q9']["Nombre d'étudiants dans la classe"])-1]
         else:
+            class_size = 'not_applicable'
             dropped_count_personal += 1
             continue
     else:
-        class_size = 'NA'
+        class_size = 'not_applicable'
     # sector of employment
     sector_n = row['Q10']['Q7']["Dans quel secteur d'activité travaillez-vous"]
     if ((not math.isnan(sector_n)) & (sector_n >= 1) & (sector_n <= 11)):
@@ -121,7 +122,7 @@ for i in tqdm(range(len(data))):
         if sector == 'C10-12':
             sector = 'C'
     else:
-        sector = 'NA'
+        sector = 'not_applicable'
     # highest diploma
     if not math.isnan(row['Q8']['Q4']['diplôme le plus élevé']):
         highest_education = translations['highest_educations'][int(row['Q8']['Q4']['diplôme le plus élevé']-1)]
@@ -135,7 +136,7 @@ for i in tqdm(range(len(data))):
     SPC_data = row['SPC'].droplevel([0]).values
     contact_properties_SPC = []
     contact_count_SPC = []
-    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1) & (sector != 'NA')):
+    if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1) & (sector != 'not_applicable')):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
             # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
             age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
@@ -147,7 +148,7 @@ for i in tqdm(range(len(data))):
             # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
             for age_y in out.index:
                 # Keep track of the contacts data so we can eliminate doubles in the end
-                contact_properties_SPC.append((ID, sex, age_x, highest_education, sector, str(age_y),),)
+                contact_properties_SPC.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation, sector, str(age_y),),)
                 contact_count_SPC.append(out[age_y])
 
     ## Temporal characteristics
@@ -205,7 +206,8 @@ for i in tqdm(range(len(data))):
                     loc = loc!= 0
                     location = translations['location'][np.where(loc)[0][0]]
                 # Keep track of the contacts data so we can eliminate doubles
-                contact_properties.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation, sector, age_y, location, duration, daytype, vacation),)
+                contact_properties.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation,
+                                            sector, age_y, location, duration, daytype, vacation),)
 
         # Drop the duplicate data
         unique_indices, contact_counts = drop_duplicates(contact_properties)
@@ -225,9 +227,9 @@ for i in tqdm(range(len(data))):
                     output_SPC[key].append(unique_index[i])
 
 # Print the fraction of dropped contacts
-print(f"\n{100*dropped_count_personal/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, sex, household size or highest education level were missing\n")
-print(f"\n{100*dropped_count_temporal/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the date listed on the survey was invalid\n")
-print(f"\n{100*dropped_count_contact/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration, or location of the contact was missing\n")
+print(f"\n{100*dropped_count_personal/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, sex, household size or highest education level were missing")
+print(f"{100*dropped_count_temporal/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the date listed on the survey was invalid")
+print(f"{100*dropped_count_contact/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration, or location of the contact was missing\n")
 
 # Define output dataframe containing all contact-related characteristics in index and person-related characteristics in the columns
 names = ['ID', 'age_y', 'location', 'duration', 'type_day', 'vacation']
@@ -236,14 +238,127 @@ df = pd.DataFrame(0, index=pd.MultiIndex.from_product(iterables, names=names), c
 
 # Fill in correct personal characteristics for every ID
 for id in tqdm(np.unique(output['ID'])):
-    for personal_characterstic in ['age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector']:
+    for personal_characterstic in ['sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector']:
         df.loc[df.index.get_level_values('ID') == id, personal_characterstic] = str(np.unique(np.array(output[personal_characterstic])[output['ID']==id])[0])
     
 # Fill in present values
 for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts']):
     df.loc[(ID, age_y, location, duration, daytype, vacation),'reported_contacts'] = contacts
 
-# Remove daytypes and vacations not present
+# rearrange columns: 
+column_order = ['location','duration','type_day','vacation', 'ID', 'age_x', 'sex', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector', 'age_y', 'reported_contacts']
+df = df.reset_index()
+df = df[column_order]
+
+## compute the distribution of durations of work contacts per sector, for individuals who reported between 10 and 20 contacts
+# output dataframe
+iterables = [df['sector'].unique(), df['duration'].unique()]
+names = ['sector', 'duration']
+duration_distribution = pd.Series(0,index=pd.MultiIndex.from_product(iterables, names=names), name='duration_distribution', dtype=float)
+# groupby for convenience
+df = df.groupby(by=['ID', 'location', 'duration', 'type_day', 'vacation', 'age_y']).last()
+# loop over all participants
+for ID in tqdm(df.index.get_level_values('ID').unique()):
+    # slice location work_indoor on a weekday outside vacation
+    sl = df.loc[ID, 'work_indoor', slice(None), 'weekday', False, slice(None)]
+    # particpant has more than 10 work contacts?
+    if not sum(sl['reported_contacts'].groupby(by=['duration']).sum()) > 8:
+        continue
+    else:
+        # sector
+        sector = sl['sector'].unique()
+        # distribution
+        duration_distribution.loc[sector, slice(None)] += sl['reported_contacts'].groupby(by='duration').sum().values
+# global average distribution
+glob = duration_distribution.groupby(by='duration').sum()/sum(duration_distribution)
+# compute average distribution per sector --> no data --> global average assumed
+for sector in duration_distribution.index.get_level_values('sector').unique():
+    n = sum(duration_distribution.loc[sector])
+    if not n ==0:
+        duration_distribution.loc[sector] = (duration_distribution.loc[sector]/sum(duration_distribution.loc[sector])).values
+    else:
+        duration_distribution.loc[sector] = glob.values
+
+## Split every SPC in accordance with the duration distribution
+n = len(duration_distribution.index.get_level_values('duration').unique())
+# personal properties
+ID = []
+sex = []
+age_x = []
+household_size = []
+class_size = []
+highest_education = []
+professional_situation = []
+sector = []
+age_y = []
+location = []
+duration = []
+daytype = []
+vacation = []
+# contacts
+reported_contacts = []
+duration = []
+# Loop over SPC output
+for i in tqdm(range(len(output_SPC['ID']))):
+    # new in the output
+    location.extend(n*['SPC',])
+    daytype.extend(n*['weekday',])
+    vacation.extend(n*[False,])
+    # blow personal properties up
+    ID.extend(n*[output_SPC['ID'][i],])
+    sex.extend(n*[output_SPC['sex'][i],])
+    age_x.extend(n*[output_SPC['age_x'][i],])
+    household_size.extend(n*[output_SPC['household_size'][i],])
+    class_size.extend(n*[output_SPC['class_size'][i],])
+    highest_education.extend(n*[output_SPC['highest_education'][i],])
+    professional_situation.extend(n*[output_SPC['professional_situation'][i],])
+    sector.extend(n*[output_SPC['sector'][i],])
+    age_y.extend(n*[output_SPC['age_y'][i],])
+    # distribute contacts over durations
+    reported_contacts.extend(output_SPC['reported_contacts'][i]*duration_distribution.loc[output_SPC['sector'][i]].values)
+    # make a list of durations
+    duration.extend(duration_distribution.index.get_level_values('duration').unique(),)
+
+# Update SPC output dictionary
+output_SPC.update({
+    'ID': ID,
+    'sex': sex,
+    'age_x': age_x,
+    'household_size': household_size,
+    'class_size': class_size,
+    'highest_education': highest_education,
+    'professional_situation': professional_situation,
+    'sector': sector,
+    'age_y': age_y,
+    'location': location,
+    'duration': duration,
+    'daytype': daytype,
+    'vacation': vacation,
+    'reported_contacts': reported_contacts
+})
+
+# merge SPC output and regular output
+for k,v in output_SPC.items():
+    output[k].extend(v)
+
+# construct dataframe
+df_small = pd.DataFrame(output).set_index('ID').sort_index()
+
+# Define output dataframe containing all contact-related characteristics in index and person-related characteristics in the columns
+names = ['ID', 'age_y', 'location', 'duration', 'daytype', 'vacation']
+iterables = [np.unique(output['ID']), translations['age_y'], translations['location'], translations['duration'], translations['daytype'], translations['vacation']]
+df = pd.DataFrame(0, index=pd.MultiIndex.from_product(iterables, names=names), columns=['sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector', 'reported_contacts'])
+
+# Fill in correct personal characteristics for every ID
+for id in tqdm(np.unique(output['ID'])):
+    for personal_characterstic in ['sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector']:
+        df.loc[df.index.get_level_values('ID') == id, personal_characterstic] = str(np.unique(np.array(output[personal_characterstic])[output['ID']==id])[0])
+    
+# Fill in present values
+for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts']):
+    df.loc[(ID, age_y, location, duration, daytype, vacation),'reported_contacts'] = contacts
+
+# Remove daytypes and vacations not originally present (this would mean we're adding extra days to the survey)
 df_no_index = df.reset_index()
 for id in tqdm(np.unique(output['ID'])):
     dt_list = np.unique(np.array(output['daytype'])[output['ID']==id])
@@ -251,16 +366,16 @@ for id in tqdm(np.unique(output['ID'])):
     dt_list_complement = [d for d in translations['daytype'] if d not in dt_list]
     vctns_list_complement = [d for d in translations['vacation'] if d not in vctns_list]
     for dt in dt_list_complement: 
-        df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.type_day == dt)].index, inplace = True)
+        df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.daytype == dt)].index, inplace = True)
     for vctns in vctns_list_complement:
         df_no_index.drop(df_no_index[(df_no_index.ID == id) & (df_no_index.vacation == vctns)].index, inplace = True)
-df = df_no_index.set_index("ID")
+df = df_no_index
+df = df.set_index('ID').sort_index()
+
+# rearrange columns: 
+column_order = ['location','duration','daytype', 'vacation', 'age_x', 'sex', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector', 'age_y', 'reported_contacts']
+df = df[column_order]
+df = df.rename(columns={'daytype': 'type_day'})
 
 # Save normal contacts
 df.to_csv('comesf_contacts.csv')
-
-# Save SPC contacts
-df_SPC = pd.DataFrame(output_SPC).set_index('ID')
-df_SPC.to_csv('comesf_SPC.csv')
-
-
