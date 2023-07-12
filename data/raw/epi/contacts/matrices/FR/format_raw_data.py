@@ -20,7 +20,8 @@ def drop_duplicates(input_list):
     result = []
     duplicates_count = []
     for entry in input_list:
-        key = (entry[0], frozenset(entry[1]), entry[2], frozenset(entry[3]), entry[4], entry[5], entry[6], entry[7])
+        key = (entry[0], entry[1], frozenset(entry[2]), entry[3], entry[4], entry[5], entry[6],
+                entry[7], frozenset(entry[8]), entry[9], entry[10], entry[11], entry[12])
         if key not in unique_tuples:
             unique_tuples[key] = 1
             result.append(entry)
@@ -51,6 +52,10 @@ data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 
 # Translation
 translations = {
+    'class_sizes': ['< 20', '20 - 30', '> 30'],
+    'highest_educations': ['primary', 'primary', 'secundary', 'secundary', 'tertiary', 'tertiary'],
+    'professional_situations': 6*['employed']+['student', 'retired', 'unemployed', 'unemployed'],
+    'sexes': ['F', 'M'],
     'sector': ['A', 'C10-12', 'C', 'D', 'F', 'G', 'K', 'M', 'S, T', 'P, Q', 'O, N'],
     'location': ['home', 'school', 'work_indoor', 'leisure_private', 'leisure_public', 'transport', 'work_leisure_outdoor'],
     'duration': ['< 5 min', '5-15 min', '15-60 min', '60-240 min', '> 240 min'],
@@ -61,24 +66,54 @@ translations = {
 }
 
 # Pre-allocate dictionary for the output
-columns = ['ID', 'age_x', 'sector', 'age_y', 'location', 'duration', 'daytype', 'vacation', 'reported_contacts']
+columns = ['ID', 'sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation',
+            'sector', 'age_y', 'location', 'duration', 'daytype', 'vacation', 'reported_contacts']
 output = {k: [] for k in columns}
 
 # Pre-allocate dictionary for the SPC (no location, duration, daytype or vacation available)
-columns = ['ID', 'age_x', 'sector', 'age_y', 'reported_contacts']
+columns = ['ID', 'sex', 'age_x', 'highest_education', 'sector', 'age_y', 'reported_contacts']
 output_SPC = {k: [] for k in columns}
 
-dropped_count=0
+## PARTICIPANT LOOP
+dropped_count_personal=dropped_count_temporal=dropped_count_contact=0
 for i in tqdm(range(len(data))):
-    
+
+    row = data.iloc[i]
+
     # Assign ID to survey participant
     ID = i
-    # Personal characteristics: age group
-    row = data.iloc[i]
+
+    ## Personal characteristics
+    # missing age, sex, household size or professional situation
+    if ((math.isnan(row['Q1']['Q3_1']["Age du sujet de l'enquête"])) | \
+        (math.isnan(row['Q2']['Q2']["Sexe du sujet de l'enquête"])) | \
+        (math.isnan(row['Q7nb']['Q3nb']["Nombre de personnes au foyer"])) | \
+        (math.isnan(row['Q9']['Q6']['situation professionnelle ']))):
+
+        dropped_count_personal += 1
+        continue
+
+    # age
     age = row['Q1']['Q3_1']["Age du sujet de l'enquête"]
     age_x = age_classes[age_classes.contains(age)].values
     age_x = age_x.astype(str)[0]
-    # Personal characteristics: sector of employment
+    # sex
+    sex = translations['sexes'][int(row['Q2']['Q2']["Sexe du sujet de l'enquête"]-1)]
+    # household size
+    household_size = int(row['Q7nb']['Q3nb']["Nombre de personnes au foyer"])
+    # professional situation
+    professional_situation = translations['professional_situations'][int(row['Q9']['Q6']['situation professionnelle ']-1)]
+    if professional_situation == 'student':
+        if ((not math.isnan(row['SPC']['Q9']["Nombre d'étudiants dans la classe"])) & \
+            (row['SPC']['Q9']["Nombre d'étudiants dans la classe"] <=3) & \
+            (row['SPC']['Q9']["Nombre d'étudiants dans la classe"] >= 1)):
+            class_size = translations['class_sizes'][int(row['SPC']['Q9']["Nombre d'étudiants dans la classe"])-1]
+        else:
+            dropped_count_personal += 1
+            continue
+    else:
+        class_size = 'NA'
+    # sector of employment
     sector_n = row['Q10']['Q7']["Dans quel secteur d'activité travaillez-vous"]
     if ((not math.isnan(sector_n)) & (sector_n >= 1) & (sector_n <= 11)):
         sector = translations['sector'][int(sector_n - 1)]
@@ -87,7 +122,16 @@ for i in tqdm(range(len(data))):
             sector = 'C'
     else:
         sector = 'NA'
-    # Personal characteristics: supplementary professional contacts
+    # highest diploma
+    if not math.isnan(row['Q8']['Q4']['diplôme le plus élevé']):
+        highest_education = translations['highest_educations'][int(row['Q8']['Q4']['diplôme le plus élevé']-1)]
+    else:
+        if row['Q1']['Q3_1']["Age du sujet de l'enquête"] <= 15:
+            highest_education = 'primary'
+        else:
+            dropped_count_personal+=1
+            continue
+    # supplementary professional contacts
     SPC_data = row['SPC'].droplevel([0]).values
     contact_properties_SPC = []
     contact_count_SPC = []
@@ -103,17 +147,22 @@ for i in tqdm(range(len(data))):
             # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
             for age_y in out.index:
                 # Keep track of the contacts data so we can eliminate doubles in the end
-                contact_properties_SPC.append((ID, age_x, sector, str(age_y),),)
+                contact_properties_SPC.append((ID, sex, age_x, highest_education, sector, str(age_y),),)
                 contact_count_SPC.append(out[age_y])
+
+    ## Temporal characteristics
+
     # Temporal characteristics: type of day
     days_of_week = row.loc['Jour1'].droplevel(0).values
     # Temporal characteristics: vacation or not
     is_vacation = row.loc['VAC1'].droplevel(0).values
     # Perform checks on impossible day types
     if ((any(math.isnan(d) for d in days_of_week)) | (any(d > 7 for d in days_of_week)) | (any(d < 1 for d in days_of_week))):
-        dropped_count+=1
+        dropped_count_temporal+=1
+        continue
+
+    # CONTACT LOOP
     else:
-        # CONTACT LOOP
         # Keep track of all contact's properties
         contact_properties=[]
         for j in range(1,69):
@@ -145,7 +194,7 @@ for i in tqdm(range(len(data))):
             if not math.isnan(contact_data.loc['age moyen ']):
                 # Check if age, duration and location are known, drop the contact if this is not the case
                 if ((math.isnan(contact_data.loc['age moyen '])) | (math.isnan(contact_data.loc['durée '])) | (all(v == 0 for v in contact_data.iloc[4:11].values))):
-                    dropped_count+=1
+                    dropped_count_contact+=1
                 else:
                     # Extract age of contacted person and duration
                     age_y = age_classes[age_classes.contains(contact_data.loc['age moyen '])].values
@@ -156,7 +205,7 @@ for i in tqdm(range(len(data))):
                     loc = loc!= 0
                     location = translations['location'][np.where(loc)[0][0]]
                 # Keep track of the contacts data so we can eliminate doubles
-                contact_properties.append((ID, age_x, sector, age_y, location, duration, daytype, vacation),)
+                contact_properties.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation, sector, age_y, location, duration, daytype, vacation),)
 
         # Drop the duplicate data
         unique_indices, contact_counts = drop_duplicates(contact_properties)
@@ -176,18 +225,20 @@ for i in tqdm(range(len(data))):
                     output_SPC[key].append(unique_index[i])
 
 # Print the fraction of dropped contacts
-print(f"\n{100*dropped_count/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration, daytype, or location was missing\n")
+print(f"\n{100*dropped_count_personal/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, sex, household size or highest education level were missing\n")
+print(f"\n{100*dropped_count_temporal/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the date listed on the survey was invalid\n")
+print(f"\n{100*dropped_count_contact/(len(data)*69):.1f} % of the {len(data)*69} reported contacts were dropped because the age, duration, or location of the contact was missing\n")
 
 # Define output dataframe containing all contact-related characteristics in index and person-related characteristics in the columns
 names = ['ID', 'age_y', 'location', 'duration', 'type_day', 'vacation']
 iterables = [np.unique(output['ID']), translations['age_y'], translations['location'], translations['duration'], translations['daytype'], translations['vacation']]
-df = pd.DataFrame(0, index=pd.MultiIndex.from_product(iterables, names=names), columns=["age_x", "sector", "reported_contacts"])
+df = pd.DataFrame(0, index=pd.MultiIndex.from_product(iterables, names=names), columns=['sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector', 'reported_contacts'])
 
-# Fill in correct age_x and sector for every ID
+# Fill in correct personal characteristics for every ID
 for id in tqdm(np.unique(output['ID'])):
-    df.loc[df.index.get_level_values('ID') == id, 'age_x'] = str(np.unique(np.array(output['age_x'])[output['ID']==id])[0])
-    df.loc[df.index.get_level_values('ID') == id, 'sector'] = str(np.unique(np.array(output['sector'])[output['ID']==id])[0])
-
+    for personal_characterstic in ['age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector']:
+        df.loc[df.index.get_level_values('ID') == id, personal_characterstic] = str(np.unique(np.array(output[personal_characterstic])[output['ID']==id])[0])
+    
 # Fill in present values
 for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts']):
     df.loc[(ID, age_y, location, duration, daytype, vacation),'reported_contacts'] = contacts
