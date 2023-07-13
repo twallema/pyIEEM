@@ -40,11 +40,11 @@ mixed_effects = 'age_x*age_y + type_day*vacation + duration*type_day + duration*
 # regression formulas
 formula = {
     'home': pure_effects + mixed_effects + 'household_size + professional_situation + professional_situation*duration + household_size*duration',
-    'school': pure_effects + obligated_mixed_effects + '+ class_size',
-    'leisure_public': pure_effects + obligated_mixed_effects + 'professional_situation',
-    'leisure_private': pure_effects + obligated_mixed_effects + 'professional_situation',
-    'transport': pure_effects + obligated_mixed_effects + 'professional_situation',
-    'work_leisure_outdoor': pure_effects + obligated_mixed_effects + 'professional_situation',
+    'school': pure_effects + mixed_effects + '+ class_size',
+    'leisure_public': pure_effects + mixed_effects + 'professional_situation',
+    'leisure_private': pure_effects + mixed_effects + 'professional_situation',
+    'transport': pure_effects + mixed_effects + 'professional_situation',
+    'work_leisure_outdoor': pure_effects + mixed_effects + 'professional_situation',
 }
 
 print('\n')
