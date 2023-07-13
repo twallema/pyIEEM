@@ -47,7 +47,7 @@ demo_df = desired_df['count_right'].fillna(0)
 abs_dir = os.path.dirname(__file__)
 
 # Load dataset
-data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF.xlsx'), sheet_name="CONTACT", header=[0,1,2])
+data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF_extract.xlsx'), sheet_name="CONTACT", header=[0,1,2])
 data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 
 # Translation
@@ -353,7 +353,7 @@ df = pd.DataFrame(0, index=pd.MultiIndex.from_product(iterables, names=names), c
 for id in tqdm(np.unique(output['ID'])):
     for personal_characterstic in ['sex', 'age_x', 'household_size', 'class_size', 'highest_education', 'professional_situation', 'sector']:
         df.loc[df.index.get_level_values('ID') == id, personal_characterstic] = str(np.unique(np.array(output[personal_characterstic])[output['ID']==id])[0])
-    
+
 # Fill in present values
 for ID, age_x, sector, age_y, location, duration, daytype, vacation, contacts in zip(output['ID'], output['age_x'], output['sector'], output['age_y'], output['location'], output['duration'], output['daytype'], output['vacation'], output['reported_contacts']):
     df.loc[(ID, age_y, location, duration, daytype, vacation),'reported_contacts'] = contacts
@@ -363,6 +363,7 @@ df_no_index = df.reset_index()
 for id in tqdm(np.unique(output['ID'])):
     dt_list = np.unique(np.array(output['daytype'])[output['ID']==id])
     vctns_list = np.unique(np.array(output['vacation'])[output['ID']==id])
+
     dt_list_complement = [d for d in translations['daytype'] if d not in dt_list]
     vctns_list_complement = [d for d in translations['vacation'] if d not in vctns_list]
     for dt in dt_list_complement: 
