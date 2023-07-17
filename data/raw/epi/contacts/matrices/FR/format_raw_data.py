@@ -389,4 +389,4 @@ df = df[column_order]
 df = df.rename(columns={'daytype': 'type_day'})
 
 # Save normal contacts
-df.to_csv('comesf_contacts.csv')
+df.to_csv('comesf_formatted_data.csv')

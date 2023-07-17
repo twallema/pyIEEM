@@ -4,6 +4,7 @@ import seaborn as sns
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
+from pyIEEM.data.utils import to_pd_interval
 
 ##############
 ## Settings ##
@@ -17,7 +18,7 @@ ind = sm.cov_struct.Independence()
 #######################################
 
 # Load data
-data_df = pd.read_csv('comesf_contacts.csv', dtype={'class_size': str})
+data_df = pd.read_csv('comesf_formatted_data.csv', dtype={'class_size': str})
 
 # Make sure columns are in following order
 data_df = data_df.set_index(['location', 'duration', 'type_day', 'vacation'])
@@ -31,7 +32,7 @@ duration = data_df.reset_index()['duration'].unique()
 type_day = data_df.reset_index()['type_day'].unique()
 vacation = data_df.reset_index()['vacation'].unique()
 iterables = [location, sector, duration, type_day, vacation, age_classes, age_classes]
-data_GEE = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='desired_format', dtype=float)
+data_GEE = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='contacts', dtype=float)
 data_GEE = data_GEE.sort_index()
 
 # define relevant pure and mixed effects
@@ -72,11 +73,11 @@ for location, formula in formula.items():
 ###################################
 
 # define relevant pure and mixed effects
-pure_effects = 'reported_contacts ~ type_day + vacation + duration + age_x + age_y + sex + professional_situation +'
-mixed_effects = 'age_x*age_y + type_day*vacation + duration*type_day + duration*vacation + duration*age_x + '
+pure_effects = 'reported_contacts ~ type_day + vacation + duration + age_x + age_y + sex + professional_situation + sector +'
+mixed_effects = 'age_x*age_y + type_day*vacation + duration*type_day + duration*vacation + duration*age_x + duration*sector +'
 formula = {
-    'work_indoor': pure_effects + mixed_effects + 'sector + duration*sector + type_day*sector + vacation*sector',
-    'SPC': pure_effects + mixed_effects + 'sector + duration*sector',
+    'work_indoor': pure_effects + mixed_effects + 'type_day*sector + vacation*sector + age_y*sector + type_day*vacation*sector',
+    'SPC': pure_effects + mixed_effects + 'age_y*sector',
 }
 for location, formula in formula.items():
     print(f"performing GEE in location '{location}'")
@@ -98,31 +99,3 @@ for location, formula in formula.items():
 
 # write to .csv
 data_GEE.to_csv('comesf_matrices.csv')
-
-###################
-## Visualisation ##
-###################
-
-# # visualize result
-# location = 'work_indoor'
-# sector = 'C'
-# vacation = False
-# # slice data
-# sl = data_GEE.groupby(by=['location', 'sector', 'type_day', 'vacation', 'age_x', 'age_y']).sum()
-
-# # compute average week/weekend
-# week = sl.loc[location, sector, 'weekday', vacation].values.reshape(2*[len(age_classes),])
-# weekend = sl.loc[location, sector, 'weekendday', vacation].values.reshape(2*[len(age_classes),])
-# m = week
-
-# # visualise result
-# fig,ax=plt.subplots()
-# ax = sns.heatmap(m, annot=True, fmt='.2f', ax=ax, square=True, cbar=False, annot_kws={"size":6})
-# ax.xaxis.tick_top() # x axis on top
-# ax.xaxis.set_label_position('top')
-# ax.set_xticklabels(age_classes, rotation = 30, size=8)
-# ax.set_yticklabels(age_classes, rotation = 30, size=8)
-# ax.set_title(f'at {location}, weekend/week average ({vacation})\navg. contacts: {np.mean(np.sum(m,axis=1)):.2f}', fontsize=10)
-# ax.set(ylabel='participant age')
-# plt.show()
-# plt.close()
