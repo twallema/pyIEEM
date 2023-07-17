@@ -10,8 +10,8 @@ from tqdm import tqdm
 from pyIEEM.data.utils import convert_age_stratified_quantity
 
 # Define desired age groups of final matrices
-age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
-#age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,30),(30,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
+#age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
+age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,30),(30,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
 #age_classes = pd.IntervalIndex.from_tuples([(0,20),(20,40),(40,60),(60,80),(80,120)], closed='left')
 
 # Helper function
@@ -47,7 +47,7 @@ demo_df = desired_df['count_right'].fillna(0)
 abs_dir = os.path.dirname(__file__)
 
 # Load dataset
-data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF_extract.xlsx'), sheet_name="CONTACT", header=[0,1,2])
+data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF.xlsx'), sheet_name="CONTACT", header=[0,1,2])
 data.sort_index(axis=1).drop(columns=['NBcontact1'], inplace=True)
 
 # Translation
@@ -132,24 +132,30 @@ for i in tqdm(range(len(data))):
         else:
             dropped_count_personal+=1
             continue
+    # parent filled in survey --> professional situation/economic sector filled in by parent --> correct this, below 16 everyone is a student
+    if ((age <= 16) & (professional_situation != 'student')):
+        professional_situation = 'student'
+        sector = 'not_applicable'
+        highest_education = 'primary'
     # supplementary professional contacts
     SPC_data = row['SPC'].droplevel([0]).values
     contact_properties_SPC = []
     contact_count_SPC = []
     if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1) & (sector != 'not_applicable')):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
-            # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
-            age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
-            d = pd.Series(SPC_data[1], index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
-            d = convert_age_stratified_quantity(d, age_groups_SPC, demo_df)
-            d = d/sum(d)*SPC_data[1]
-            # Convert to the desired age groups of the contact matrices
-            out = convert_age_stratified_quantity(d, age_classes, demo_df)
-            # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
-            for age_y in out.index:
-                # Keep track of the contacts data so we can eliminate doubles in the end
-                contact_properties_SPC.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation, sector, str(age_y),),)
-                contact_count_SPC.append(out[age_y])
+            if not age <= 16:
+                # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
+                age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
+                d = pd.Series(SPC_data[1], index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
+                d = convert_age_stratified_quantity(d, age_groups_SPC, demo_df)
+                d = d/sum(d)*SPC_data[1]
+                # Convert to the desired age groups of the contact matrices
+                out = convert_age_stratified_quantity(d, age_classes, demo_df)
+                # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
+                for age_y in out.index:
+                    # Keep track of the contacts data so we can eliminate doubles in the end
+                    contact_properties_SPC.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation, sector, str(age_y),),)
+                    contact_count_SPC.append(out[age_y])
 
     ## Temporal characteristics
 
@@ -203,8 +209,12 @@ for i in tqdm(range(len(data))):
                     duration = translations['duration'][int(contact_data.loc['durée ']-1)]
                     # Extract location, keep track of dropped contacts due to missing location
                     loc = contact_data.iloc[4:11].values
-                    loc = loc!= 0
+                    loc = loc!= 0               
                     location = translations['location'][np.where(loc)[0][0]]
+                    # Some parents have filed teacher - student contacts of their children as work_indoor --> set to school below age 16
+                    if ((age <= 16) & (location == 'work_indoor')):
+                        location = 'school'
+                        
                 # Keep track of the contacts data so we can eliminate doubles
                 contact_properties.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation,
                                             sector, age_y, location, duration, daytype, vacation),)
