@@ -34,6 +34,8 @@
 
 + `BE0101U1_20230706-191203.csv`: Population, land area and population density per Swedish county in 2019. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101C/
 
++ `pop-totale-france-metro.xlsx`: demography of metropolitan france per year of age and sex in 2019. Used to distribute the Supplementary Professional Contacts across the desired age groups of the contact matrices. Retrieved from: https://www.insee.fr/en/statistiques/2382599?sommaire=2382613. Modified: saved as .xlsx instead of .xls.
+
 #### labor_market_composition
 
 + `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
@@ -73,8 +75,6 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 + `RawData_ComesF.xlsx`: contains the raw dataset from "The French Connection: The First Large Population-Based Contact Survey in France Relevant for the Spread of Infectious Diseases". Social contact data is available based on the place of work. Modifications: 1) Merge AS --> AY, rename 'SPC'. 2) Rename 'contacts  x' (double space is intentional!), going from 1 to 40 and then again from 1 to 29 --> 'contacts 1' --> 'contacts 69'. 
 
 + `S1_Fig.pdf`: questionnaire used by the authors to obtain the social contact data in `RawData_ComesF.xlsx`.
-
-+ `pop-totale-france-metro.xlsx`: demography of metropolitan france per year of age and sex in 2019. Used to distribute the Supplementary Professional Contacts across the desired age groups of the contact matrices. Retrieved from: https://www.insee.fr/en/statistiques/2382599?sommaire=2382613. Modified: saved as .xlsx instead of .xls.
 
 #### mobility
 
@@ -144,6 +144,8 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 + `age_structure_SWE_2019.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county denoted by its name. Cleaned version of raw demography. 
 
 + `population_density_SWE_2019.csv`: Population, land area and population density per Swedish county in 2019. Cleaned version of `BE0101U1_20230706-191203.csv`.
+
++ `age_structure_FR_2019.csv`: Population of metropolitan France in 2019. Clean version of `pop-totale-france-metro.xlsx`. Elongated until 120 years of age.
 
 ##### proximity
 
