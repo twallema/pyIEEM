@@ -10,9 +10,7 @@ from tqdm import tqdm
 from pyIEEM.data.utils import convert_age_stratified_quantity
 
 # Define desired age groups of final matrices
-#age_classes = pd.IntervalIndex.from_tuples([(0,10),(10,20),(20,30),(30,40),(40,50),(50,60),(60,70),(70,80),(80,120)], closed='left')
 age_classes = pd.IntervalIndex.from_tuples([(0,5),(5,10),(10,15),(15,20),(20,25),(25,30),(30,35),(35,40),(40,45),(45,50),(50,55),(55,60),(60,65),(65,70),(70,75),(75,80),(80,120)], closed='left')
-#age_classes = pd.IntervalIndex.from_tuples([(0,20),(20,40),(40,60),(60,80),(80,120)], closed='left')
 
 # Helper function
 def drop_duplicates(input_list):
@@ -31,20 +29,11 @@ def drop_duplicates(input_list):
         duplicates_count.append(value)
     return result, duplicates_count
 
-# Format demography of France
-demo_df = pd.read_excel('pop-totale-france-metro.xlsx', skiprows=5)
-demo_df = demo_df.set_index('Age in completed years')
-demo_df = demo_df.drop(columns=['Year of birth','Males','Females'])
-demo_df.index.name = 'age'
-demo_df = demo_df.rename(columns={'Total': 'count'})
-demo_df = demo_df.iloc[:-1]
-demo_df = demo_df.squeeze()
-desired_df = pd.DataFrame(0,index=range(121), columns=['count',])
-desired_df = desired_df.join(demo_df,lsuffix='_left', rsuffix='_right')
-demo_df = desired_df['count_right'].fillna(0)
-
 # Define absolute paths only
 abs_dir = os.path.dirname(__file__)
+
+# Load demography of France
+demo_df = pd.read_csv(os.path.join(abs_dir, '../../../../../../data/interim/epi/demographic/age_structure_FR_2019.csv'), index_col=[0,1]).squeeze().droplevel(0)
 
 # Load dataset
 data = pd.read_excel(os.path.join(abs_dir, 'RawData_ComesF.xlsx'), sheet_name="CONTACT", header=[0,1,2])
@@ -145,10 +134,14 @@ for i in tqdm(range(len(data))):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
             if not age <= 16:
                 # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
+                n = SPC_data[1]
+                # Cap at 134 contacts --> reported 95% quantile by Beraud
+                if n > 134:
+                    n = 134
                 age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
-                d = pd.Series(SPC_data[1], index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
+                d = pd.Series(n, index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
                 d = convert_age_stratified_quantity(d, age_groups_SPC, demo_df)
-                d = d/sum(d)*SPC_data[1]
+                d = d/sum(d)*n
                 # Convert to the desired age groups of the contact matrices
                 out = convert_age_stratified_quantity(d, age_classes, demo_df)
                 # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
@@ -263,6 +256,7 @@ df = df[column_order]
 ## compute the distribution of durations of work contacts per sector, for individuals who reported between 10 and 20 contacts
 # output dataframe
 iterables = [df['sector'].unique(), df['duration'].unique()]
+dur = df['duration'].unique()
 names = ['sector', 'duration']
 duration_distribution = pd.Series(0,index=pd.MultiIndex.from_product(iterables, names=names), name='duration_distribution', dtype=float)
 # groupby for convenience
@@ -278,7 +272,7 @@ for ID in tqdm(df.index.get_level_values('ID').unique()):
         # sector
         sector = sl['sector'].unique()
         # distribution
-        duration_distribution.loc[sector, slice(None)] += sl['reported_contacts'].groupby(by='duration').sum().values
+        duration_distribution.loc[sector, slice(None)] += sl['reported_contacts'].groupby(by='duration').sum().reindex(index = dur).values
 # global average distribution
 glob = duration_distribution.groupby(by='duration').sum()/sum(duration_distribution)
 # compute average distribution per sector --> no data --> global average assumed
