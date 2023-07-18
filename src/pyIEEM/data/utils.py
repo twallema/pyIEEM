@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def to_pd_interval(istr, dtype=int):
     """
@@ -30,41 +31,34 @@ def to_pd_interval(istr, dtype=int):
     left, right = map(dtype, istr[1:-1].split(','))
     return pd.Interval(left, right, closed)
 
-import numpy as np
-import sys
 def convert_age_stratified_quantity(data, age_classes, demography):
         """ 
-        Given an age-stratified pd.Series of some quantity: [age_group_lower, age_group_upper] : quantity,
-        this function can convert the data into a user-defined age-stratification using demographic weighing
+        Given a pd.Series containing age classes and some quantity: "[age_group_lower, age_group_upper] : quantity",
+        this function can convert the data into different age groups using demographic weighing
 
-        Parameters
-        ----------
+        input
+        =====
+
         data: pd.Series
-            A dataset containing a quantity in age bands. Index must be of type pd.Intervalindex.
+            a dataset containing a quantity in age bands. Index must be of type pd.Intervalindex.
         
         age_classes : pd.IntervalIndex
-            Desired age groups of output pd.Series.
+            desired age groups of output pd.Series.
 
         demography: pd.Series
-            Demography of the country under study. Index must contain the number of individuals per year of age (type: float).
+            demography of the country under study. Index must contain the number of individuals per year of age (type: float). 
 
-        Returns
-        -------
+        output
+        ======
 
         out: pd.Series
-            Converted data.
+            A dataset containing the quantity in the desired age bands.
         """
 
         # Pre-allocate new series
-        out = pd.Series(index = age_classes, dtype=float)
-        # Format demographics --> age_groups_data / no_individuals
-        demo_format = pd.Series(0, index=data.index)
-        for interval in data.index:
-            count=0
-            for age in range(interval.left, interval.right):
-                count+= demography[age]
-            demo_format.loc[interval] = count
-        
+        out = pd.Series(index=age_classes, dtype=float)
+        # Format demographics into desired age classes
+        demo_format = demography.groupby(pd.cut(demography.index.values, data.index)).sum()
         # Loop over desired intervals
         for idx,interval in enumerate(age_classes):
             result = []
@@ -75,3 +69,125 @@ def convert_age_stratified_quantity(data, age_classes, demography):
                     result.append(0)
             out.iloc[idx] = sum(result)
         return out
+
+def aggregate_contact_matrix(matrix, age_classes, demography):
+    """
+    A function to convert a (square) contact matrix from a given to a desired set of age classes using demographic weighing
+
+    input
+    =====
+
+    matrix: pd.Series
+        contact matrix given as pd.Series with a multiindex containing two levels ('age_x' and 'age_y').
+        the first level is assumed to be the x-axis (survey participant) and the second level the y-axis (contacted individual)
+
+    age_classes : pd.IntervalIndex
+        desired age groups of contact matrix
+
+    demography: pd.Series
+        demography of the country under study. Index must contain the number of individuals per year of age (type: float). 
+
+    output
+    ======
+
+    out: pd.Series
+        contact matrix in desired age classes
+
+    remarks
+    =======
+
+    Only works if the minimum and maximum ages of the demography, x-axis and y-axis of the contact matrix are identical!
+    """
+
+    ## assert minimum and maximum ages are identical
+    assert matrix.index.get_level_values(0).unique().min().left == matrix.index.get_level_values(1).unique().min().left
+    assert matrix.index.get_level_values(0).unique().max().right == matrix.index.get_level_values(1).unique().max().right
+    assert demography.index.max() == matrix.index.get_level_values(0).unique().max().right
+    assert demography.index.min() == matrix.index.get_level_values(0).unique().min().left
+    assert matrix.index.get_level_values(0).unique().max().right == age_classes.max().right
+    ## given age classes
+    given_age_classes = matrix.index.get_level_values(0).unique().values
+    desired_age_classes = age_classes
+    ## pre-allocate output dataframe
+    out = pd.Series(index=pd.MultiIndex.from_product([desired_age_classes, desired_age_classes], names=matrix.index.names), dtype=float)
+    out.name = matrix.name
+    ## convert demography in desired_age_classes
+    desired_demography = demography.groupby(pd.cut(demography.index.values, desired_age_classes)).sum()
+    ## loop over age_x, convert age_y to desired age classes
+    converted_age_y = []
+    for age_x in given_age_classes:
+        converted_age_y.append(convert_age_stratified_quantity(matrix.loc[age_x], desired_age_classes, demography).values) 
+    ## loop over desired age_x
+    for age_class in desired_age_classes:
+        result = np.zeros(len(age_classes), dtype=float)
+        for i in range(age_class.left, age_class.right):
+            # fraction of population in desired age class currently of age i
+            f = (demography.loc[i]/desired_demography.loc[desired_age_classes.contains(i)].values)[0]
+            # number of contacts of age i (in given age class)
+            n = converted_age_y[np.where(given_age_classes.contains(i))[0][0]]
+            # multiply and sum
+            result += f*n
+        # save result
+        out.loc[age_class, slice(None)] = result
+    return out
+
+import statsmodels.api as sm
+from statsmodels.gam.api import GLMGam, BSplines
+def smooth_contact_matrix(matrix, df, degree):
+    """
+    A function to GAM smooth contact matrices
+    
+    Input
+    =====
+    
+    matrix: pd.Series
+        contact matrix given as pd.Series with a multiindex containing two levels ('age_x' and 'age_y')
+        the first level is assumed to be the x-axis (survey participant) and the second level the y-axis (contacted individual)
+
+    df: int
+        Number of B-splines for GAM fit
+        
+    degree: int
+        Degree of B-splines for GAM fit    
+    
+    Output
+    ======
+    
+    matrix: pd.Series
+        Smoothed contact matrix. Index: age_x, age_y. Name: contacts. 
+    """
+    
+    # name of endogeneous variable
+    y = f'{matrix.name} ~'
+    # extract age classes and midpoints
+    age_classes_x = matrix.index.get_level_values(0).unique().values
+    age_classes_y = matrix.index.get_level_values(1).unique().values
+    midpoints_x = [age_class.mid for age_class in age_classes_x]
+    midpoints_y = [age_class.mid for age_class in age_classes_y]
+    index_names = matrix.index.names
+    # replace index with midpoints
+    matrix.index = matrix.index.set_levels(midpoints_x, level=0)
+    matrix.index = matrix.index.set_levels(midpoints_y, level=1)
+    matrix.index.names = ['x', 'y']
+    # drop index
+    matrix = matrix.reset_index()
+    matrix = matrix.astype(float)
+    # construct GAM model
+    x_spline = matrix[['x', 'y']]
+    bs = BSplines(x_spline, df=[df,df], degree=[degree, degree])
+    model = GLMGam.from_formula(y +'x + y + x:y', data=matrix, smoother=bs,
+                                family=sm.families.NegativeBinomial(), alpha=np.array([0.1, 0.1]), method='newton')
+    # fit GAM model
+    res = model.fit()
+    # predict matrix of contacts
+    smoothed_values = res.predict()
+    # merge back into dataframe
+    matrix['smoothed_contacts'] = smoothed_values
+    # set multiindex
+    matrix = matrix.groupby(by=['x','y']).last()
+    # re-introduce the age classes as index
+    matrix.index = matrix.index.set_levels(age_classes_x, level=0)
+    matrix.index = matrix.index.set_levels(age_classes_y, level=1)
+    # set names back to original
+    matrix.index.names = index_names
+    return matrix.squeeze()
