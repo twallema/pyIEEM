@@ -78,9 +78,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### BE
 
-+ `Pop_LPW_NL_25FEB15.XLSX`: contains the working population of Belgium per sex, place of residence and place of work. Data retrieved from: https://census2011.fgov.be/download/downloads_nl.html
-
-+ `active_population_2011.csv`: contains the 18-60 yo (active) population of Belgium per province. Per one year age groups.
++ `Pop_LPW_NL_25FEB15.XLSX`: contains the active population of Belgium per sex, place of residence and place of work. Data retrieved from: https://census2011.fgov.be/download/downloads_nl.html
 
 ##### SWE
 
@@ -95,6 +93,8 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 + `AM0207I6_20230706-115023.csv`: Gainfully employed 16+ years by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
 
 + `sector_structure_by_work_BE_raw.csv`: C19: Werkende bevolking volgens plaats van tewerkstelling (provincies/buitenland), geslacht, economische sector (C), opleidingsniveau, land van staatsburgerschap (A) en leeftijd (B). Data likely resulting from the 2011 Census, however the origins of these data are not clear from Statbel's website. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=f7fa1111-a328-454f-95f3-6c258f522754 
+
+`active_population_BE_raw.csv`: Employed fraction 15-64 year olds. Fraction of total population between 15-64 jaar. Total population. Per Belgian province. Census of 2011. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=06deb4bd-8f91-49fb-befb-cfb25108b5ae (dataset: "Geografische indicatoren (gebaseerd op Census 2011)")
 
 #### pichler
 
@@ -175,13 +175,11 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### BE
 
-+ `active_population_2011_format.csv`: contains the 18-60 yo (active) population of Belgium per province. Summed from 18-60 years old.
-
 + `Pop_LPW_NL_25FEB15_delete_unknown.xlsx`: from the raw spreadsheet `Pop_LPW_NL_25FEB15.xlsx`, the columns denoting the inhabitants with an unkown location of work were removed.
 
 + `extract_recurrent_mobility.py`: script to extract and normalise the recurrent mobility matrix for Belgium.
 
-+ `recurrent_mobility_BE.csv`: contains the recurrent mobility matrix between the Belgian provinces, obtained from the census of 2011. Note that the rows do not sum to one as not every inhabitant has a job. This effect is not minor, with as low as 52% (!) of the active population (18-60 yo) not having a job. The national average employment rate in Sweden is 68.7%.
++ `recurrent_mobility_BE.csv`: contains the recurrent mobility matrix between the Belgian provinces, obtained from the census of 2011. Note that the rows do not sum to one as not every inhabitant has a job. The rows sum to the reported percentage of the population economically active in the census of 2011. This implies that if one (matrix) multiplies the total population in every province with the recurrent mobility matrix, the resulting working population accounts for unemployment.
 
 ##### SWE
 
@@ -200,7 +198,9 @@ sector_structure_by_work_SWE_2019.csv
 
 + `sector_structure_by_work_SWE_2019.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I6_20230706-115023.csv`. I verified the relative fractions in every county sum to one.
 
-+ `sector_structure_by_work_BE.csv`: Cleaned version of `sector_structure_by_work_BE_raw.csv`.
++ `sector_structure_by_work_BE.csv`: Column 'abs' is a cleaned version of the data in `sector_structure_by_work_BE_raw.csv`. Column 'rel' is obtained by dividing by the total number of employed persons between 15-64 year old in Belgium.
+
++ `active_population_BE.csv`: Employed fraction 15-64 year olds. Population between 15-64 year. Total population. Per Belgian province. Census of 2011. Cleaned version of `active_population_BE_raw.csv`.
 
 #### national_accounts
 

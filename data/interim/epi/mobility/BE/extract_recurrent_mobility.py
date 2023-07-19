@@ -29,14 +29,42 @@ working_pop_df = pd.Series(working_pop,index=excel_names)
 mobility_df=pd.DataFrame(mobility_df.loc[extract_names, extract_names].values, index=desired_names,columns=desired_names)
 working_pop_df=pd.Series(working_pop_df.loc[extract_names].values, index=desired_names)
 
-# Extract total population 18-60 yo
-active_pop_df = pd.read_csv(os.path.join(abs_dir, 'active_population_2011_format.csv'), index_col=0)
+# Extract the number of employed people per province according to the census
+n_employed = pd.read_csv(os.path.join(abs_dir, '../../../eco/labor_market_composition/active_population_BE.csv'), index_col=0)['population_15_64']* \
+                pd.read_csv(os.path.join(abs_dir, '../../../eco/labor_market_composition/active_population_BE.csv'), index_col=0)['fraction_employed_15_64']       
+
+# Recurrent mobility data is imperfect 
+# -> Sum over rows should should match degrees of employment in every province (which it doesn't; see below)
+
+# spatial_unit          # computed            # actual (2011 census)
+#Antwerpen              0.63                  0.68
+#Vlaams-Brabant         0.66                  0.69
+#Brabant Wallon         0.61                  0.66
+#Brussels               0.46                  0.57
+#West-Vlaanderen        0.67                  0.70
+#Oost-Vlaanderen        0.67                  0.70
+#Hainaut                0.53                  0.62
+#Liege                  0.55                  0.64
+#Limburg                0.60                  0.67
+#Luxembourg             0.46                  0.66
+#Namur                  0.59                  0.66
+
+# Compute fraction that is missing
+missing_employees = n_employed - mobility_df.sum(axis=1)
+
+# Compute ratios of travelers traveling to every other province
+ratios = mobility_df/mobility_df.sum(axis=1)
+
+# Distribute missing employees using the ratios in the census
+for prov in ratios.index:
+    mobility_df.loc[prov, :] += (ratios.loc[prov, :] * missing_employees.loc[prov]).values
+
+# Extract total population
+total_pop_df = pd.read_csv(os.path.join(abs_dir, '../../../eco/labor_market_composition/active_population_BE.csv'), index_col=0)['total_population']
 
 # Perform row-wise division by total population
 for i in range(len(desired_names)):
-        mobility_df.values[i,:] = mobility_df.values[i,:]/active_pop_df.values[i]
-
-print(f'\nTotal fraction of Belgian active population with a job: {np.sum(working_pop_df.values)/np.sum(active_pop_df.values)*100:.1f} %\n')
+        mobility_df.values[i,:] = mobility_df.values[i,:]/total_pop_df.values[i]
 
 # Save result
 mobility_df=pd.DataFrame(mobility_df.values, index=desired_names,columns=desired_names)
