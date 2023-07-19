@@ -10,3 +10,6 @@ dependencies:
   - matplotlib
   - openpyxl
   - jupyter
+  - tqdm
+  - statsmodels
+  - seaborn
