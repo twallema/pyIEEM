@@ -76,6 +76,12 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `S1_Fig.pdf`: questionnaire used by the authors to obtain the social contact data in `RawData_ComesF.xlsx`.
 
++ `format_raw_data.py`: Converts the raw data in `RawData_ComesF.xlsx` in a more Python-friendly format for further processing. The analysis is run using 5-year age intervals. Noteable asumptions: 1) Maximum SPC contacts truncated at 200, opposed to the original author who set this to 134 (95% quantile of reported SPC contacts). I opted for 200 because cutting of the top 5% observations from a population whos distribution will have a long tail frankly seems statistically wrong to me. 2) Duration distribution of SPC contacts assumed the same as the distribution for work_indoor contacts of survey particpants reporting between 10 and 20 contacts. Outputs a large file `comesf_formatted_data.csv`, which is subsequently used as input by `regress_formatted_data.py`.
+
++ `regress_formatted_data.py`: Peforms a Negative Binomial Regression to the data using a Generalised Estimating Equation. The regression is performed in every location seperately because of limits in computational resources. The data are then expanded to contain a value for every age x and age y. Outputs a large file `comesf_raw_matrices.csv`, which is subsequently used as input by `postprocess_raw_matrices.py`.
+
++ `postprocess_raw_matrices.py`: (1) The locations 'transport' and 'work_leisure_outdoor' are eliminated by merging into other locations. Transport contacts for children during a regular week are merged with the school contacts. Vacation and weekend contacts of children are merged with 'leisure_public'. Transport contacts for elderly are always merged with 'leisure_public'. Transport contacts for the working population during the week (irregardless of vacation) are merged with 'work_indoor' while weekend contacts are merged with 'leisure_public'. Outdoor work/leisure contacts for the active population are merged with 'work_indoor' during the week and with 'leisure_private' during the weekend. Contacts for youths and elderly are merged with 'leisure_private'. (2) The 'SPC' contacts, for which we have assumed that they happen during weekdays outside vacations, are distributed across weekends/vacation according to the observed ratio weekday/weekendday vacation/no vacation on contacts 'work indoor'. (3) The durations are eliminated, the absolute number of contacts and integrated number of contact minutes are saved. (4) The week/weekend average is added to the dataset. (5) The sample size for sector 'K' was small, therefore the data were averaged with the highly similar sector 'M'. (6) Reciprocity at home, leisure_private and leisure_public is forced. (7) The observed sectors are expanded to every level of NACE 21. The results are saved as `data/interim/epi/contacts/matrices/FR/comesf_formatted_matrices.csv`.
+
 #### mobility
 
 ##### BE
@@ -146,6 +152,14 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 + `population_density_SWE_2019.csv`: Population, land area and population density per Swedish county in 2019. Cleaned version of `BE0101U1_20230706-191203.csv`.
 
 + `age_structure_FR_2019.csv`: Population of metropolitan France in 2019. Clean version of `pop-totale-france-metro.xlsx`. Elongated until 120 years of age.
+
+#### contacts
+
+##### matrices
+
+###### FR
+
+`comesf_formatted_matrices.csv`: Contains the contact matrices from the ComesF study. Stratified into: 1) five year age intervals, 2) locations: home, work, leisure_public, leisure_private, school. 3) Economic activity (NACE 21) - matrices at home, schools, leisure_public, leisure_private do not differ with economic activity. They are only present for every sector to make subsequent extraction more elegant. 4) Daytype: weekday, weekendday, average. 5) Vacation: True or False. 6) Absolute number of contacts or integrated contact duration.
 
 ##### proximity
 

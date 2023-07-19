@@ -1,9 +1,9 @@
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from pyIEEM.data.utils import to_pd_interval
-from pyIEEM.data.utils import smooth_contact_matrix, aggregate_contact_matrix, make_reciprocal
+from pyIEEM.data.utils import to_pd_interval, smooth_contact_matrix, aggregate_contact_matrix, make_reciprocal
 
 ###############
 ## Load data ##
@@ -314,9 +314,6 @@ for colname in list(d.columns):
         props = dict(boxstyle='round', facecolor='black', alpha=1)
         ax.text(0.05, 0.12, textstr, transform=ax.transAxes, fontsize=8, color='white',
         verticalalignment='top', bbox=props)
-        
-    #fig.delaxes(axs[-1,-1])
-    #fig.tight_layout(rect=[0, 0, .9, 1])
 
     plt.savefig(f'{colname}_{type_day}_{vacation}.png', dpi=600)
     plt.close()
@@ -325,6 +322,6 @@ for colname in list(d.columns):
 ## Save result ##
 #################
 
-d.to_csv('comesf_formatted_matrices.csv')
+d.to_csv(os.path.join(os.path.dirname(__file__), '../../../../../../data/interim/epi/contacts/matrices/FR/comesf_formatted_matrices.csv'))
 
 

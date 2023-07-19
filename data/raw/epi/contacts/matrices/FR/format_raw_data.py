@@ -132,6 +132,7 @@ for i in tqdm(range(len(data))):
     contact_count_SPC = []
     if ((not math.isnan(SPC_data[0])) & (SPC_data[0] == 1) & (sector != 'not_applicable')):
         if ((not math.isnan(SPC_data[1])) & (sum(SPC_data[2:7]) != 0)):
+            # Under 16 the parents seem to have reported contacts..
             if not age <= 16:
                 # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
                 n = SPC_data[1]
