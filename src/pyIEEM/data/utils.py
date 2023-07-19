@@ -70,6 +70,50 @@ def convert_age_stratified_quantity(data, age_classes, demography):
             out.iloc[idx] = sum(result)
         return out
 
+def make_reciprocal(matrix, demography):
+    """
+    A function to make a contact matrix reciprocal using demographic weighing
+
+    input
+    =====
+
+    matrix: pd.Series
+        contact matrix given as pd.Series with a multiindex containing two levels ('age_x' and 'age_y').
+        the first level is assumed to be the x-axis (survey participant) and the second level the y-axis (contacted individual)
+
+    demography: pd.Series
+        demography of the country under study. Index must contain the number of individuals per year of age (type: float). 
+
+    output
+    ======
+
+    out: pd.Series
+        contact matrix in desired age classes
+    """
+
+    # Verify matrix is square
+    assert all(matrix.index.get_level_values(0).unique().values == matrix.index.get_level_values(1).unique().values)
+
+    # Convert demography to age classes
+    age_classes = matrix.index.get_level_values(0).unique()
+    desired_demography = demography.groupby(pd.cut(demography.index.values, age_classes)).sum()
+
+    # Loop over every row
+    c = np.zeros([len(age_classes), len(age_classes)])
+    for x, age_class_x in enumerate(age_classes):
+        for y, age_class_y in enumerate(age_classes):
+            N_x = desired_demography.loc[age_class_x]
+            N_y = desired_demography.loc[age_class_y]
+            m_xy = matrix.loc[age_class_x, age_class_y]
+            m_yx = matrix.loc[age_class_y, age_class_x]
+            c[x, y] = (m_xy*N_x + m_yx*N_y)/(2*N_x*N_y)*N_x
+
+    # Assign data to matrix
+    matrix = matrix.to_frame()
+    matrix.loc[(slice(None), slice(None)),matrix.columns] = c.flatten()
+    matrix = matrix.squeeze()
+    return matrix
+
 def aggregate_contact_matrix(matrix, age_classes, demography):
     """
     A function to convert a (square) contact matrix from a given to a desired set of age classes using demographic weighing
