@@ -36,14 +36,6 @@
 
 + `pop-totale-france-metro.xlsx`: demography of metropolitan france per year of age and sex in 2019. Used to distribute the Supplementary Professional Contacts across the desired age groups of the contact matrices. Retrieved from: https://www.insee.fr/en/statistiques/2382599?sommaire=2382613. Modified: saved as .xlsx instead of .xls.
 
-#### labor_market_composition
-
-+ `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
-
-+ `AM0207I6_20230706-115023.csv`: Gainfully employed 16+ years by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
-
-+ `sector_structure_by_work_BE_raw.csv`: C19: Werkende bevolking volgens plaats van tewerkstelling (provincies/buitenland), geslacht, economische sector (C), opleidingsniveau, land van staatsburgerschap (A) en leeftijd (B). Data likely resulting from the 2011 Census, however the origins of these data are not clear from Statbel's website. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=f7fa1111-a328-454f-95f3-6c258f522754 
-
 #### contacts
 
 ##### proximity
@@ -95,6 +87,14 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 + `AM0207AC_20230705-141955.csv`: Gainfully employed commuters in Sweden by county 16+ years by County of residence, County of work, sex and year. For 2018. Extracted from: https://www.statistikdatabasen.scb.se 
 
 ### eco
+
+#### labor_market_composition
+
++ `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
+
++ `AM0207I6_20230706-115023.csv`: Gainfully employed 16+ years by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
+
++ `sector_structure_by_work_BE_raw.csv`: C19: Werkende bevolking volgens plaats van tewerkstelling (provincies/buitenland), geslacht, economische sector (C), opleidingsniveau, land van staatsburgerschap (A) en leeftijd (B). Data likely resulting from the 2011 Census, however the origins of these data are not clear from Statbel's website. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=f7fa1111-a328-454f-95f3-6c258f522754 
 
 #### pichler
 
@@ -171,15 +171,6 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 `estimated_remote_labor.csv`: Estimated fraction of workers able to work from home. Primarily based on the reported fraction of workers working from home during the first COVID-19 lockdown in Belgium (`ermg-tables.xlsx`), when telework was mandated where possible. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when data was available. Assumptions listed in the data file.
 
-#### labor_market_composition
-
-+ `sector_structure_by_residence_SWE_2019.csv`: Number (and fraction of the county's population) of gainfully employed by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I5_20230705-155636.csv`. I verified the relative fractions in every county sum to one.
-sector_structure_by_work_SWE_2019.csv
-
-+ `sector_structure_by_work_SWE_2019.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I6_20230706-115023.csv`. I verified the relative fractions in every county sum to one.
-
-+ `sector_structure_by_work_BE.csv`: Cleaned version of `sector_structure_by_work_BE_raw.csv`.
-
 #### mobility
 
 ##### BE
@@ -201,6 +192,15 @@ sector_structure_by_work_SWE_2019.csv
 + `recurrent_mobility_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Note that the rows do not sum to one as not every inhabitant has a job. This effect is not minor, with as low as 52% (!) of the active population (18-60 yo) not having a job. The national average employment rate in Sweden is 84.5%.
 
 ### eco
+
+#### labor_market_composition
+
++ `sector_structure_by_residence_SWE_2019.csv`: Number (and fraction of the county's population) of gainfully employed by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I5_20230705-155636.csv`. I verified the relative fractions in every county sum to one.
+sector_structure_by_work_SWE_2019.csv
+
++ `sector_structure_by_work_SWE_2019.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I6_20230706-115023.csv`. I verified the relative fractions in every county sum to one.
+
++ `sector_structure_by_work_BE.csv`: Cleaned version of `sector_structure_by_work_BE_raw.csv`.
 
 #### national_accounts
 
