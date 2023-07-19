@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from pyIEEM.data.utils import to_pd_interval
-from pyIEEM.data.utils import smooth_contact_matrix, aggregate_contact_matrix
+from pyIEEM.data.utils import smooth_contact_matrix, aggregate_contact_matrix, make_reciprocal
 
 ###############
 ## Load data ##
@@ -128,7 +128,7 @@ for location in ['SPC', 'work']:
             for vacation in vacations:
                 for colname in list(d.columns):
                     try:
-                        mat = smooth_contact_matrix(d.loc[(location, sector, type_day, vacation), colname], 4, 2)['smoothed_contacts'].values
+                        mat = smooth_contact_matrix(d.loc[(location, sector, type_day, vacation), colname], 4, 3)['smoothed_contacts'].values
                     except:
                         # Verified seperation error arises because sum of matrix < 10e-09 --> set zeros
                         mat = np.zeros(len(age_classes)*len(age_classes))
@@ -161,76 +161,22 @@ d = pd.concat([avg, d.reset_index()]).groupby(by=['location', 'sector', 'type_da
 d.loc[(slice(None), 'K', slice(None), slice(None), slice(None), slice(None)), :] = \
     d.loc[(slice(None), ['K','M'], slice(None), slice(None), slice(None), slice(None)), :].groupby(by=['location', 'type_day', 'vacation', 'age_x','age_y']).mean().values
 
-########################
-## Visualise matrices ##
-########################
+##########################################################
+## Reciprocity at home, leisure_private, leisure_public ##
+##########################################################
 
-# settings
-type_day = 'average'
-vacation = False
+locations = ['home', 'leisure_public', 'leisure_private']
 
-# index levels
-age_classes = d.index.get_level_values('age_x').unique().values
-sectors = list(d.index.get_level_values('sector').unique().values)
-locations = ['home', 'leisure_private', 'leisure_public', 'school'] + len(sectors)*['work',]
-locations_titles = ['Home', 'Leisure (private)', 'Leisure (public)', 'School'] + len(sectors)*['Workplace',]
-sectors = ['A', 'A', 'A', 'A'] + sectors
-
-for colname in list(d.columns):
-
-    fig, axs = plt.subplots(nrows=5, ncols=3, figsize=(8.3, 11.7))
-
-    for i in range(len(axs.flatten())-1):
-        ax = axs.flatten()[i]
-        # heatmap
-        m = d.loc[(locations[i], sectors[i], type_day, vacation, slice(None), slice(None)), colname].values.reshape([len(age_classes), len(age_classes)])
-        if colname == 'absolute_contacts':
-            vmin = 0
-            vmax = 2
-        else:
-            vmin = 0
-            vmax = 4*60
-        x = sns.heatmap(m, annot=False, fmt='.1f', ax=ax, square=True, cbar=False,
-                         annot_kws={"size":6}, vmin=vmin, vmax=vmax)
-        
-        # Ticks
-        ax.xaxis.tick_top() # x axis on top
-        ax.xaxis.set_label_position('top')
-
-        if i < 3:
-            ax.set_xticks(np.array(range(len(age_classes)))+0.5)
-            ax.set_xticklabels(age_classes, rotation=70, size=6)
-        else:
-            ax.set_xticks(ticks=[])
-            ax.set_xticklabels(labels=[])
-        
-        if i in [1,2,4,5,7,8,10,11,13]:
-            ax.set_yticks(ticks=[])
-            ax.set_yticklabels(labels=[])
-        else:
-            ax.set_yticks(np.array(range(len(age_classes)))+0.5)
-            ax.set_yticklabels(age_classes, rotation=20, size=6)
-        
-        
-        # Titles
-        if i < 4:
-            ax.set_title(f'{locations_titles[i]}', fontsize=10)
-        else:
-            ax.set_title(f'{locations_titles[i]} ({sectors[i]})', fontsize=10)
-
-        # Number of contacts
-        if colname == 'absolute_contacts':
-            textstr = f'{np.mean(np.sum(m,axis=1)):.1f} contacts'
-        else:
-            textstr = f'{np.mean(np.sum(m,axis=1)):.0f} contact min.'
-            
-        props = dict(boxstyle='round', facecolor='black', alpha=1)
-        ax.text(0.05, 0.12, textstr, transform=ax.transAxes, fontsize=6, color='white',
-        verticalalignment='top', bbox=props)
-        
-    fig.delaxes(axs[-1,-1])
-    plt.savefig(f'{colname}_{type_day}_{vacation}.png', dpi=600)
-    plt.close()
+print(f"Enforcing reciprocity on locations: '{locations}'\n")
+for location in locations:
+    print(f"\tlocation: '{location}'")
+    for sector in d.index.get_level_values('sector').unique().values:
+        for type_day in d.index.get_level_values('type_day').unique().values:
+            for vacation in d.index.get_level_values('vacation').unique().values:
+                for colname in d.columns:
+                    mat = make_reciprocal(d.loc[location, sector, type_day, vacation, slice(None), slice(None)][colname], demography)
+                    d.loc[(location, sector, type_day, vacation, slice(None), slice(None)), colname] = mat.values          
+print('\ndone.\n')
 
 ##############################################
 ## Expand sectors to every level of NACE 21 ##
@@ -249,7 +195,7 @@ iterables = [locations, sectors, type_days, vacations, age_x, age_y]
 new_df = pd.DataFrame(index=pd.MultiIndex.from_product(iterables, names=d.index.names), columns=d.columns)
 
 # Fill it in: sectors for which we have data
-for sector in ['A', 'C', 'D', 'F', 'G', 'M']:
+for sector in ['A', 'C', 'D', 'F', 'G', 'M', 'K']:
     new_df.loc[slice(None), sector, slice(None), slice(None), slice(None), slice(None)] = \
         d.loc[slice(None), sector, slice(None), slice(None), slice(None), slice(None)].values
 
@@ -258,8 +204,6 @@ new_df.loc[slice(None), 'O', slice(None), slice(None), slice(None), slice(None)]
     d.loc[slice(None), 'O, N', slice(None), slice(None), slice(None), slice(None)].values
 new_df.loc[slice(None), 'N', slice(None), slice(None), slice(None), slice(None)] = \
     d.loc[slice(None), 'O, N', slice(None), slice(None), slice(None), slice(None)].values
-new_df.loc[slice(None), 'P', slice(None), slice(None), slice(None), slice(None)] = \
-    d.loc[slice(None), 'P, Q', slice(None), slice(None), slice(None), slice(None)].values
 new_df.loc[slice(None), 'Q', slice(None), slice(None), slice(None), slice(None)] = \
     d.loc[slice(None), 'P, Q', slice(None), slice(None), slice(None), slice(None)].values
 new_df.loc[slice(None), 'S', slice(None), slice(None), slice(None), slice(None)] = \
@@ -283,9 +227,6 @@ new_df.loc[slice(None), 'I', slice(None), slice(None), slice(None), slice(None)]
 # J is equal to M --> motivated by similar relative incidence in Belgium (Verbeeck)
 new_df.loc[slice(None), 'J', slice(None), slice(None), slice(None), slice(None)] = \
     d.loc[slice(None), 'M', slice(None), slice(None), slice(None), slice(None)].values 
-# K is equal to the average of K and O,N --> small sample size for K, similar relative incidence in Belgium (Verbeeck) between sector K and O, N
-#new_df.loc[slice(None), 'K', slice(None), slice(None), slice(None), slice(None)] = \
-#    d.loc[slice(None), ['K','O, N'], slice(None), slice(None), slice(None), slice(None)].groupby(by=['location', 'type_day', 'vacation', 'age_x','age_y']).mean().values
 # L is equal to G --> highly similar customer-facing interactions
 new_df.loc[slice(None), 'L', slice(None), slice(None), slice(None), slice(None)] = \
     d.loc[slice(None), 'G', slice(None), slice(None), slice(None), slice(None)].values
@@ -293,12 +234,97 @@ new_df.loc[slice(None), 'L', slice(None), slice(None), slice(None), slice(None)]
 new_df.loc[slice(None), 'R', slice(None), slice(None), slice(None), slice(None)] = \
     d.loc[slice(None), 'G', slice(None), slice(None), slice(None), slice(None)].values
 
-data=new_df.copy()
+# Schools are an important exception: synthetic school work contacts are the contacts with people aged < 25 yo
+new_df.loc[slice(None), 'P', slice(None), slice(None), slice(None), age_classes[:5]] = \
+    d.loc[slice(None), 'P, Q', slice(None), slice(None), slice(None), age_classes[:5]].values
+new_df = new_df.fillna(0)
+d = new_df.copy()
+
+
+########################
+## Visualise matrices ##
+########################
+
+from matplotlib.colors import SymLogNorm
+
+# settings
+type_day = 'average'
+vacation = False
+
+# index levels
+age_classes = d.index.get_level_values('age_x').unique().values
+sectors = ['A', 'C', 'D', 'F', 'G', 'K', 'M', 'O', 'P', 'Q', 'S']
+sectors = ['A', 'A', 'A', 'A'] + sectors
+sectors_names = ['A', 'A', 'A', 'A'] + ['A', 'C', 'D', 'F', 'G', 'K', 'M', 'O, N', 'P', 'Q', 'S, T']
+locations = ['home', 'leisure_private', 'leisure_public', 'school'] + len(sectors)*['work',]
+locations_titles = ['Home', 'Leisure (private)', 'Leisure (public)', 'School'] + len(sectors)*['Workplace',]
+
+for colname in list(d.columns):
+
+    fig, axs = plt.subplots(nrows=5, ncols=3, figsize=(8.3, 11.7))
+
+    for i in range(len(axs.flatten())):
+        ax = axs.flatten()[i]
+
+        # heatmap
+        m = d.loc[(locations[i], sectors[i], type_day, vacation, slice(None), slice(None)), colname].values.reshape([len(age_classes), len(age_classes)])
+        if colname == 'absolute_contacts':
+            vthresh = 0.25
+            vmax = 10.1
+        else:
+            vthresh = 15
+            vmax = 1010
+
+        cbar_ax = fig.add_axes([.91, .3, .03, .4])
+        x = sns.heatmap(m, annot=False, fmt='.1f', ax=ax, square=True, cmap="mako",
+                         annot_kws={"size":6}, vmin=0, vmax=vmax, norm=SymLogNorm(linthresh=vthresh, vmin=0, vmax=vmax),
+                         cbar=True, cbar_ax=cbar_ax)
+        
+        # Ticks
+        ax.xaxis.tick_top() # x axis on top
+        ax.xaxis.set_label_position('top')
+
+        if i < 3:
+            ax.set_xticks(np.array(range(len(age_classes)))+0.5)
+            ax.set_xticklabels(age_classes, rotation=75, size=6)
+        else:
+            ax.set_xticks(ticks=[])
+            ax.set_xticklabels(labels=[])
+        
+        if i in [1,2,4,5,7,8,10,11,13,14]:
+            ax.set_yticks(ticks=[])
+            ax.set_yticklabels(labels=[])
+        else:
+            ax.set_yticks(np.array(range(len(age_classes)))+0.5)
+            ax.set_yticklabels(age_classes, rotation=15, size=6)
+        
+        
+        # Titles
+        if i < 4:
+            ax.set_title(f'{locations_titles[i]}', fontsize=11)
+        else:
+            ax.set_title(f'{locations_titles[i]} ({sectors_names[i]})', fontsize=11)
+
+        # Number of contacts
+        if colname == 'absolute_contacts':
+            textstr = f'{np.mean(np.sum(m,axis=1)):.1f} contacts'
+        else:
+            textstr = f'{np.mean(np.sum(m,axis=1)):.0f} contact min.'
+            
+        props = dict(boxstyle='round', facecolor='black', alpha=1)
+        ax.text(0.05, 0.12, textstr, transform=ax.transAxes, fontsize=8, color='white',
+        verticalalignment='top', bbox=props)
+        
+    #fig.delaxes(axs[-1,-1])
+    #fig.tight_layout(rect=[0, 0, .9, 1])
+
+    plt.savefig(f'{colname}_{type_day}_{vacation}.png', dpi=600)
+    plt.close()
 
 #################
 ## Save result ##
 #################
 
-data.to_csv('comesf_formatted_matrices.csv')
+d.to_csv('comesf_formatted_matrices.csv')
 
 
