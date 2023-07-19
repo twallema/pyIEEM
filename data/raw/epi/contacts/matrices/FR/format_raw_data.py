@@ -136,8 +136,8 @@ for i in tqdm(range(len(data))):
                 # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
                 n = SPC_data[1]
                 # Cap at 134 contacts --> reported 95% quantile by Beraud
-                if n > 134:
-                    n = 134
+                if n > 200:
+                    n = 200
                 age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
                 d = pd.Series(n, index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
                 d = convert_age_stratified_quantity(d, age_groups_SPC, demo_df)
