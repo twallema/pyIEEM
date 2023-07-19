@@ -62,12 +62,24 @@ for prov in ratios.index:
 # Extract total population
 total_pop_df = pd.read_csv(os.path.join(abs_dir, '../../../eco/labor_market_composition/active_population_BE.csv'), index_col=0)['total_population']
 
+# Save a copy
+mobility_df_normactive = mobility_df.copy()
+
 # Perform row-wise division by total population
 for i in range(len(desired_names)):
         mobility_df.values[i,:] = mobility_df.values[i,:]/total_pop_df.values[i]
 
 # Save result
 mobility_df=pd.DataFrame(mobility_df.values, index=desired_names,columns=desired_names)
+mobility_df.to_csv(os.path.join(abs_dir,'recurrent_mobility_normtotal_BE.csv'))
+
+# Total active population
+active_pop_df = pd.read_csv(os.path.join(abs_dir, '../../../eco/labor_market_composition/active_population_BE.csv'), index_col=0)['population_15_64']
+
+# Perform row-wise division by active population
+for i in range(len(desired_names)):
+        mobility_df_normactive.values[i,:] = mobility_df_normactive.values[i,:]/active_pop_df.values[i]
 
 # Save result
-mobility_df.to_csv(os.path.join(abs_dir,'recurrent_mobility_BE.csv'))
+mobility_df=pd.DataFrame(mobility_df_normactive.values, index=desired_names,columns=desired_names)
+mobility_df.to_csv(os.path.join(abs_dir,'recurrent_mobility_normactive_BE.csv'))
