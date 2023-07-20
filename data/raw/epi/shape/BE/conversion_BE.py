@@ -18,13 +18,13 @@ limburg = limburg.dissolve(by='NAME_2', aggfunc='sum')
 BE.drop(2, inplace=True)
 
 # Define a better index name
-BE['simple_names'] = ['Brussel', 'Antwerpen', 'Oost-Vlaanderen', 'Vlaams Brabant', 'West-Vlaanderen', 'Brabant Wallon',
+BE['spatial_unit'] = ['Brussels', 'Antwerpen', 'Oost-Vlaanderen', 'Vlaams-Brabant', 'West-Vlaanderen', 'Brabant Wallon',
                         'Hainaut', 'Liege', 'Limburg', 'Luxembourg', 'Namur']
-BE.set_index('simple_names', inplace=True)
+BE.set_index('spatial_unit', inplace=True)
 BE.index.name = 'spatial_unit'
 
 # Drop all columns except geometry
-BE.drop(columns=[x for x in list(BE.columns) if x != 'geometry'], inplace=True)
+BE.drop(columns=[x for x in list(BE.columns) if ((x != 'geometry') & (x != 'spatial_unit'))], inplace=True)
 
 # Add merged limburg
 BE.loc['Limburg'] = limburg['geometry'].values[0]
@@ -40,6 +40,9 @@ BE['pop'] = [1208542, 1857986, 1515064, 1146175, 1195796, 403599, 1344241, 11069
 
 # Compute population density
 BE['pop_density'] = BE['pop']/BE['area']
+
+# Set index
+BE['spatial_unit'] = BE.index.values
 
 # Save result
 BE.to_file(os.path.join(abs_dir, '../../../../interim/epi/shape/BE.json'), driver="GeoJSON")
