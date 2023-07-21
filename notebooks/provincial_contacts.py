@@ -41,7 +41,7 @@ for i, country_suffix in enumerate(country_suffixes):
     workpop = np.matmul(np.transpose(mob), pop).squeeze()
     # Load NACE 21 composition at provincial level
     sectors = pd.read_csv(os.path.join(abs_dir, f'../data/interim/eco/labor_market_composition/sector_structure_by_work_{country_suffix}.csv'), index_col=[0,1])['rel']
-    
+    print(pop)
     ## desination-based average number of contacts 
     # Compute the number of contacts at work
     work_cont = pop.copy()
