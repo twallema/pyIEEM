@@ -16,7 +16,7 @@ def initialize_SIR(country, age_classes, spatial=True):
     demography = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0,1])
     demography = demography.groupby(by=['spatial_unit', pd.cut(demography.index.get_level_values('age').values, age_classes)], sort=True).sum()
     demography.index.rename(['spatial_unit', 'age_class'], inplace=True)
-
+    
     # Load recurrent mobility matrices and sort alphabetically
     mob = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0)
     mob = mob.loc[sorted(mob.index), sorted(mob.columns)]
