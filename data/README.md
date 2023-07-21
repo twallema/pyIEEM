@@ -30,19 +30,13 @@
 
 + `export.csv`: Demography of Belgium in 2019. Stratified per year of age from 0 to 100 years old. Stratified per province denoted by its NIS code. Retrieved from: https://bestat.statbel.fgov.be/bestat/ > Population by place of residence, nationality (Belgian/non-Belgian), marital status, age and gender 
 
++ `BE0101N1_20230719-185419.csv`: Demography of Sweden in 2019. Total population per county. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101A 
+
 + `BE0101N1_20230704-171432.csv`: Demography of Sweden in 2019. Stratified per year of age from 0 to 100 years old. Stratified per county. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101C/
 
 + `BE0101U1_20230706-191203.csv`: Population, land area and population density per Swedish county in 2019. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__BE__BE0101__BE0101C/
 
 + `pop-totale-france-metro.xlsx`: demography of metropolitan france per year of age and sex in 2019. Used to distribute the Supplementary Professional Contacts across the desired age groups of the contact matrices. Retrieved from: https://www.insee.fr/en/statistiques/2382599?sommaire=2382613. Modified: saved as .xlsx instead of .xls.
-
-#### labor_market_composition
-
-+ `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
-
-+ `AM0207I6_20230706-115023.csv`: Gainfully employed 16+ years by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
-
-+ `sector_structure_by_work_BE_raw.csv`: C19: Werkende bevolking volgens plaats van tewerkstelling (provincies/buitenland), geslacht, economische sector (C), opleidingsniveau, land van staatsburgerschap (A) en leeftijd (B). Data likely resulting from the 2011 Census, however the origins of these data are not clear from Statbel's website. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=f7fa1111-a328-454f-95f3-6c258f522754 
 
 #### contacts
 
@@ -86,15 +80,23 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### BE
 
-+ `Pop_LPW_NL_25FEB15.XLSX`: contains the working population of Belgium per sex, place of residence and place of work. Data retrieved from: https://census2011.fgov.be/download/downloads_nl.html
-
-+ `active_population_2011.csv`: contains the 18-60 yo (active) population of Belgium per province. Per one year age groups.
++ `Pop_LPW_NL_25FEB15.XLSX`: contains the active population of Belgium per sex, place of residence and place of work. Data retrieved from: https://census2011.fgov.be/download/downloads_nl.html
 
 ##### SWE
 
 + `AM0207AC_20230705-141955.csv`: Gainfully employed commuters in Sweden by county 16+ years by County of residence, County of work, sex and year. For 2018. Extracted from: https://www.statistikdatabasen.scb.se 
 
 ### eco
+
+#### labor_market_composition
+
++ `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
+
++ `AM0207I6_20230706-115023.csv`: Gainfully employed 16+ years by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
+
++ `sector_structure_by_work_BE_raw.csv`: C19: Werkende bevolking volgens plaats van tewerkstelling (provincies/buitenland), geslacht, economische sector (C), opleidingsniveau, land van staatsburgerschap (A) en leeftijd (B). Data likely resulting from the 2011 Census, however the origins of these data are not clear from Statbel's website. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=f7fa1111-a328-454f-95f3-6c258f522754 
+
+`active_population_BE_raw.csv`: Employed fraction 15-64 year olds. Fraction of total population between 15-64 jaar. Total population. Per Belgian province. Census of 2011. Retrieved from: https://bestat.statbel.fgov.be/bestat/crosstable.xhtml?datasource=06deb4bd-8f91-49fb-befb-cfb25108b5ae (dataset: "Geografische indicatoren (gebaseerd op Census 2011)")
 
 #### pichler
 
@@ -171,36 +173,44 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 `estimated_remote_labor.csv`: Estimated fraction of workers able to work from home. Primarily based on the reported fraction of workers working from home during the first COVID-19 lockdown in Belgium (`ermg-tables.xlsx`), when telework was mandated where possible. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when data was available. Assumptions listed in the data file.
 
-#### labor_market_composition
-
-+ `sector_structure_by_residence_SWE_2019.csv`: Number (and fraction of the county's population) of gainfully employed by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I5_20230705-155636.csv`. I verified the relative fractions in every county sum to one.
-sector_structure_by_work_SWE_2019.csv
-
-+ `sector_structure_by_work_SWE_2019.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I6_20230706-115023.csv`. I verified the relative fractions in every county sum to one.
-
-+ `sector_structure_by_work_BE.csv`: Cleaned version of `sector_structure_by_work_BE_raw.csv`.
-
 #### mobility
 
 ##### BE
-
-+ `active_population_2011_format.csv`: contains the 18-60 yo (active) population of Belgium per province. Summed from 18-60 years old.
 
 + `Pop_LPW_NL_25FEB15_delete_unknown.xlsx`: from the raw spreadsheet `Pop_LPW_NL_25FEB15.xlsx`, the columns denoting the inhabitants with an unkown location of work were removed.
 
 + `extract_recurrent_mobility.py`: script to extract and normalise the recurrent mobility matrix for Belgium.
 
-+ `recurrent_mobility_BE.csv`: contains the recurrent mobility matrix between the Belgian provinces, obtained from the census of 2011. Note that the rows do not sum to one as not every inhabitant has a job. This effect is not minor, with as low as 52% (!) of the active population (18-60 yo) not having a job. The national average employment rate in Sweden is 68.7%.
++ `recurrent_mobility_normtotal_BE.csv`: contains the recurrent mobility matrix between the Belgian provinces, obtained from the census of 2011. Normalised by the total population.
+
++ `recurrent_mobility_normactive_BE.csv`: contains the recurrent mobility matrix between the Belgian provinces, obtained from the census of 2011. Normalised by the total active population (16-65 yo).
 
 ##### SWE
 
-+ `AM0207AC_20230705-141955_format.csv`:  Gainfully employed commuters in 2018 by Swedish county 16+ years by County of residence, County of work, sex and year. For 2018. Formatted in an origin-destination style matrix. Raw data extracted from: https://www.statistikdatabasen.scb.se 
++ `AM0207AC_20230705-141955_format.csv`:  Number of gainfully employed commuters in 2018 by Swedish county 16+ years by County of residence, County of work, sex and year. For 2018. Formatted from `AM0207AC_20230705-141955.csv` into an origin-destination style matrix. Raw data extracted from: https://www.statistikdatabasen.scb.se 
 
-+ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-60 year old (active population) in 2019. Used to normalize the recurrent mobility matrix. Formatted from `age_structure_SWE_2019.csv`. 
++ `BE0101N1_20230719-185419_format.csv`: Total number of inhabitants per Swedish county in 2018. Cleaned version of `BE0101N1_20230719-185419.csv`.
 
-+ `recurrent_mobility_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Note that the rows do not sum to one as not every inhabitant has a job. This effect is not minor, with as low as 52% (!) of the active population (18-60 yo) not having a job. The national average employment rate in Sweden is 84.5%.
++ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-60 years old (active population) per county. Formatted from `data/interim/epi/demographic/age_structure_SWE_2019.csv`. # TODO: Perhaps change to 16-65 years old.
+
++ `recurrent_mobility_normtotal_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Recurrent mobility matrix `AM0207AC_20230705-141955_format.csv` normalised with the total population `BE0101N1_20230719-185419_format.csv`.
+
++ `recurrent_mobility_normactive_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Recurrent mobility matrix `AM0207AC_20230705-141955_format.csv` normalised with the total active population `active_population_2019_format.csv`.
 
 ### eco
+
+#### labor_market_composition
+
++ `sector_structure_by_residence_SWE_2019.csv`: Number (and fraction of the county's population) of gainfully employed by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I5_20230705-155636.csv`. I verified the relative fractions in every county sum to one.
+sector_structure_by_work_SWE_2019.csv
+
++ `sector_structure_by_work_SWE_2019_original.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Cleaned version of `AM0207I6_20230706-115023.csv`. I verified the relative fractions in every county sum to one.
+
++ `sector_structure_by_work_SWE.csv`: Number (and fraction of the county's total number of workers) of gainfully employed by Swedish county of work (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Aggregated sectors (f.e. 'S, T') expanded to match the NACE 21 classification ('S' and 'T').  Aggregated sectors are disentangled using the national number of employees at the NACE 64 level (found in IO tables). Converted from: `sector_structure_by_work_SWE_2019_original.csv` using `expand_sector_structure_SWE.ipynb`.
+
++ `sector_structure_by_work_BE.csv`: Column 'abs' is a cleaned version of the data in `sector_structure_by_work_BE_raw.csv`. Column 'rel' is obtained by dividing by the total number of employed persons between 15-64 year old in Belgium.
+
++ `active_population_BE.csv`: Employed fraction 15-64 year olds. Population between 15-64 year. Total population. Per Belgian province. Census of 2011. Cleaned version of `active_population_BE_raw.csv`.
 
 #### national_accounts
 

@@ -1,0 +1,316 @@
+spatial_unit,economic_activity,abs
+Stockholm,A,4066
+Stockholm,"B, C",65577
+Stockholm,"D, E",9909
+Stockholm,F,83873
+Stockholm,G,165754
+Stockholm,H,63825
+Stockholm,I,53758
+Stockholm,J,104935
+Stockholm,K,55720
+Stockholm,L,21057
+Stockholm,"M, N",208691
+Stockholm,O,80174
+Stockholm,P,123711
+Stockholm,Q,152742
+Stockholm,"R, S, T, U",65671
+Uppsala,A,3219
+Uppsala,"B, C",12140
+Uppsala,"D, E",2538
+Uppsala,F,14255
+Uppsala,G,16976
+Uppsala,H,5690
+Uppsala,I,4547
+Uppsala,J,4387
+Uppsala,K,1546
+Uppsala,L,2720
+Uppsala,"M, N",20070
+Uppsala,O,11478
+Uppsala,P,22384
+Uppsala,Q,31444
+Uppsala,"R, S, T, U",7088
+Sodermanland,A,2509
+Sodermanland,"B, C",16228
+Sodermanland,"D, E",1327
+Sodermanland,F,10349
+Sodermanland,G,12734
+Sodermanland,H,4680
+Sodermanland,I,3758
+Sodermanland,J,1640
+Sodermanland,K,1063
+Sodermanland,L,2410
+Sodermanland,"M, N",11101
+Sodermanland,O,6917
+Sodermanland,P,14886
+Sodermanland,Q,23580
+Sodermanland,"R, S, T, U",5024
+Ostergotland,A,4738
+Ostergotland,"B, C",29787
+Ostergotland,"D, E",2181
+Ostergotland,F,15506
+Ostergotland,G,22203
+Ostergotland,H,9194
+Ostergotland,I,6384
+Ostergotland,J,8299
+Ostergotland,K,2125
+Ostergotland,L,3652
+Ostergotland,"M, N",25162
+Ostergotland,O,13657
+Ostergotland,P,24882
+Ostergotland,Q,37320
+Ostergotland,"R, S, T, U",8654
+Jonkoping,A,4833
+Jonkoping,"B, C",40869
+Jonkoping,"D, E",1651
+Jonkoping,F,10856
+Jonkoping,G,20922
+Jonkoping,H,10403
+Jonkoping,I,4636
+Jonkoping,J,2909
+Jonkoping,K,1013
+Jonkoping,L,2358
+Jonkoping,"M, N",15264
+Jonkoping,O,9455
+Jonkoping,P,18841
+Jonkoping,Q,30918
+Jonkoping,"R, S, T, U",5933
+Kronoberg,A,3137
+Kronoberg,"B, C",18375
+Kronoberg,"D, E",576
+Kronoberg,F,6343
+Kronoberg,G,12122
+Kronoberg,H,4985
+Kronoberg,I,2493
+Kronoberg,J,3540
+Kronoberg,K,843
+Kronoberg,L,1326
+Kronoberg,"M, N",10007
+Kronoberg,O,4530
+Kronoberg,P,10902
+Kronoberg,Q,16967
+Kronoberg,"R, S, T, U",3439
+Kalmar,A,4624
+Kalmar,"B, C",19714
+Kalmar,"D, E",1994
+Kalmar,F,7843
+Kalmar,G,10897
+Kalmar,H,4374
+Kalmar,I,3512
+Kalmar,J,1623
+Kalmar,K,868
+Kalmar,L,1709
+Kalmar,"M, N",9244
+Kalmar,O,6371
+Kalmar,P,12097
+Kalmar,Q,21031
+Kalmar,"R, S, T, U",4250
+Gotland,A,1631
+Gotland,"B, C",1848
+Gotland,"D, E",247
+Gotland,F,2582
+Gotland,G,2587
+Gotland,H,1236
+Gotland,I,1540
+Gotland,J,380
+Gotland,K,627
+Gotland,L,443
+Gotland,"M, N",1806
+Gotland,O,2997
+Gotland,P,2865
+Gotland,Q,4959
+Gotland,"R, S, T, U",1692
+Blekinge,A,1879
+Blekinge,"B, C",11829
+Blekinge,"D, E",804
+Blekinge,F,4635
+Blekinge,G,5699
+Blekinge,H,2537
+Blekinge,I,1890
+Blekinge,J,2596
+Blekinge,K,502
+Blekinge,L,1032
+Blekinge,"M, N",6451
+Blekinge,O,6336
+Blekinge,P,8223
+Blekinge,Q,13942
+Blekinge,"R, S, T, U",2429
+Skane,A,11648
+Skane,"B, C",57209
+Skane,"D, E",5953
+Skane,F,45598
+Skane,G,82548
+Skane,H,29308
+Skane,I,19594
+Skane,J,22124
+Skane,K,8101
+Skane,L,11075
+Skane,"M, N",72780
+Skane,O,33778
+Skane,P,72921
+Skane,Q,102229
+Skane,"R, S, T, U",26111
+Halland,A,4027
+Halland,"B, C",16522
+Halland,"D, E",3025
+Halland,F,12521
+Halland,G,21260
+Halland,H,6100
+Halland,I,5150
+Halland,J,1953
+Halland,K,1684
+Halland,L,2121
+Halland,"M, N",12673
+Halland,O,6716
+Halland,P,16904
+Halland,Q,24458
+Halland,"R, S, T, U",5817
+Vastra Gotaland,A,13069
+Vastra Gotaland,"B, C",120638
+Vastra Gotaland,"D, E",8053
+Vastra Gotaland,F,60396
+Vastra Gotaland,G,106940
+Vastra Gotaland,H,42242
+Vastra Gotaland,I,27644
+Vastra Gotaland,J,31253
+Vastra Gotaland,K,10198
+Vastra Gotaland,L,14096
+Vastra Gotaland,"M, N",109318
+Vastra Gotaland,O,48718
+Vastra Gotaland,P,89954
+Vastra Gotaland,Q,139274
+Vastra Gotaland,"R, S, T, U",33902
+Varmland,A,4415
+Varmland,"B, C",17531
+Varmland,"D, E",1257
+Varmland,F,10158
+Varmland,G,14445
+Varmland,H,5333
+Varmland,I,3952
+Varmland,J,2751
+Varmland,K,1063
+Varmland,L,2304
+Varmland,"M, N",11476
+Varmland,O,7633
+Varmland,P,14131
+Varmland,Q,23755
+Varmland,"R, S, T, U",5340
+Orebro,A,2857
+Orebro,"B, C",20643
+Orebro,"D, E",1244
+Orebro,F,10969
+Orebro,G,15760
+Orebro,H,6967
+Orebro,I,4024
+Orebro,J,3073
+Orebro,K,992
+Orebro,L,2413
+Orebro,"M, N",13020
+Orebro,O,10227
+Orebro,P,16255
+Orebro,Q,26514
+Orebro,"R, S, T, U",5695
+Vastmanland,A,1909
+Vastmanland,"B, C",21720
+Vastmanland,"D, E",1523
+Vastmanland,F,9025
+Vastmanland,G,13038
+Vastmanland,H,4944
+Vastmanland,I,3451
+Vastmanland,J,2238
+Vastmanland,K,978
+Vastmanland,L,1897
+Vastmanland,"M, N",14777
+Vastmanland,O,6883
+Vastmanland,P,13177
+Vastmanland,Q,21950
+Vastmanland,"R, S, T, U",4301
+Dalarna,A,4197
+Dalarna,"B, C",19843
+Dalarna,"D, E",1519
+Dalarna,F,11441
+Dalarna,G,14602
+Dalarna,H,5318
+Dalarna,I,4312
+Dalarna,J,2053
+Dalarna,K,921
+Dalarna,L,2070
+Dalarna,"M, N",11088
+Dalarna,O,8317
+Dalarna,P,14951
+Dalarna,Q,25910
+Dalarna,"R, S, T, U",6138
+Gavleborg,A,4109
+Gavleborg,"B, C",19596
+Gavleborg,"D, E",1655
+Gavleborg,F,11369
+Gavleborg,G,12256
+Gavleborg,H,5966
+Gavleborg,I,4217
+Gavleborg,J,2227
+Gavleborg,K,959
+Gavleborg,L,2137
+Gavleborg,"M, N",11014
+Gavleborg,O,9198
+Gavleborg,P,13967
+Gavleborg,Q,24556
+Gavleborg,"R, S, T, U",5455
+Vasternorrland,A,4013
+Vasternorrland,"B, C",13521
+Vasternorrland,"D, E",1499
+Vasternorrland,F,9015
+Vasternorrland,G,11226
+Vasternorrland,H,5710
+Vasternorrland,I,3169
+Vasternorrland,J,3925
+Vasternorrland,K,3118
+Vasternorrland,L,1839
+Vasternorrland,"M, N",10235
+Vasternorrland,O,8957
+Vasternorrland,P,12462
+Vasternorrland,Q,21669
+Vasternorrland,"R, S, T, U",4793
+Jamtland,A,3333
+Jamtland,"B, C",4729
+Jamtland,"D, E",764
+Jamtland,F,5017
+Jamtland,G,6116
+Jamtland,H,2797
+Jamtland,I,2900
+Jamtland,J,1274
+Jamtland,K,792
+Jamtland,L,911
+Jamtland,"M, N",6867
+Jamtland,O,5549
+Jamtland,P,7039
+Jamtland,Q,12084
+Jamtland,"R, S, T, U",2960
+Vasterbotten,A,4348
+Vasterbotten,"B, C",15336
+Vasterbotten,"D, E",1807
+Vasterbotten,F,10679
+Vasterbotten,G,12549
+Vasterbotten,H,5855
+Vasterbotten,I,3774
+Vasterbotten,J,3781
+Vasterbotten,K,1480
+Vasterbotten,L,2044
+Vasterbotten,"M, N",11659
+Vasterbotten,O,6983
+Vasterbotten,P,17426
+Vasterbotten,Q,28432
+Vasterbotten,"R, S, T, U",5240
+Norrbotten,A,4117
+Norrbotten,"B, C",15612
+Norrbotten,"D, E",1748
+Norrbotten,F,11087
+Norrbotten,G,11005
+Norrbotten,H,6456
+Norrbotten,I,4208
+Norrbotten,J,2690
+Norrbotten,K,1545
+Norrbotten,L,1915
+Norrbotten,"M, N",12387
+Norrbotten,O,10271
+Norrbotten,P,12740
+Norrbotten,Q,22895
+Norrbotten,"R, S, T, U",4708
