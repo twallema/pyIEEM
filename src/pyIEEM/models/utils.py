@@ -100,6 +100,21 @@ def initialize_SIR(country, age_classes, spatial=True):
         # other contacts
         N_other = np.expand_dims(N_other.values.reshape(2*[len(age_classes),]), axis=2)
 
+    ##########
+    ## TDPF ##
+    ##########
+
+    # reload NACE 21 composition per patch
+    if spatial == True:
+        sectors = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0,1])['rel'].sort_index()
+    else:
+        sectors = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0,1])['abs']
+        sectors = sectors.groupby(by='economic_activity').sum()/sectors.groupby(by='economic_activity').sum().sum()
+
+    
+    from pyIEEM.models.TDPF import make_social_contact_function
+    social_contact_function = make_social_contact_function(contacts, sectors).get_contacts
+
     ######################
     ## Initialize model ##
     ######################
