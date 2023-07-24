@@ -116,7 +116,9 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### SWE
 
-`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification. 2016. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
+`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification but some sectors are aggregated so there are only 57 sectors in total :'( . 2016. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
+
+`input_output_produkt_2015-2020_korr.xlsx` Symmetric Input-ouput tables for Sweden, 2015-2020. NACE 64 classification. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-quarterly-and-annual-estimates/pong/tables-and-graphs/tables/input-output-tables-productproduct/#:~:text=Tabellerna%20inneh%C3%A5ller%20symmetriska%20input%2Doutput,2%20och%20CPA%202008.
 
 #### calibration_data
 
@@ -240,8 +242,6 @@ sector_structure_by_work_SWE_2019.csv
 
 #### misc
 
-+ `conversion_matrix_BE_SWE.csv`: Convert from the Swedish version of NACE64 (only 57 out of 63 sectors available) to the Belgian version. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Belgian simulations must be aggregated before comparing them to Sweden.
-
-+ `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the Swedish NACE 64 to NACE 21.
++ `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the NACE 64 to NACE 21 classification.
 
 + `conversion_matrix_NACE21_NACE10.csv`:  contains conversion matrices to aggregate data from NACE 21 to NACE 10.
