@@ -64,7 +64,7 @@ def initialize_SIR(country, age_classes, spatial=True, contact_type='absolute_co
     social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, lav, False, f_employees, convmat).get_contacts
 
     # define economic policies
-    economic_policy = pd.Series(0, index=NACE64_coordinates, dtype=float)
+    economic_policy = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
     parameters.update({'social_policy': 1, 'economic_policy': economic_policy})

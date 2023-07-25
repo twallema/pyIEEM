@@ -52,11 +52,11 @@ class make_social_contact_function():
         assert isinstance(demography, pd.Series)
         assert ((contact_type == 'absolute_contacts') | (contact_type == 'integrated_contacts'))
 
-        # infer spatial length
+        # infer the number of spatial patches
         if 'spatial_unit' in lmc_df.index.names:
             self.G = len(lmc_df.index.get_level_values('spatial_unit').unique().values)
         else:
-            self.G = None
+            self.G = 1
 
         # Extract minimal version of contact matrices and demographically convert to right age bins
         self.N_home, self.N_leisure_private, self.N_leisure_public, self.N_school, self.N_work = aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type)
@@ -74,7 +74,7 @@ class make_social_contact_function():
     def __call__(self, t, social_policy, economic_policy):
 
         # check daytype
-        vacation = False #is_Belgian_primary_secundary_school_holiday(t)
+        vacation = is_Belgian_primary_secundary_school_holiday(t)
         if self.distinguish_day_type:
             if ((t.weekday() == 5) | (t.weekday() == 6)):
                 type_day = 'weekendday'
@@ -85,7 +85,7 @@ class make_social_contact_function():
 
         # slice right matrices and convert to right size
         # Home, leisure, school: (age, age, spatial_unit)
-        if self.G:
+        if self.G != 1:
             N_home = np.tile(np.expand_dims(self.N_home.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
             N_leisure_private = np.tile(np.expand_dims(self.N_leisure_private.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
             N_leisure_public = np.tile(np.expand_dims(self.N_leisure_public.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
@@ -140,8 +140,9 @@ class make_social_contact_function():
         t_lockdown = datetime(2020, 3, 15) # start of lockdown
 
         if t <= t_lockdown:
-            #print(t, np.mean(np.sum(param['other'], axis=0)), np.mean(np.sum(param['work'], axis=0)))
-            return param
+            m = self.__call__(t, 1, tuple(np.ones(63, dtype=float)))
+            #print(t, np.mean(np.sum(m['other'], axis=0)), np.mean(np.sum(m['work'], axis=0)))
+            return self.__call__(t, 1, tuple(np.ones(63, dtype=float)))
         else:
             m = self.__call__(t, social_policy, tuple(economic_policy))
             #print(t, np.mean(np.sum(m['other'], axis=0)), np.mean(np.sum(m['work'], axis=0)))
