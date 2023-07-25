@@ -111,12 +111,20 @@ for sector in sectors:
 d_absolute_contacts = d.groupby(by=['location', 'sector', 'type_day', 'vacation', 'age_x', 'age_y']).sum()
 d_absolute_contacts = d_absolute_contacts.rename(columns={'contacts': 'absolute_contacts'})
 d_absolute_contacts = d_absolute_contacts.fillna(0)
+# absolute (< 5 min)
+d_absolute_contacts_less_5_min = d.loc[slice(None), slice(None), ['< 5 min',], slice(None), slice(None), slice(None), slice(None)].groupby(by=['location', 'sector', 'type_day', 'vacation', 'age_x', 'age_y']).sum()
+d_absolute_contacts_less_5_min = d_absolute_contacts_less_5_min.rename(columns={'contacts': 'absolute_contacts_less_5_min'})
+d_absolute_contacts_less_5_min = d_absolute_contacts_less_5_min.fillna(0)
 # integrated
 duration_min = np.array([37.5, 10, 150, 2.5, 240], dtype=float)
 d_integrated_contacts = d.groupby(by=['location', 'sector', 'type_day', 'vacation', 'age_x', 'age_y']).apply(lambda x: np.sum(duration_min*x.values.flatten())).to_frame(name = 'integrated_contacts')
 d_integrated_contacts = d_integrated_contacts.fillna(0)
+# integrated (< 5 min)
+duration_min = np.array([2.5,], dtype=float)
+d_integrated_contacts_less_5_min = d.loc[slice(None), slice(None), ['< 5 min',] , slice(None), slice(None), slice(None), slice(None)].groupby(by=['location', 'sector', 'type_day', 'vacation', 'age_x', 'age_y']).apply(lambda x: np.sum(duration_min*x.values.flatten())).to_frame(name = 'integrated_contacts_less_5_min')
+d_integrated_contacts_less_5_min = d_integrated_contacts_less_5_min.fillna(0)
 # merge
-d = pd.concat([d_absolute_contacts, d_integrated_contacts], axis=1)
+d = pd.concat([d_absolute_contacts, d_absolute_contacts_less_5_min, d_integrated_contacts, d_integrated_contacts_less_5_min], axis=1)
 
 ######################################
 ## Smooth 'work' and 'SPC' matrices ##
@@ -137,8 +145,12 @@ for location in ['SPC', 'work']:
 ## Add the SPC matrices to the work matrices (we'll keep the SPC)
 d.loc[('work', slice(None), slice(None), slice(None), slice(None), slice(None)), 'absolute_contacts'] += \
     d.loc[('SPC', slice(None), slice(None), slice(None), slice(None), slice(None)), 'absolute_contacts'].values
+d.loc[('work', slice(None), slice(None), slice(None), slice(None), slice(None)), 'absolute_contacts_less_5_min'] += \
+    d.loc[('SPC', slice(None), slice(None), slice(None), slice(None), slice(None)), 'absolute_contacts_less_5_min'].values
 d.loc[('work', slice(None), slice(None), slice(None), slice(None), slice(None)), 'integrated_contacts'] += \
     d.loc[('SPC', slice(None), slice(None), slice(None), slice(None), slice(None)), 'integrated_contacts'].values
+d.loc[('work', slice(None), slice(None), slice(None), slice(None), slice(None)), 'integrated_contacts_less_5_min'] += \
+    d.loc[('SPC', slice(None), slice(None), slice(None), slice(None), slice(None)), 'integrated_contacts_less_5_min'].values
 
 ## Fill all remaining nan
 d = d.fillna(0)
@@ -268,7 +280,7 @@ for colname in list(d.columns):
 
         # heatmap
         m = d.loc[(locations[i], sectors[i], type_day, vacation, slice(None), slice(None)), colname].values.reshape([len(age_classes), len(age_classes)])
-        if colname == 'absolute_contacts':
+        if colname in ['absolute_contacts', 'absolute_contacts_less_5_min']:
             vthresh = 0.25
             vmax = 10.1
         else:
@@ -306,7 +318,7 @@ for colname in list(d.columns):
             ax.set_title(f'{locations_titles[i]} ({sectors_names[i]})', fontsize=11)
 
         # Number of contacts
-        if colname == 'absolute_contacts':
+        if colname in ['absolute_contacts', 'absolute_contacts_less_5_min']:
             textstr = f'{np.mean(np.sum(m,axis=1)):.1f} contacts'
         else:
             textstr = f'{np.mean(np.sum(m,axis=1)):.0f} contact min.'

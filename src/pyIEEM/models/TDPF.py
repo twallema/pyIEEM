@@ -58,8 +58,10 @@ class make_social_contact_function():
         else:
             self.G = 1
 
-        # Extract minimal version of contact matrices and demographically convert to right age bins
+        # Extract contact matrices and demographically convert to right age bins
         self.N_home, self.N_leisure_private, self.N_leisure_public, self.N_school, self.N_work = aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type)
+        # Extract contact matrices of contacts < 5 min and demographically convert to right age bins
+        self.N_home_short, self.N_leisure_private_short, self.N_leisure_public_short, self.N_school_short, self.N_work_short = aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type+'_less_5_min')
 
         # Assign to variables
         self.age_classes = age_classes
@@ -71,10 +73,10 @@ class make_social_contact_function():
         self.conversion_matrix = conversion_matrix
     
     @lru_cache()
-    def __call__(self, t, social_policy, economic_policy):
+    def __call__(self, t, social_restrictions, preventive_measures, economic_closures):
 
-        # check daytype
-        vacation = is_Belgian_primary_secundary_school_holiday(t)
+        ## check daytype
+        vacation = False #is_Belgian_primary_secundary_school_holiday(t)
         if self.distinguish_day_type:
             if ((t.weekday() == 5) | (t.weekday() == 6)):
                 type_day = 'weekendday'
@@ -83,7 +85,9 @@ class make_social_contact_function():
         else:
             type_day = 'average'
 
-        # slice right matrices and convert to right size
+        ## slice right matrices and convert to right size
+
+        # long contacts
         # Home, leisure, school: (age, age, spatial_unit)
         if self.G != 1:
             N_home = np.tile(np.expand_dims(self.N_home.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
@@ -98,31 +102,53 @@ class make_social_contact_function():
         # Work: (NACE 21, age, age)
         N_work = np.swapaxes(self.N_work.loc[slice(None), type_day, vacation, slice(None), slice(None)].values.reshape([len(self.N_work.index.get_level_values('sector').unique().values),] +2*[len(self.age_classes),]), 0, -1)
 
+        # short contacts
+        # Home, leisure, school: (age, age, spatial_unit)
+        if self.G != 1:
+            N_home_short = np.tile(np.expand_dims(self.N_home_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+            N_leisure_private_short = np.tile(np.expand_dims(self.N_leisure_private_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+            N_leisure_public_short = np.tile(np.expand_dims(self.N_leisure_public_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+            N_school_short = np.tile(np.expand_dims(self.N_school_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+        else:
+            N_home_short = np.expand_dims(self.N_home_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+            N_leisure_private_short = np.expand_dims(self.N_leisure_private_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+            N_leisure_public_short = np.expand_dims(self.N_leisure_public_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+            N_school_short = np.expand_dims(self.N_school_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+        # Work: (NACE 21, age, age)
+        N_work_short = np.swapaxes(self.N_work_short.loc[slice(None), type_day, vacation, slice(None), slice(None)].values.reshape([len(self.N_work_short.index.get_level_values('sector').unique().values),] +2*[len(self.age_classes),]), 0, -1)
+
+        # subtract short contacts from long contacts
+        N_home -= preventive_measures*N_home_short
+        N_leisure_private -= preventive_measures*N_leisure_private_short
+        N_leisure_public -= preventive_measures*N_leisure_public_short
+        N_school -= preventive_measures*N_school_short
+        N_work -= preventive_measures*N_work_short
+
         # convert economic policy from tuple to numpy array
-        assert isinstance(economic_policy, tuple)
-        economic_policy = np.array(economic_policy, dtype=float)
-        
+        assert isinstance(economic_closures, tuple)
+        economic_closures = 1-np.array(economic_closures, dtype=float)
+
         # assert degree of school opennness
-        f_school = economic_policy[np.where(self.f_workplace.index == 'P85')[0][0]]
+        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0]]
 
         # convert the leisure_public contacts depending on the economic policy
-        f_leisure_public = sum(self.lav * economic_policy)
+        f_leisure_public = sum(self.lav * economic_closures)
 
-        # zero in economic_policy corresponds to full lockdown in Belgium
-        economic_policy = self.f_workplace.values + economic_policy*(1-self.f_workplace.values)
+        # zero in economic_closures corresponds to full lockdown in Belgium
+        economic_closures = self.f_workplace.values + economic_closures*(1-self.f_workplace.values)
 
         # convert economic policy from NACE 64 to NACE 21
-        economic_policy = np.matmul(economic_policy*self.f_employees.values, self.conversion_matrix)
+        economic_closures = np.matmul(economic_closures*self.f_employees.values, self.conversion_matrix)
 
         # multiply the work contacts (age, age, NACE 21) with the openness of the sectors
-        N_work = N_work*economic_policy[np.newaxis, np.newaxis, :]
+        N_work = N_work*economic_closures[np.newaxis, np.newaxis, :]
 
         # convert work contacts to (age, age, spatial_unit) using the labor market structure
-        N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_policy)])))
+        N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_closures)])))
 
-        return {'other': N_home + f_school*N_school + social_policy*N_leisure_private + f_leisure_public*N_leisure_public, 'work': N_work}
+        return {'other': N_home + f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public, 'work': N_work}
 
-    def get_contacts(self, t, states, param, social_policy, economic_policy):
+    def get_contacts(self, t, states, param, social_restrictions, preventive_measures, economic_closures):
         """
         Function returning the number of social contacts under sector closure and/or lockdown
 
@@ -137,16 +163,12 @@ class make_social_contact_function():
             Contact matrix per spatial patch at work and in all other locations.
         """
 
-        t_lockdown = datetime(2020, 3, 15) # start of lockdown
+        t_lockdown = datetime(2020, 1, 21) # start of lockdown
 
         if t <= t_lockdown:
-            m = self.__call__(t, 1, tuple(np.ones(63, dtype=float)))
-            #print(t, np.mean(np.sum(m['other'], axis=0)), np.mean(np.sum(m['work'], axis=0)))
-            return self.__call__(t, 1, tuple(np.ones(63, dtype=float)))
+            return self.__call__(t, 0, 0, tuple(np.zeros(63, dtype=float)))
         else:
-            m = self.__call__(t, social_policy, tuple(economic_policy))
-            #print(t, np.mean(np.sum(m['other'], axis=0)), np.mean(np.sum(m['work'], axis=0)))
-            return self.__call__(t, social_policy, tuple(economic_policy))
+            return self.__call__(t, social_restrictions, preventive_measures, tuple(economic_closures))
 
 from dateutil.easter import easter
 def is_Belgian_primary_secundary_school_holiday(d):
@@ -252,7 +274,7 @@ def aggregate_simplify_contacts(contact_df, age_classes, demography, contact_typ
         demography of country under study.
 
     contact_type: str
-        'absolute_contacts' versus 'integrated_contacts'
+        'absolute_contacts'/'absolute_contacts_less_5_min' versus 'integrated_contacts'/'integrated_contacts_less_5_min'
 
     output
     ======

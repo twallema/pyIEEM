@@ -23,16 +23,13 @@ class SIR(ODE):
         I_work = np.matmul(I, G)
 
         # compute infection pressure in home patch and work patch
-        IP_work = beta*np.einsum('iik,ik->ik', N['work'], I_work/T_work)
-        IP_other = beta*np.einsum('iik,ik->ik', N['other'], I/T)
+        IP_work = beta*np.einsum('ij, jki -> ki', np.transpose(I_work/T_work), N['work'])
+        IP_other = beta*np.einsum('ij, jki -> ki', np.transpose(I/T), N['other'])
 
         # compute number of infections
         n_inf = S * IP_other + S_work * IP_work
 
-        ################################
-        ## Transmission on home patch ##
-        ################################
-
+        # equations
         dS = - n_inf
         dI = n_inf - 1/gamma*I
         dR = 1/gamma*I

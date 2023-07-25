@@ -64,10 +64,10 @@ def initialize_SIR(country, age_classes, spatial=True, contact_type='absolute_co
     social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, lav, False, f_employees, convmat).get_contacts
 
     # define economic policies
-    economic_policy = pd.Series(1, index=NACE64_coordinates, dtype=float)
+    economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'social_policy': 1, 'economic_policy': economic_policy})
+    parameters.update({'social_restrictions': 1, 'preventive_measures': 1, 'economic_closures': economic_closures})
 
     # Initialize model
     # ================
@@ -237,7 +237,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     # disease parameters
     # ==================
 
-    parameters = {'beta': 0.010,
+    parameters = {'beta': 0.015,
                   'gamma': 5,
                   'N': {'other': N_other, 'work': N_work},
                   'G': mob,
