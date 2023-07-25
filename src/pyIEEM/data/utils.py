@@ -61,7 +61,7 @@ def convert_age_stratified_quantity(data, age_classes, demography):
         # Pre-allocate new series
         out = pd.Series(index=age_classes, dtype=float)
         # Format demographics into desired age classes
-        demo_format = demography.groupby(pd.cut(demography.index.values, data.index)).sum().squeeze()
+        demo_format = demography.groupby(pd.cut(demography.index.values, data.index)).sum()#.squeeze() --> if only one age group this becomes an int --> always excepts
         # Loop over desired intervals
         for idx,interval in enumerate(age_classes):
             result = []
