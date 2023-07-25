@@ -116,7 +116,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### SWE
 
-`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification but some sectors are aggregated so there are only 57 sectors in total :'( . 2016. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
+`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification but some sectors are aggregated so there are only 57 sectors in total :'( . 2016. Contains the total number of employees per sector. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
 
 `input_output_produkt_2015-2020_korr.xlsx` Symmetric Input-ouput tables for Sweden, 2015-2020. NACE 64 classification. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-quarterly-and-annual-estimates/pong/tables-and-graphs/tables/input-output-tables-productproduct/#:~:text=Tabellerna%20inneh%C3%A5ller%20symmetriska%20input%2Doutput,2%20och%20CPA%202008.
 
@@ -228,9 +228,9 @@ sector_structure_by_work_SWE_2019.csv
 
 ##### SWE
 
-`IO_SWE_NACE64.csv`: symmetric input-output table for Sweden, formatted to NACE 64 classification starting from `nrio_siot_181108.xlsx`. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Similarily to to the Belgian IO matrix, revenue from rent was removed from L68.
+`IO_SWE_NACE64.csv`: symmetric input-output table for Sweden in 2019, formatted to NACE 64 classification starting from `input_output_produkt_2015-2020_korr.xlsx` Similarily to to the Belgian IO matrix, revenue from rent was removed from L68 (delete corresponding row and column from matrix).
 
-`other_accounts_SWE.csv`: All other variables from the Swedish national accounts `nrio_siot_181108.xlsx` needed to initialize the model. 
+`other_accounts_SWE.csv`: All other variables from the Swedish national accounts `input_output_produkt_2015-2020_korr.xlsx` (2019 SIOT) needed to initialize the model. The total number of employees is sadly not listed in `input_output_produkt_2015-2020_korr.xlsx` (2019) but it is in `nrio_siot_181108.xlsx` (2016). However, some sectors are aggregated in `nrio_siot_181108.xlsx` (f.i. C20-21 instead of C20 and C21). I have used the fraction of employees derived from the Belgian IO Table to disaggregate these sectors in Sweden.
 
 #### pichler
 
