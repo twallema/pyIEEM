@@ -4,6 +4,10 @@ from functools import lru_cache
 from datetime import datetime, timedelta
 from pyIEEM.data.utils import aggregate_contact_matrix
 
+#####################
+## Social contacts ##
+#####################
+
 class make_social_contact_function():
 
     def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, lav, distinguish_day_type, f_employees, conversion_matrix):
@@ -76,7 +80,7 @@ class make_social_contact_function():
     def __call__(self, t, social_restrictions, preventive_measures, economic_closures):
 
         ## check daytype
-        vacation = False #is_Belgian_primary_secundary_school_holiday(t)
+        vacation = is_Belgian_primary_secundary_school_holiday(t)
         if self.distinguish_day_type:
             if ((t.weekday() == 5) | (t.weekday() == 6)):
                 type_day = 'weekendday'
@@ -146,7 +150,7 @@ class make_social_contact_function():
         # convert work contacts to (age, age, spatial_unit) using the labor market structure
         N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_closures)])))
 
-        return {'other': N_home + f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public, 'work': N_work}
+        return {'other': N_home + 0.4*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': 0.4*N_work}
 
     def get_contacts(self, t, states, param, social_restrictions, preventive_measures, economic_closures):
         """
@@ -163,12 +167,56 @@ class make_social_contact_function():
             Contact matrix per spatial patch at work and in all other locations.
         """
 
-        t_lockdown = datetime(2020, 1, 21) # start of lockdown
+        t_start_lockdown = datetime(2020, 3, 15) # start of lockdown
+        t_end_lockdown = datetime(2020, 5, 15)
 
-        if t <= t_lockdown:
+        if t < t_start_lockdown:
             return self.__call__(t, 0, 0, tuple(np.zeros(63, dtype=float)))
+        elif t_start_lockdown < t < t_end_lockdown:
+            l = 7
+            N_old = self.__call__(t, 0, 0, tuple(np.zeros(63, dtype=float)))
+            N_new = self.__call__(t, social_restrictions, preventive_measures, tuple(economic_closures))
+            return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
         else:
-            return self.__call__(t, social_restrictions, preventive_measures, tuple(economic_closures))
+            l = 62
+            N_old = self.__call__(t, social_restrictions, preventive_measures, tuple(economic_closures))
+            economic_policy = np.zeros(63, dtype=float)
+            economic_policy[54] = 1
+            N_new = self.__call__(t, 0, 1, tuple(economic_policy))
+            return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
+
+
+def ramp_fun(t, t_start, l, N_old, N_new):
+    """
+
+    input
+    =====
+
+    t : timestamp
+        current date
+
+    t_start : timestamp
+        start of ramp
+
+    l : timestamp
+        length of ramp
+
+    N_old : float/np.array
+        old policy
+    
+    N_new : float/np.array
+        new policy
+
+    output
+    ======
+
+    N_t : float/np.array
+        interpolation between N_old and N_new
+    """
+    if t_start < t < t_start+timedelta(days=l):
+        return N_old + ((N_new-N_old)/l)*((t-t_start)/timedelta(days=1))
+    else:
+        return N_new
 
 from dateutil.easter import easter
 def is_Belgian_primary_secundary_school_holiday(d):
@@ -336,3 +384,26 @@ def aggregate_simplify_contacts(contact_df, age_classes, demography, contact_typ
             matrices.append(contact)
 
     return (*matrices,)
+
+#################
+## Seasonality ##
+#################
+
+class make_seasonality_function():
+    """
+    Simple class to create functions that controls the season-dependent value of the transmission coefficients.
+    """
+    def __call__(self, t, states, param, amplitude):
+        """
+        Default output function. Returns the transmission coefficient beta multiplied with a sinusoid with average value 1.
+        
+        t : datetime.datetime
+            simulation time
+        amplitude : float
+            maximum deviation of output with respect to the average (1)
+        """
+        maxdate = datetime(2021,1,1)
+        # One period is one year long (seasonality)
+        t = (t - maxdate)/timedelta(days=1)/365
+        rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))
+        return param*rescaling

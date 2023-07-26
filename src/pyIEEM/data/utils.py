@@ -73,6 +73,48 @@ def convert_age_stratified_quantity(data, age_classes, demography):
             out.iloc[idx] = sum(result)
         return out
 
+def convert_age_stratified_property(data, age_classes, demography):
+    """ 
+    Given an age-stratified dataframe of a (non-cumulative) population property: [age_group_lower, age_group_upper] : property,
+    this function can convert the data into another user-defined age-stratification using demographic weighing.
+
+    input
+    =====
+
+    data: pd.Series
+        a dataset containing a quantity in age bands. Index must be of type pd.Intervalindex.
+
+    age_classes : pd.IntervalIndex
+        desired age groups of output pd.Series.
+
+    demography: pd.Series
+        demography of the country under study. Index must contain the number of individuals per year of age (type: float). 
+
+    output
+    ======
+
+    out: pd.DataFrame
+        A dataset containing the property in the desired age bands.
+    """
+
+    # check if data and demography are pd.Series
+    assert isinstance(data, pd.Series)
+    assert isinstance(demography, pd.Series)
+    # Pre-allocate new series
+    out = pd.Series(0, index=age_classes, dtype=float)
+    # Format demographics into desired age classes
+    demo_format = demography.groupby(pd.cut(demography.index.values, age_classes)).sum()#.squeeze() --> if only one age group this becomes an int --> always excepts
+    # Loop over desired intervals
+    for idx,interval in enumerate(age_classes):
+        result = []
+        for age in range(interval.left, interval.right):
+            try:
+                result.append(demography[age]/demo_format.loc[interval]*data.iloc[np.where(data.index.contains(age))[0][0]])
+            except:
+                result.append(0)
+        out.iloc[idx] = sum(result)
+    return out
+
 def make_reciprocal(matrix, demography):
     """
     A function to make a contact matrix reciprocal using demographic weighing

@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from pyIEEM.data.utils import to_pd_interval, aggregate_contact_matrix
+from pyIEEM.data.utils import to_pd_interval, aggregate_contact_matrix, convert_age_stratified_property
 from pyIEEM.models.models import SIR
 
 abs_dir = os.path.dirname(__file__)
@@ -14,8 +14,8 @@ def initialize_SIR(country, age_classes, spatial=True, contact_type='absolute_co
 
     initial_states, parameters, coordinates = get_epi_params(country, age_classes, spatial, contact_type)
 
-    # Construct TDPF
-    # ==============
+    # Construct social contact TDPF
+    # =============================
 
     # load NACE 21 composition per spatial patch
     if spatial == True:
@@ -69,10 +69,17 @@ def initialize_SIR(country, age_classes, spatial=True, contact_type='absolute_co
     # add TDPF parameters to dictionary
     parameters.update({'social_restrictions': 1, 'preventive_measures': 1, 'economic_closures': economic_closures})
 
+    # Construct seasonality TDPF
+    # ==========================
+
+    from pyIEEM.models.TDPF import make_seasonality_function
+    seasonality_function = make_seasonality_function()
+    parameters.update({'amplitude': 0.18})
+
     # Initialize model
     # ================
 
-    model = SIR(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function})
+    model = SIR(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function, 'beta': seasonality_function})
 
     return model
 
@@ -237,21 +244,61 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     # disease parameters
     # ==================
 
-    parameters = {'beta': 0.015,
-                  'gamma': 5,
-                  'N': {'other': N_other, 'work': N_work},
-                  'G': mob,
-                  }
+    # infectivity
+    R0_desired = 3.3
+    
+    parameters = {'beta': 0.014}
+
+    # durations
+    parameters.update({'alpha': 4.5,
+                      'gamma': 0.7,
+                      'delta': 5,
+                      'epsilon': 14,
+                      'N': {'other': N_other, 'work': N_work},
+                      'G': mob,
+                  })
+
+    # fractions
+    s = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 10), (10, 120)], closed='left'),
+                    data=np.array([0.56, 1]), dtype=float) #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8260804/
+    h = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 12), (12, 18), (18, 25), (25, 35), (35, 45), (45, 55), (55, 65), (65, 75), (75, 85), (85,120)], closed='left'),
+                    data=np.array([0.01, 0.01, 0.015, 0.025, 0.03, 0.06, 0.12, 0.45, 0.95, 0.99]), dtype=float)
+    a = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 20), (20, 40), (40, 60), (60, 80), (80,85), (85, 120)], closed='left'),
+                         data=np.array([0.82, 0.78, 0.70, 0.65, 0.35, 0.01]), dtype=float)   
+    m = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 10), (10, 20), (20, 30), (30, 40), (40,50), (50, 60), (60,70), (70,80), (80,120)], closed='left'),
+                         data=np.array([0.000, 0.012, 0.015, 0.027, 0.041, 0.080, 0.164, 0.266, 0.404]), dtype=float)
+       
+    # convert to right age groups
+    demography = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='age').sum().squeeze()
+    s = convert_age_stratified_property(s, age_classes, demography)  
+    h = convert_age_stratified_property(h, age_classes, demography)
+    a = convert_age_stratified_property(a, age_classes, demography)
+    m = convert_age_stratified_property(m, age_classes, demography)
+
+    parameters.update({
+        's': np.expand_dims(s.values, axis=1),
+        'h': np.expand_dims(h.values, axis=1),
+        'a': np.expand_dims(a.values, axis=1),
+        'm': np.expand_dims(m.values, axis=1),
+    })
+
+    # mobility and social contact
+    parameters.update({
+        'N': {'other': N_other, 'work': N_work},
+        'G': mob,
+    })
 
     # initial condition and coordinates
     # =================================
 
     # default initial condition: one infected divided over every possible metapopulation
     initial_states = {'S': S,
-                      'I': 1/len(age_classes)/len(mob)*np.ones(S.shape)}
+                      'E': 1/len(age_classes)/len(mob)*np.ones(S.shape)}
 
     # Define coordinates
     coordinates = {'age_class': age_classes,
                    'spatial_unit': spatial_units}
 
     return initial_states, parameters, coordinates
+
