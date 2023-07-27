@@ -116,7 +116,9 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### SWE
 
-`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification. 2016. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
+`nrio_siot_181108.xlsx` Symmetric Input-ouput tables for Sweden. NACE 64 classification but some sectors are aggregated so there are only 57 sectors in total :'( . 2016. Contains the total number of employees per sector. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-previous-definitions/pong/tables-and-graphs/input-output-tables-2008-2016/ > Symmetrical tables - SIOT, 2008-2016 (xlsx)
+
+`input_output_produkt_2015-2020_korr.xlsx` Symmetric Input-ouput tables for Sweden, 2015-2020. NACE 64 classification. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/national-accounts/national-accounts-quarterly-and-annual-estimates/pong/tables-and-graphs/tables/input-output-tables-productproduct/#:~:text=Tabellerna%20inneh%C3%A5ller%20symmetriska%20input%2Doutput,2%20och%20CPA%202008.
 
 #### calibration_data
 
@@ -171,7 +173,11 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `pichler_table_5_NACE64.csv`: Remote Labor Index (RLI) of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) S94, S95, S96 equal to G47. 3) R90-92, R93: Set to 0.05 to obtain an employee-weighted average remote labor index of R90-92, R93, S94, S95, S96 (R_S) of 39, which is equal to the value used by Pichler. 4) T: Set to 0.05. Essentiality score of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) R90-92, R93 equal to I. 3) S94, S95, S96: Set to 63 to obtain an employee-weighted average essentiality score for R90-92, R93, S94, S95, S96 (R_S) of 47, which is equal to the value used by Pichler.
 
-`estimated_remote_labor.csv`: Estimated fraction of workers able to work from home. Primarily based on the reported fraction of workers working from home during the first COVID-19 lockdown in Belgium (`ermg-tables.xlsx`), when telework was mandated where possible. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when data was available. Assumptions listed in the data file.
+`ermg_remote_labor.csv`: Fraction of workers working from home during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when no data was available. Assumptions listed in the data file.
+
+`ermg_at_workplace.csv`: Fraction of workers working in the workplace during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used.Assumptions listed in the data file.
+
+`ermg_summary.csv`: Combines `ermg_remote_labor.csv` and `ermg_at_workplace.csv` into a cleaner format.
 
 #### mobility
 
@@ -222,9 +228,9 @@ sector_structure_by_work_SWE_2019.csv
 
 ##### SWE
 
-`IO_SWE_NACE64.csv`: symmetric input-output table for Sweden, formatted to NACE 64 classification starting from `nrio_siot_181108.xlsx`. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Similarily to to the Belgian IO matrix, revenue from rent was removed from L68.
+`IO_SWE_NACE64.csv`: symmetric input-output table for Sweden in 2019, formatted to NACE 64 classification starting from `input_output_produkt_2015-2020_korr.xlsx` Similarily to to the Belgian IO matrix, revenue from rent was removed from L68 (delete corresponding row and column from matrix).
 
-`other_accounts_SWE.csv`: All other variables from the Swedish national accounts `nrio_siot_181108.xlsx` needed to initialize the model. 
+`other_accounts_SWE.csv`: All other variables from the Swedish national accounts `input_output_produkt_2015-2020_korr.xlsx` (2019 SIOT) needed to initialize the model. The total number of employees is sadly not listed in `input_output_produkt_2015-2020_korr.xlsx` (2019) but it is in `nrio_siot_181108.xlsx` (2016). However, some sectors are aggregated in `nrio_siot_181108.xlsx` (f.i. C20-21 instead of C20 and C21). I have used the fraction of employees derived from the Belgian IO Table to disaggregate these sectors in Sweden.
 
 #### pichler
 
@@ -236,8 +242,6 @@ sector_structure_by_work_SWE_2019.csv
 
 #### misc
 
-+ `conversion_matrix_BE_SWE.csv`: Convert from the Swedish version of NACE64 (only 57 out of 63 sectors available) to the Belgian version. The Swedish data sadly lumps some of the NACE 64's economic activities: C20, C21 --> C20-21; G45, G46, G47 --> G45-47; H52, H53 --> H52-53; M71, M72 --> M71-72. Belgian simulations must be aggregated before comparing them to Sweden.
-
-+ `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the Swedish NACE 64 to NACE 21.
++ `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the NACE 64 to NACE 21 classification.
 
 + `conversion_matrix_NACE21_NACE10.csv`:  contains conversion matrices to aggregate data from NACE 21 to NACE 10.

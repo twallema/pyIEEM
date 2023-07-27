@@ -64,7 +64,7 @@ columns = ['ID', 'sex', 'age_x', 'household_size', 'class_size', 'highest_educat
 output_SPC = {k: [] for k in columns}
 
 ## PARTICIPANT LOOP
-dropped_count_personal=dropped_count_temporal=dropped_count_contact=0
+dropped_count_personal=dropped_count_temporal=dropped_count_contact=count_SPC=0
 for i in tqdm(range(len(data))):
 
     row = data.iloc[i]
@@ -136,13 +136,17 @@ for i in tqdm(range(len(data))):
             if not age <= 16:
                 # Distribute the total number of contacts over the age groups indicated by the survey participant using demographic weighing
                 n = SPC_data[1]
-                # Cap at 134 contacts --> reported 95% quantile by Beraud
-                if n > 200:
-                    n = 200
+                # Capped by Beraud at 134 contacts --> upper 5$ quantile
+                # We'll cap this at 500 --> upper 1% quantile
+                threshold = 500
+                if n > threshold:
+                    n = threshold
+                    print(f'capped SPC contacts of ID {ID} from {SPC_data[1]} contacts to {threshold} contacts')
                 age_groups_SPC = translations['age_group_SPC'][SPC_data[2:7] != 0]
-                d = pd.Series(n, index=pd.IntervalIndex.from_tuples([(0,105),], closed='left'))
-                d = convert_age_stratified_quantity(d, age_groups_SPC, demo_df)
-                d = d/sum(d)*n
+                # cut demography in age_groups_SPC
+                demo_format = demo_df.groupby(pd.cut(demo_df.index.values, age_groups_SPC)).sum()
+                n = (n * demo_format/sum(demo_format)).squeeze()
+                d = pd.Series(n, index=age_groups_SPC, name='count')
                 # Convert to the desired age groups of the contact matrices
                 out = convert_age_stratified_quantity(d, age_classes, demo_df)
                 # Add the contact properties (these are always "unique" so we can paste them after ommitting the unique contacts down below)
@@ -150,6 +154,7 @@ for i in tqdm(range(len(data))):
                     # Keep track of the contacts data so we can eliminate doubles in the end
                     contact_properties_SPC.append((ID, sex, age_x, household_size, class_size, highest_education, professional_situation, sector, str(age_y),),)
                     contact_count_SPC.append(out[age_y])
+                count_SPC+=1
 
     ## Temporal characteristics
 

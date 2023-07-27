@@ -80,7 +80,7 @@ pure_effects = 'reported_contacts ~ type_day + vacation + duration + age_x + age
 mixed_effects = 'age_x*age_y + type_day*vacation + duration*type_day + duration*vacation + duration*age_x + duration*sector'
 formula = {
     'work_indoor': pure_effects + mixed_effects + '+ type_day*sector + vacation*sector + age_y*sector + type_day*vacation*sector',
-    'SPC': pure_effects + mixed_effects, #+ 'age_y*sector',
+    'SPC': pure_effects + mixed_effects + ' + age_y*sector',
 }
 for location, formula in formula.items():
     print(f"performing GEE in location '{location}'")
