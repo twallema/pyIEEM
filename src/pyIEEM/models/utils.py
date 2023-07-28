@@ -11,7 +11,7 @@ abs_dir = os.path.dirname(__file__)
 ## Initialisation of the model ##
 #################################
 
-def initialize_model(country, age_classes, spatial=True, contact_type='absolute_contacts'):
+def initialize_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts', ):
 
     # Get model parameters
     # ====================
@@ -64,14 +64,17 @@ def initialize_model(country, age_classes, spatial=True, contact_type='absolute_
     NACE64_coordinates = convmat.index.values
     convmat = convmat.fillna(0).values
 
+    # memory length
+    l=6*28
+
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, lav, False, f_employees, convmat).get_contacts
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, lav, False, f_employees, convmat, simulation_start, l).get_contacts
 
     # define economic policies
     economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'social_restrictions': 1, 'economic_closures': economic_closures})
+    parameters.update({'tau': 14, 'social_restrictions': 1, 'economic_closures': economic_closures})
 
     # Construct seasonality TDPF
     # ==========================

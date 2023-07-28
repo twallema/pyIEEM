@@ -10,7 +10,7 @@ from pyIEEM.models.utils import ramp_fun, is_Belgian_school_holiday, aggregate_s
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, lav, distinguish_day_type, f_employees, conversion_matrix):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l):
         """
         Time-dependent parameter function of social contacts
 
@@ -49,6 +49,13 @@ class make_social_contact_function():
 
         conversion_matrix: np.ndarray
             NACE 64 to NACE 21 conversion matrix.
+        
+        simulation_start: datetime.datetime
+            Simulation startdate. Note that this implies you can't change the simulation startdate without re-initializing the model.
+            Sadly, there is no way around this (that I can think of for now).
+        
+        l: int
+            Memory length. Should be quite large (2-3 months)
         """
 
         # input checks
@@ -75,6 +82,22 @@ class make_social_contact_function():
         self.lav = lav
         self.f_employees = f_employees
         self.conversion_matrix = conversion_matrix
+
+        # pre-allocate memory
+        self.memory_index = list(range(-(int(abs(l))), 1))
+        self.memory_values = list(np.zeros(len(self.memory_index)))
+        self.l = l
+
+        # pre-allocate simulation start
+        if not isinstance(simulation_start, (str, datetime)):
+            raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
+        if isinstance(simulation_start, str):
+            try:
+                simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
+            except:
+                raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
+        self.t = simulation_start
+        self.simulation_start = simulation_start
     
     @lru_cache()
     def __call__(self, t, social_restrictions, economic_closures):
@@ -116,7 +139,7 @@ class make_social_contact_function():
 
         return {'other': N_home + 0.4*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': 0.4*N_work}
 
-    def get_contacts(self, t, states, param, social_restrictions, economic_closures):
+    def get_contacts(self, t, states, param, tau, social_restrictions, economic_closures):
         """
         Function returning the number of social contacts under sector closure and/or lockdown
 
@@ -130,6 +153,41 @@ class make_social_contact_function():
             Keys: "work" and "other"
             Contact matrix per spatial patch at work and in all other locations.
         """
+
+        ############
+        ## memory ##
+        ############
+
+        # Get total number of hospitalisations (sum over all ages and spatial units)
+        Ih = np.sum(np.sum(states['Ih'], axis=0))
+        # determine length of timestep
+        delta_t = (t - self.t)/timedelta(days=1)
+        self.t = t
+        # add case count to memory (RK23 can step backwards)
+        if delta_t > 0:
+            # copy values
+            new_index = self.memory_index
+            new_values = self.memory_values
+            # append new values
+            new_index.append(new_index[-1] + delta_t)
+            new_values.append(Ih)
+            # subtract the new timestep
+            new_index = np.array(new_index) - new_index[-1]
+            # cut of values and index to not exceed memory length l
+            new_values = np.array(new_values)[new_index >= -self.l]
+            new_index = new_index[new_index >= -self.l]
+            # compute exponential weights at new_index
+            weights = np.exp((1/tau)*new_index)/sum(np.exp((1/tau)*new_index))
+            # multiply weights with case count and sum to compute average
+            Ih_star = sum(new_values*weights)
+            print(t, Ih, Ih_star)
+            # update memory
+            self.memory_index = list(new_index)
+            self.memory_values = list(new_values)
+
+        ##############
+        ## policies ##
+        ##############
 
         t_start_lockdown = datetime(2020, 3, 15) # start of lockdown
         t_end_lockdown = datetime(2020, 5, 15)
