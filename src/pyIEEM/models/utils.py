@@ -71,7 +71,7 @@ def initialize_model(country, age_classes, spatial=True, contact_type='absolute_
     economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'social_restrictions': 1, 'preventive_measures': 1, 'economic_closures': economic_closures})
+    parameters.update({'social_restrictions': 1, 'economic_closures': economic_closures})
 
     # Construct seasonality TDPF
     # ==========================
@@ -261,7 +261,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
                   })
 
     # fractions
-    s = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 10), (10, 120)], closed='left'),
+    s = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 12), (12, 120)], closed='left'),
                     data=np.array([0.56, 1]), dtype=float) #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8260804/
     h = pd.Series(index=pd.IntervalIndex.from_tuples([(0, 12), (12, 18), (18, 25), (25, 35), (35, 45), (45, 55), (55, 65), (65, 75), (75, 85), (85,120)], closed='left'),
                     data=np.array([0.01, 0.01, 0.015, 0.025, 0.03, 0.06, 0.12, 0.45, 0.95, 0.99]), dtype=float)

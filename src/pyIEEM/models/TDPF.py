@@ -77,9 +77,9 @@ class make_social_contact_function():
         self.conversion_matrix = conversion_matrix
     
     @lru_cache()
-    def __call__(self, t, social_restrictions, preventive_measures, economic_closures):
+    def __call__(self, t, social_restrictions, economic_closures):
 
-        ## check daytype
+        # check daytype
         vacation = is_Belgian_school_holiday(t)
         if self.distinguish_day_type:
             if ((t.weekday() == 5) | (t.weekday() == 6)):
@@ -89,44 +89,8 @@ class make_social_contact_function():
         else:
             type_day = 'average'
 
-        ## slice right matrices and convert to right size
-
-        # long contacts
-        # Home, leisure, school: (age, age, spatial_unit)
-        if self.G != 1:
-            N_home = np.tile(np.expand_dims(self.N_home.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-            N_leisure_private = np.tile(np.expand_dims(self.N_leisure_private.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-            N_leisure_public = np.tile(np.expand_dims(self.N_leisure_public.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-            N_school = np.tile(np.expand_dims(self.N_school.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-        else:
-            N_home = np.expand_dims(self.N_home.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-            N_leisure_private = np.expand_dims(self.N_leisure_private.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-            N_leisure_public = np.expand_dims(self.N_leisure_public.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-            N_school = np.expand_dims(self.N_school.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-        # Work: (NACE 21, age, age)
-        N_work = np.swapaxes(self.N_work.loc[slice(None), type_day, vacation, slice(None), slice(None)].values.reshape([len(self.N_work.index.get_level_values('sector').unique().values),] +2*[len(self.age_classes),]), 0, -1)
-
-        # short contacts
-        # Home, leisure, school: (age, age, spatial_unit)
-        if self.G != 1:
-            N_home_short = np.tile(np.expand_dims(self.N_home_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-            N_leisure_private_short = np.tile(np.expand_dims(self.N_leisure_private_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-            N_leisure_public_short = np.tile(np.expand_dims(self.N_leisure_public_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-            N_school_short = np.tile(np.expand_dims(self.N_school_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
-        else:
-            N_home_short = np.expand_dims(self.N_home_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-            N_leisure_private_short = np.expand_dims(self.N_leisure_private_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-            N_leisure_public_short = np.expand_dims(self.N_leisure_public_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-            N_school_short = np.expand_dims(self.N_school_short.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
-        # Work: (NACE 21, age, age)
-        N_work_short = np.swapaxes(self.N_work_short.loc[slice(None), type_day, vacation, slice(None), slice(None)].values.reshape([len(self.N_work_short.index.get_level_values('sector').unique().values),] +2*[len(self.age_classes),]), 0, -1)
-
-        # subtract short contacts from long contacts
-        N_home -= preventive_measures*N_home_short
-        N_leisure_private -= preventive_measures*N_leisure_private_short
-        N_leisure_public -= preventive_measures*N_leisure_public_short
-        N_school -= preventive_measures*N_school_short
-        N_work -= preventive_measures*N_work_short
+        # slice right matrices and convert to right size
+        N_home, N_leisure_private, N_leisure_public, N_school, N_work = self.slice_matrices(type_day, vacation)
 
         # convert economic policy from tuple to numpy array
         assert isinstance(economic_closures, tuple)
@@ -152,7 +116,7 @@ class make_social_contact_function():
 
         return {'other': N_home + 0.4*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': 0.4*N_work}
 
-    def get_contacts(self, t, states, param, social_restrictions, preventive_measures, economic_closures):
+    def get_contacts(self, t, states, param, social_restrictions, economic_closures):
         """
         Function returning the number of social contacts under sector closure and/or lockdown
 
@@ -171,19 +135,40 @@ class make_social_contact_function():
         t_end_lockdown = datetime(2020, 5, 15)
 
         if t < t_start_lockdown:
-            return self.__call__(t, 0, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, 0, tuple(np.zeros(63, dtype=float)))
         elif t_start_lockdown < t < t_end_lockdown:
             l = 7
-            N_old = self.__call__(t, 0, 0, tuple(np.zeros(63, dtype=float)))
-            N_new = self.__call__(t, social_restrictions, preventive_measures, tuple(economic_closures))
+            N_old = self.__call__(t, 0, tuple(np.zeros(63, dtype=float)))
+            N_new = self.__call__(t, social_restrictions, tuple(economic_closures))
             return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
         else:
             l = 62
-            N_old = self.__call__(t, social_restrictions, preventive_measures, tuple(economic_closures))
+            N_old = self.__call__(t, social_restrictions, tuple(economic_closures))
             economic_policy = np.zeros(63, dtype=float)
             economic_policy[54] = 1
-            N_new = self.__call__(t, 0, 1, tuple(economic_policy))
+            N_new = self.__call__(t, 0, tuple(economic_policy))
             return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
+
+    def slice_matrices(self, type_day, vacation):
+        """
+        Extract matrices on `type_day` and `vacation` and convert to np.ndarray of appropriate size
+        """
+
+        # Home, leisure, school: (age, age, spatial_unit)
+        if self.G != 1:
+            N_home = np.tile(np.expand_dims(self.N_home.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+            N_leisure_private = np.tile(np.expand_dims(self.N_leisure_private.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+            N_leisure_public = np.tile(np.expand_dims(self.N_leisure_public.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+            N_school = np.tile(np.expand_dims(self.N_school.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2), self.G)
+        else:
+            N_home = np.expand_dims(self.N_home.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+            N_leisure_private = np.expand_dims(self.N_leisure_private.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+            N_leisure_public = np.expand_dims(self.N_leisure_public.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+            N_school = np.expand_dims(self.N_school.loc[type_day, vacation, slice(None), slice(None)].values.reshape(2*[len(self.age_classes),]), axis=2)
+        # Work: (NACE 21, age, age)
+        N_work = np.swapaxes(self.N_work.loc[slice(None), type_day, vacation, slice(None), slice(None)].values.reshape([len(self.N_work.index.get_level_values('sector').unique().values),] +2*[len(self.age_classes),]), 0, -1)
+        
+        return N_home, N_leisure_private, N_leisure_public, N_school, N_work
 
 #################
 ## Seasonality ##
