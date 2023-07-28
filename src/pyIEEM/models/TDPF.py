@@ -96,7 +96,7 @@ class make_social_contact_function():
         self.simulation_start = simulation_start
 
     @lru_cache()
-    def __call__(self, t, social_restrictions, economic_closures):
+    def __call__(self, t, M, social_restrictions, economic_closures):
 
         # check daytype
         vacation = is_Belgian_school_holiday(t)
@@ -133,7 +133,7 @@ class make_social_contact_function():
         # convert work contacts to (age, age, spatial_unit) using the labor market structure
         N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_closures)])))
 
-        return {'other': N_home + 0.4*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': 0.4*N_work}
+        return {'other': (1-M)*(N_home + f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': (1-M)*N_work}
 
     def get_contacts(self, t, states, param, tau, social_restrictions, economic_closures):
         """
@@ -193,9 +193,12 @@ class make_social_contact_function():
         ## behavioral model ##
         ######################
 
-        IC_threshold = 2000/11.6e6/(1-0.838)
-        I_star = self.I_star/np.sum(np.sum(states['S'] + states['R'], axis=0))
+        # compute fraction of maximum IC capacity
+        IC_threshold = 1000/11.6e6/(1-0.838)
+        I_star = (self.I_star/np.sum(np.sum(states['S'] + states['R'], axis=0)))/IC_threshold
 
+        # simplest model: linear relationship capped at maximum IC capacity
+        M = min(I_star, 1)
 
         ##############
         ## policies ##
@@ -205,18 +208,18 @@ class make_social_contact_function():
         t_end_lockdown = datetime(2020, 5, 15)
 
         if t < t_start_lockdown:
-            return self.__call__(t, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, M, 0, tuple(np.zeros(63, dtype=float)))
         elif t_start_lockdown < t < t_end_lockdown:
             l = 7
-            N_old = self.__call__(t, 0, tuple(np.zeros(63, dtype=float)))
-            N_new = self.__call__(t, social_restrictions, tuple(economic_closures))
+            N_old = self.__call__(t, M, 0, tuple(np.zeros(63, dtype=float)))
+            N_new = self.__call__(t, M, social_restrictions, tuple(economic_closures))
             return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
         else:
             l = 62
-            N_old = self.__call__(t, social_restrictions, tuple(economic_closures))
+            N_old = self.__call__(t, M, social_restrictions, tuple(economic_closures))
             economic_policy = np.zeros(63, dtype=float)
             economic_policy[54] = 1
-            N_new = self.__call__(t, 0, tuple(economic_policy))
+            N_new = self.__call__(t, M, 0, tuple(economic_policy))
             return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
 
     def slice_matrices(self, type_day, vacation):
