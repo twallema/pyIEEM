@@ -66,7 +66,6 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
 
     # memory length
     l=6*28
-
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, lav, False, f_employees, convmat, simulation_start, l).get_contacts
 

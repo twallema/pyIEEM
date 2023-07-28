@@ -82,10 +82,6 @@ class make_social_contact_function():
         self.lav = lav
         self.f_employees = f_employees
         self.conversion_matrix = conversion_matrix
-
-        # pre-allocate memory
-        self.memory_index = list(range(-(int(abs(l))), 1))
-        self.memory_values = list(np.zeros(len(self.memory_index)))
         self.l = l
 
         # pre-allocate simulation start
@@ -161,12 +157,12 @@ class make_social_contact_function():
         # if timestep is less then 0.5 day from start the user wants a simulation restart
         start_tol = 0.5
         if abs((t - self.simulation_start)/timedelta(days=1)) < start_tol:
-            # re-initialize memory
-            print('\nre-initializing memory\n')
-            self.memory_index = list(range(-(int(abs(self.l))), 1))
-            self.memory_values = list(np.zeros(len(self.memory_index)))
+            # re-initialize a clean memory
+            self.memory_index = [0,] #list(range(-(int(abs(self.l))), 1))
+            self.memory_values = [0,] #list(np.zeros(len(self.memory_index)))
+            self.I_star = 0
         # Get total number of hospitalisations (sum over all ages and spatial units)
-        Ih = np.sum(np.sum(states['Ih'], axis=0))
+        I = np.sum(np.sum(states['Ih'], axis=0))
         # determine length of timestep
         delta_t = (t - self.t)/timedelta(days=1)
         self.t = t
@@ -177,7 +173,7 @@ class make_social_contact_function():
             new_values = self.memory_values
             # append new values
             new_index.append(new_index[-1] + delta_t)
-            new_values.append(Ih)
+            new_values.append(I)
             # subtract the new timestep
             new_index = np.array(new_index) - new_index[-1]
             # cut of values and index to not exceed memory length l
@@ -186,10 +182,20 @@ class make_social_contact_function():
             # compute exponential weights at new_index
             weights = np.exp((1/tau)*new_index)/sum(np.exp((1/tau)*new_index))
             # multiply weights with case count and sum to compute average
-            Ih_star = sum(new_values*weights)
+            I_star = sum(new_values*weights)
             # update memory
             self.memory_index = list(new_index)
             self.memory_values = list(new_values)
+            # update I_star
+            self.I_star = I_star
+
+        ######################
+        ## behavioral model ##
+        ######################
+
+        IC_threshold = 2000/11.6e6/(1-0.838)
+        I_star = self.I_star/np.sum(np.sum(states['S'] + states['R'], axis=0))
+
 
         ##############
         ## policies ##
