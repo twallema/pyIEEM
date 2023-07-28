@@ -98,7 +98,7 @@ class make_social_contact_function():
                 raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
         self.t = simulation_start
         self.simulation_start = simulation_start
-    
+
     @lru_cache()
     def __call__(self, t, social_restrictions, economic_closures):
 
@@ -158,6 +158,13 @@ class make_social_contact_function():
         ## memory ##
         ############
 
+        # if timestep is less then 0.5 day from start the user wants a simulation restart
+        start_tol = 0.5
+        if abs((t - self.simulation_start)/timedelta(days=1)) < start_tol:
+            # re-initialize memory
+            print('\nre-initializing memory\n')
+            self.memory_index = list(range(-(int(abs(self.l))), 1))
+            self.memory_values = list(np.zeros(len(self.memory_index)))
         # Get total number of hospitalisations (sum over all ages and spatial units)
         Ih = np.sum(np.sum(states['Ih'], axis=0))
         # determine length of timestep
@@ -180,7 +187,6 @@ class make_social_contact_function():
             weights = np.exp((1/tau)*new_index)/sum(np.exp((1/tau)*new_index))
             # multiply weights with case count and sum to compute average
             Ih_star = sum(new_values*weights)
-            print(t, Ih, Ih_star)
             # update memory
             self.memory_index = list(new_index)
             self.memory_values = list(new_values)
