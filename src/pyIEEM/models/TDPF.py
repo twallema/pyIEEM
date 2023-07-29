@@ -135,12 +135,13 @@ class make_social_contact_function():
 
         return {'other': N_home + (1-M)*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': (1-M)*N_work}
 
-    def get_contacts(self, t, states, param, tau, social_restrictions, economic_closures):
+    def get_contacts(self, t, states, param, tau, ypsilon, phi, social_restrictions, economic_closures):
         """
         Function returning the number of social contacts under sector closure and/or lockdown
 
         input
         =====
+
 
         output
         ======
@@ -198,9 +199,7 @@ class make_social_contact_function():
         I_star = (self.I_star/np.sum(np.sum(states['S'] + states['R'], axis=0)))/IC_threshold
 
         # gompertz model
-        a=5
-        b=12
-        M = self.gompertz(I_star, a, b)
+        M = self.gompertz(I_star, ypsilon, phi)
 
         ##############
         ## policies ##
@@ -217,7 +216,7 @@ class make_social_contact_function():
             N_new = self.__call__(t, M, social_restrictions, tuple(economic_closures))
             return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
         else:
-            l = 62
+            l = 7
             N_old = self.__call__(t, M, social_restrictions, tuple(economic_closures))
             economic_policy = np.zeros(63, dtype=float)
             economic_policy[54] = 1
