@@ -133,7 +133,7 @@ class make_social_contact_function():
         # convert work contacts to (age, age, spatial_unit) using the labor market structure
         N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_closures)])))
 
-        return {'other': (1-M)*(N_home + f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': (1-M)*N_work}
+        return {'other': N_home + (1-M)*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': (1-M)*N_work}
 
     def get_contacts(self, t, states, param, tau, social_restrictions, economic_closures):
         """
@@ -194,11 +194,13 @@ class make_social_contact_function():
         ######################
 
         # compute fraction of maximum IC capacity
-        IC_threshold = 1000/11.6e6/(1-0.838)
+        IC_threshold = 2000/11.6e6/(1-0.838)
         I_star = (self.I_star/np.sum(np.sum(states['S'] + states['R'], axis=0)))/IC_threshold
 
-        # simplest model: linear relationship capped at maximum IC capacity
-        M = min(I_star, 1)
+        # gompertz model
+        a=5
+        b=12
+        M = self.gompertz(I_star, a, b)
 
         ##############
         ## policies ##
@@ -221,6 +223,31 @@ class make_social_contact_function():
             economic_policy[54] = 1
             N_new = self.__call__(t, M, 0, tuple(economic_policy))
             return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
+
+    @staticmethod
+    def gompertz(x, a, b):
+        """
+        A Gompertz behavioral model
+
+        input
+        =====
+        x: float or np.ndarray
+            input value. range: [-infinity --> infinity]
+
+        a: float
+            displacement along x-axis + y(0). higher values displace to the right and lower y(0) to zero. (if alpha > 5 then y(0) approx. 0)
+        
+        b: float
+            steepness parameter.
+
+        output
+        ======
+
+        y: float or np.ndarray
+            output value. range: [0,1]
+
+        """
+        return np.exp(-a*np.exp(-b*x))
 
     def slice_matrices(self, type_day, vacation):
         """
