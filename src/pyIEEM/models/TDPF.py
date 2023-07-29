@@ -142,6 +142,21 @@ class make_social_contact_function():
         input
         =====
 
+        tau: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        ypsilon: int/float
+            displacement parameter of the Gompertz behavioral model
+
+        phi: int/float
+            steepness parameter of the Gompertz behavioral model
+        
+        social_restrictions: int
+            restrictions on private leisure contacts: 0: no restrictions. 1: restrictions.
+
+        economic_closures: np.ndarray (size 63)
+            closure of economic sectors (NACE 64 classification). 0: open. 1: closed.
 
         output
         ======
