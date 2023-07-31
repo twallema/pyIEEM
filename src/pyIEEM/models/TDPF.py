@@ -269,19 +269,11 @@ class make_social_contact_function():
         if t < t_start_lockdown:
             return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
         elif t_start_lockdown < t < t_end_lockdown:
-            l = 7
-            N_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
-            N_new = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
-            #return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
-            return N_new
+            return self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
         else:
-            l = 7
-            N_old = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
             economic_policy = np.zeros(63, dtype=float)
             economic_policy[54] = 1
-            N_new = self.__call__(t, tuple(M_work), M_eff, 0, tuple(economic_policy))
-            return N_new
-            #return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
+            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(economic_policy))
 
     @staticmethod
     def gompertz(x, a, b):
