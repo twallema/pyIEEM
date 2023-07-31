@@ -11,7 +11,7 @@ abs_dir = os.path.dirname(__file__)
 ## Initialisation of the model ##
 #################################
 
-def initialize_model(country, age_classes, spatial=True, contact_type='absolute_contacts'):
+def initialize_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts', ):
 
     # Get model parameters
     # ====================
@@ -42,6 +42,10 @@ def initialize_model(country, age_classes, spatial=True, contact_type='absolute_
     f_workplace = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['workplace']
 
+    # load telework fraction observed during pandemic
+    f_remote = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['remote']
+
     # load and normalise leisure association vector (lav)
     lav = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['association_leisure']
@@ -50,6 +54,13 @@ def initialize_model(country, age_classes, spatial=True, contact_type='absolute_
     # load the number of employees in every sector of the NACE 64 from the national accounts
     f_employees = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=[0])['Number of employees (-)']
+
+    # load physical proximity index from Pichler et al.
+    FPI = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
+
+    # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
+    hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
 
     # compute fraction of employees in NACE 64 sector as a percentage of its NACE 21 sector
     f_employees = f_employees.reset_index()
@@ -64,14 +75,16 @@ def initialize_model(country, age_classes, spatial=True, contact_type='absolute_
     NACE64_coordinates = convmat.index.values
     convmat = convmat.fillna(0).values
 
+    # memory length
+    l=6*28
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, lav, False, f_employees, convmat).get_contacts
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start, l).get_contacts
 
     # define economic policies
     economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'social_restrictions': 1, 'economic_closures': economic_closures})
+    parameters.update({'tau': 31, 'ypsilon_work': 100, 'ypsilon_eff': 10, 'phi_work': 0.005, 'phi_eff': 0.005,  'social_restrictions': 1, 'economic_closures': economic_closures})
 
     # Construct seasonality TDPF
     # ==========================
@@ -249,7 +262,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     # ==================
 
     # infectivity
-    parameters = {'beta': 0.024}
+    parameters = {'beta': 0.027} # reproduction number of 3.0 for Sweden, 2.7 for belgium.
 
     # durations
     parameters.update({'alpha': 4.5,
