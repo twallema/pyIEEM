@@ -10,7 +10,7 @@ from pyIEEM.models.utils import ramp_fun, is_Belgian_school_holiday, aggregate_s
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l):
         """
         Time-dependent parameter function of social contacts
 
@@ -36,6 +36,14 @@ class make_social_contact_function():
         f_workplace: pd.Series
             Fraction of employees at workplace per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
             Index: NACE64 sectors
+
+        f_remote: pd.series
+            Fraction of employees working from home per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
+            Index: NACE64 sectors
+
+        hesitancy: pd.Series
+            Normalized product of `f_remote` (fraction employees able to work remotely) and the physical proximity of workplace contacts (Pichler).
+            Informs the hesitancy to stay home from work
 
         lav: pd.Series
             Leisure association vector. Contains one if sector of NACE 64 is associated with public leisure contacts. Contains zero otherwise.
@@ -71,18 +79,18 @@ class make_social_contact_function():
 
         # Extract contact matrices and demographically convert to right age bins
         self.N_home, self.N_leisure_private, self.N_leisure_public, self.N_school, self.N_work = aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type)
-        # Extract contact matrices of contacts < 5 min and demographically convert to right age bins
-        self.N_home_short, self.N_leisure_private_short, self.N_leisure_public_short, self.N_school_short, self.N_work_short = aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type+'_less_5_min')
 
         # Assign to variables
         self.age_classes = age_classes
         self.distinguish_day_type = distinguish_day_type
         self.lmc_df = lmc_df
         self.f_workplace = f_workplace
+        self.f_remote = f_remote
         self.lav = lav
         self.f_employees = f_employees
         self.conversion_matrix = conversion_matrix
         self.l = l
+        self.hesitancy = hesitancy
 
         # pre-allocate simulation start
         if not isinstance(simulation_start, (str, datetime)):
@@ -96,7 +104,7 @@ class make_social_contact_function():
         self.simulation_start = simulation_start
 
     @lru_cache()
-    def __call__(self, t, M, social_restrictions, economic_closures):
+    def __call__(self, t, M_work, M_eff, social_restrictions, economic_closures):
 
         # check daytype
         vacation = is_Belgian_school_holiday(t)
@@ -111,31 +119,67 @@ class make_social_contact_function():
         # slice right matrices and convert to right size
         N_home, N_leisure_private, N_leisure_public, N_school, N_work = self.slice_matrices(type_day, vacation)
 
+        #####################
+        ## forced response ##
+        #####################
+
         # convert economic policy from tuple to numpy array
         assert isinstance(economic_closures, tuple)
         economic_closures = 1-np.array(economic_closures, dtype=float)
 
-        # assert degree of school opennness
-        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0]]
-
         # convert the leisure_public contacts depending on the economic policy
         f_leisure_public = sum(self.lav * economic_closures)
 
-        # zero in economic_closures corresponds to full lockdown in Belgium
+        # zero in forced `economic_closures` corresponds to full lockdown in Belgium
         economic_closures = self.f_workplace.values + economic_closures*(1-self.f_workplace.values)
 
+        ###############################
+        ## voluntary response (work) ##
+        ###############################
+
+        assert isinstance(M_work, tuple)
+        M_work = np.array(M_work, dtype=float)
+
+        # compare to involuntary changes and take minimum as limiting
+        economic_closures = np.minimum(economic_closures, M_work)
+
+        # assert degree of school opennness
+        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0]]
+
+        ##################################
+        ## voluntary response (leisure) ##
+        ##################################
+
+        # public leisure contacts
+        f_leisure_public = min(f_leisure_public, M_eff)
+
+        # private leisure contacts
+        f_leisure_private = min((1-social_restrictions), M_eff)
+
+        ########################
+        ## construct matrices ##
+        ########################
+
+        ## work
         # convert economic policy from NACE 64 to NACE 21
         economic_closures = np.matmul(economic_closures*self.f_employees.values, self.conversion_matrix)
-
         # multiply the work contacts (age, age, NACE 21) with the openness of the sectors
         N_work = N_work*economic_closures[np.newaxis, np.newaxis, :]
-
         # convert work contacts to (age, age, spatial_unit) using the labor market structure
         N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_closures)])))
+        
+        ## school
+        N_school *= f_school
 
-        return {'other': N_home + (1-M)*(f_school*N_school + (1-social_restrictions)*N_leisure_private + f_leisure_public*N_leisure_public), 'work': (1-M)*N_work}
+        ## leisure_public
+        N_leisure_public *= f_leisure_public
 
-    def get_contacts(self, t, states, param, tau, ypsilon, phi, social_restrictions, economic_closures):
+        ## leisure_private
+        N_leisure_private *= f_leisure_private
+
+        return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
+
+    def get_contacts(self, t, states, param, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, social_restrictions, economic_closures):
         """
         Function returning the number of social contacts under sector closure and/or lockdown
 
@@ -205,38 +249,39 @@ class make_social_contact_function():
             # update I_star
             self.I_star = I_star
 
-        ######################
-        ## behavioral model ##
-        ######################
+        #######################
+        ## behavioral models ##
+        #######################
 
-        # compute fraction of maximum IC capacity
-        IC_threshold = 2000/11.6e6/(1-0.838)
-        I_star = (self.I_star/np.sum(np.sum(states['S'] + states['R'], axis=0)))/IC_threshold
+        # leisure and general effectivity of contacts
+        M_eff = 1-self.gompertz(self.I_star*(1-0.838), ypsilon_eff, phi_eff)
 
-        # gompertz model
-        M = self.gompertz(I_star, ypsilon, phi)
-
+        # voluntary switch to telework or absenteism
+        M_work = 1-self.gompertz(self.I_star*(1-0.838), ypsilon_work, (phi_work*self.hesitancy).values)
+        
         ##############
         ## policies ##
         ##############
 
         t_start_lockdown = datetime(2020, 3, 15) # start of lockdown
-        t_end_lockdown = datetime(2020, 5, 15)
+        t_end_lockdown = datetime(2020, 5, 7)
 
         if t < t_start_lockdown:
-            return self.__call__(t, M, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
         elif t_start_lockdown < t < t_end_lockdown:
             l = 7
-            N_old = self.__call__(t, M, 0, tuple(np.zeros(63, dtype=float)))
-            N_new = self.__call__(t, M, social_restrictions, tuple(economic_closures))
-            return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
+            N_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+            N_new = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
+            #return {'other': ramp_fun(t, t_start_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_start_lockdown, l, N_old['work'], N_new['work'])}
+            return N_new
         else:
             l = 7
-            N_old = self.__call__(t, M, social_restrictions, tuple(economic_closures))
+            N_old = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
             economic_policy = np.zeros(63, dtype=float)
             economic_policy[54] = 1
-            N_new = self.__call__(t, M, 0, tuple(economic_policy))
-            return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
+            N_new = self.__call__(t, tuple(M_work), M_eff, 0, tuple(economic_policy))
+            return N_new
+            #return {'other': ramp_fun(t, t_end_lockdown, l, N_old['other'], N_new['other']), 'work': ramp_fun(t, t_end_lockdown, l, N_old['work'], N_new['work'])}
 
     @staticmethod
     def gompertz(x, a, b):
