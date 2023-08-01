@@ -146,4 +146,4 @@ for country in ['BE', 'SWE']:
 
     abs_dir = os.path.dirname(__file__)
     out.coords.update({'age_class': range(len(out.coords['age_class']))})
-    out.to_netcdf(os.path.join(abs_dir, f'../data/interim/epi/initial_condition/{country}_INITIAL-CONDITION.nc'))
+    out.to_netcdf(os.path.join(abs_dir, f'../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
