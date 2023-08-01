@@ -132,14 +132,15 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
 
-
 ## Interim
 
 ### epi
 
 #### cases
 
-+ `hosp_incidence_SWE.csv`: Number of hospital admissions per Swedish county (except Gotland) and per week, extracted using WebPlotDigitizer from Figure S2 in `41598_2021_3499_MOESM1_ESM.pdf`. Missing column assumes missing data is 5 % of the available data in March/April 2020 and 3% from May 2020 onwards. These ratios have been computed using the monthly number of hospital admission per Swedish county and per month, available in `Statistikdatabasen_06_07_2023 20_57_17.csv`.
++ `hospital_incidence_BE.csv`: A copy of `COVID19BE_HOSP.csv` without modifications, renamed to the format `f'hospital_incidence_{country}.csv'` and placed along its Swedish equivalent to use less code.
+
++ `hospital_incidence_SWE.csv`: Number of hospital admissions per Swedish county (except Gotland) and per week, extracted using WebPlotDigitizer from Figure S2 in `41598_2021_3499_MOESM1_ESM.pdf`. Missing column assumes missing data is 5 % of the available data in March/April 2020 and 3% from May 2020 onwards. These ratios have been computed using the monthly number of hospital admission per Swedish county and per month, available in `Statistikdatabasen_06_07_2023 20_57_17.csv`.
 
 #### shape
 

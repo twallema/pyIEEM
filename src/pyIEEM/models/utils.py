@@ -1,4 +1,5 @@
 import os
+import xarray as xr
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -11,14 +12,25 @@ abs_dir = os.path.dirname(__file__)
 ## Initialisation of the model ##
 #################################
 
-def initialize_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts', ):
+def initialize_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts'):
 
-    # Get model parameters
+    # get model parameters
     # ====================
 
     initial_states, parameters, coordinates = get_epi_params(country, age_classes, spatial, contact_type)
 
-    # Construct social contact TDPF
+    # get calibrated initial states
+    # =============================
+
+    sim = xr.open_dataset(os.path.join(abs_dir, f'../../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
+    initial_states={}
+    for data_var in sim.keys():
+        if spatial == True:
+            initial_states.update({data_var: sim.sel(date=simulation_start)[data_var].values})   
+        else:
+            initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
+
+    # construct social contact TDPF
     # =============================
 
     # load NACE 21 composition per spatial patch
@@ -86,14 +98,14 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     # add TDPF parameters to dictionary
     parameters.update({'tau': 31, 'ypsilon_work': 100, 'ypsilon_eff': 10, 'phi_work': 0.005, 'phi_eff': 0.005,  'social_restrictions': 1, 'economic_closures': economic_closures})
 
-    # Construct seasonality TDPF
+    # construct seasonality TDPF
     # ==========================
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function()
     parameters.update({'amplitude': 0.18})
 
-    # Initialize model
+    # initialize model
     # ================
 
     model = SIR(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function, 'beta': seasonality_function})
