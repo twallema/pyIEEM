@@ -154,8 +154,8 @@ for country in ['SWE', 'BE']:
                 fig.delaxes(ax)
         n_figs += 1
         counter += nrows*ncols
-        plt.savefig(f'initial_condition_{country}_part_{n_figs}.pdf')
-        plt.show()
+        plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
+        #plt.show()
         plt.close()
 
     #################
