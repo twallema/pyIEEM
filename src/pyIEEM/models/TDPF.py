@@ -269,7 +269,10 @@ class make_social_contact_function():
         if t < t_start_lockdown:
             return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
         elif t_start_lockdown < t < t_end_lockdown:
-            return self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
+            policy_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
+            return {'other': ramp_fun(t, t_start_lockdown, 7, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_start_lockdown, 7, policy_old['work'], policy_new['work'])}
         else:
             economic_policy = np.zeros(63, dtype=float)
             economic_policy[54] = 1
