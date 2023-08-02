@@ -16,7 +16,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # settings calibration
 start_calibration = '2020-02-01'
 processes = 6
-max_iter = 100
+max_iter = 50
 
 # settings visualisation
 nrows = 3
@@ -74,14 +74,14 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 #################
 
 
-for country in ['BE', 'SWE']:
+for country in ['SWE', 'BE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-03-10'
+        end_calibration = '2020-03-08'
     else:
         end_calibration = '2020-03-20'
     data = data.loc[slice(start_calibration, end_calibration)]
@@ -96,10 +96,14 @@ for country in ['BE', 'SWE']:
 
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
-        theta = np.array([1e-9, 0.188, 0.165, 0.049, 0.165, 0.065, 0.762, 1e-9, 0.00695, 0.0416, 0.274, 0.850,
-                          0.249, 0.296, 7.93, 0.0807, 0.00276, 0.00417, 0.00185, 0.095, 0.265])  # ll: 210
+        theta = np.array([9.19690491e-13, 3.17408476e-01, 6.80078567e-01, 6.06827393e-02,
+                            5.07275195e-01, 1.22507688e-01, 1.21471281e+00, 9.42726855e-10,
+                            1.99797734e-02, 9.17475815e-02, 3.61440029e-01, 2.34834215e+00,
+                            5.29518851e-01, 5.06425016e-01, 2.01321879e+01, 1.31557345e-01,
+                            8.65823844e-02, 4.74567997e-02, 7.30118316e-02, 1.04102086e-01,
+                            1.16747254e+00]) # ll: 73.5 met datapunt 2020-03-09 erbij
     else:
-        theta = np.array([0.0778, 1e-12, 1e-12, 0.441, 0.081, 0.160, 0.044, 1e-12, 0.156, 1e-12, 0.0448]) # ll: 232
+        theta = np.array([0.072, 1e-12, 1e-12, 0.416, 0.080, 0.149, 0.037, 1e-12, 0.143, 1e-12, 0.040]) # ll: 232
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
@@ -151,7 +155,7 @@ for country in ['BE', 'SWE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.pdf')
-        #plt.show()
+        plt.show()
         plt.close()
 
     #################
