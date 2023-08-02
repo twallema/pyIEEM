@@ -96,7 +96,7 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 5, 'phi_work': 0.05, 'phi_eff': 0.2,  'social_restrictions': 1, 'economic_closures': economic_closures})
+    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'phi_work': 0.05, 'phi_eff': 0.05,  'social_restrictions': 1, 'economic_closures': economic_closures})
 
     # construct seasonality TDPF
     # ==========================
