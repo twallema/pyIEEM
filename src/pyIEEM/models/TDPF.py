@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from functools import lru_cache
 from datetime import datetime, timedelta
-from pyIEEM.models.utils import ramp_fun, is_Belgian_school_holiday, aggregate_simplify_contacts
+from pyIEEM.models.utils import ramp_fun, is_school_holiday, aggregate_simplify_contacts
 
 #####################
 ## Social contacts ##
@@ -10,7 +10,7 @@ from pyIEEM.models.utils import ramp_fun, is_Belgian_school_holiday, aggregate_s
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l, country):
         """
         Time-dependent parameter function of social contacts
 
@@ -64,6 +64,9 @@ class make_social_contact_function():
         
         l: int
             Memory length. Should be quite large (2-3 months)
+
+        country: str
+            'BE' or 'SWE'
         """
 
         # input checks
@@ -91,6 +94,7 @@ class make_social_contact_function():
         self.conversion_matrix = conversion_matrix
         self.l = l
         self.hesitancy = hesitancy
+        self.country = country
 
         # pre-allocate simulation start
         if not isinstance(simulation_start, (str, datetime)):
@@ -107,7 +111,7 @@ class make_social_contact_function():
     def __call__(self, t, M_work, M_eff, social_restrictions, economic_closures):
 
         # check daytype
-        vacation = is_Belgian_school_holiday(t)
+        vacation = is_school_holiday(t, self.country)
         if self.distinguish_day_type:
             if ((t.weekday() == 5) | (t.weekday() == 6)):
                 type_day = 'weekendday'
@@ -276,9 +280,7 @@ class make_social_contact_function():
             return {'other': ramp_fun(t, t_start_lockdown, 7, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_start_lockdown, 7, policy_old['work'], policy_new['work'])}
         else:
-            economic_policy = np.zeros(63, dtype=float)
-            economic_policy[54] = 1
-            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(economic_policy))
+            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
 
     @staticmethod
     def gompertz(x, a, b):
