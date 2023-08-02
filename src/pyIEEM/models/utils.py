@@ -103,7 +103,7 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function()
-    parameters.update({'amplitude': 0.18})
+    parameters.update({'amplitude': 0.0})
 
     # initialize model
     # ================
