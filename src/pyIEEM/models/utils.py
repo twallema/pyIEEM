@@ -96,7 +96,7 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'tau': 31, 'ypsilon_work': 100, 'ypsilon_eff': 10, 'phi_work': 0.005, 'phi_eff': 0.005,  'social_restrictions': 1, 'economic_closures': economic_closures})
+    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 5, 'phi_work': 0.05, 'phi_eff': 0.2,  'social_restrictions': 1, 'economic_closures': economic_closures})
 
     # construct seasonality TDPF
     # ==========================
@@ -273,8 +273,11 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     # disease parameters
     # ==================
 
-    # infectivity
-    parameters = {'beta': 0.027} # reproduction number of 3.0 for Sweden, 2.7 for belgium.
+    # infectivity (R0 = 3.0)
+    if country == 'BE':
+        parameters = {'beta': 0.030}
+    else:
+        parameters = {'beta': 0.027} 
 
     # durations
     parameters.update({'alpha': 4.5,

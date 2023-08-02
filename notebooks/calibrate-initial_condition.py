@@ -99,7 +99,7 @@ for country in ['BE', 'SWE']:
         theta = np.array([1e-9, 0.188, 0.165, 0.049, 0.165, 0.065, 0.762, 1e-9, 0.00695, 0.0416, 0.274, 0.850,
                           0.249, 0.296, 7.93, 0.0807, 0.00276, 0.00417, 0.00185, 0.095, 0.265])  # ll: 210
     else:
-        theta = np.array([0.189, 1e-09, 1e-09, 1.17, 0.23, 0.45, 0.108, 1e-09, 0.46, 1e-09, 0.115]) # ll: 250
+        theta = np.array([0.0778, 1e-12, 1e-12, 0.441, 0.081, 0.160, 0.044, 1e-12, 0.156, 1e-12, 0.0448]) # ll: 232
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
