@@ -87,17 +87,26 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     NACE64_coordinates = convmat.index.values
     convmat = convmat.fillna(0).values
 
-    # memory length
+    # memory parameters
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
-                                                            f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
-                                                            country).get_contacts
+    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'phi_work': 0.05, 'phi_eff': 0.05})
+    policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
 
     # define economic policies
-    economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
-
-    # add TDPF parameters to dictionary
-    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'phi_work': 0.05, 'phi_eff': 0.05,  'social_restrictions': 1, 'economic_closures': economic_closures})
+    if country == 'BE':
+        parameters.update({'economy_BE_lockdown_1': policies_df['lockdown_1'],
+                            'economy_BE_phaseI': policies_df['lockdown_release_phaseI'],
+                            'economy_BE_lockdown_Antwerp': policies_df['lockdown_Antwerp'],
+                            'economy_BE_lockdown_2': policies_df['lockdown_2']})
+        social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
+                                                            f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
+                                                            country).get_contacts_BE
+    else:
+        parameters.update({'economy_SWE_ban_gatherings_1': policies_df['ban_gatherings_1'],
+                            'economy_SWE_ban_gatherings_2': policies_df['ban_gatherings_2']})
+        social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
+                                                            f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
+                                                            country).get_contacts_SWE
 
     # construct seasonality TDPF
     # ==========================

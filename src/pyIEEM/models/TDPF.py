@@ -179,9 +179,9 @@ class make_social_contact_function():
 
         return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
 
-    def get_contacts(self, t, states, param, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, social_restrictions, economic_closures):
+    def get_contacts_BE(self, t, states, param, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
-        Function returning the number of social contacts under sector closure and/or lockdown
+        Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
         input
         =====
@@ -196,10 +196,7 @@ class make_social_contact_function():
         phi: int/float
             steepness parameter of the Gompertz behavioral model
         
-        social_restrictions: int
-            restrictions on private leisure contacts: 0: no restrictions. 1: restrictions.
-
-        economic_closures: np.ndarray (size 63)
+        economy_BE_lockdown_1: pd.Series
             closure of economic sectors (NACE 64 classification). 0: open. 1: closed.
 
         output
@@ -217,7 +214,7 @@ class make_social_contact_function():
         # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G)
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=1)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, tau)
 
@@ -234,18 +231,109 @@ class make_social_contact_function():
         ## policies ##
         ##############
 
-        t_start_lockdown = datetime(2020, 3, 15) # start of lockdown
-        t_end_lockdown = datetime(2020, 5, 7)
+        # key dates
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_phase_I = datetime(2020, 5, 1)
+        t_BE_phase_II = datetime(2020, 6, 1)
+        t_BE_lockdown_Antwerp = datetime(2020, 8, 7)
+        t_BE_end_lockdown_Antwerp = datetime(2020, 9, 1)
+        t_BE_lockdown_2 = datetime(2020, 10, 19)
 
-        if t < t_start_lockdown:
+        # ramp length
+        l=10
+
+        if t < t_BE_lockdown_1:
             return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
-        elif t_start_lockdown < t < t_end_lockdown:
+        elif t_BE_lockdown_1 <= t < t_BE_phase_I:
             policy_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
-            return {'other': ramp_fun(t, t_start_lockdown, 7, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_start_lockdown, 7, policy_old['work'], policy_new['work'])}
-        else:
+            policy_new = self.__call__(t, tuple(M_work), M_eff, 1, tuple(economy_BE_lockdown_1))
+            return {'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
+        elif t_BE_phase_I <= t < t_BE_phase_II:
+            return self.__call__(t, tuple(M_work), M_eff, 1, tuple(economy_BE_phaseI))
+        elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
             return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+        elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
+            return self.__call__(t, tuple(M_work), M_eff, 1, tuple(economy_BE_lockdown_Antwerp))
+        elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
+            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+        else:
+            policy_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), M_eff, 1, tuple(economy_BE_lockdown_2))
+            return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
+
+    def get_contacts_SWE(self, t, states, param, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+        """
+        Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
+
+        input
+        =====
+
+        tau: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        ypsilon: int/float
+            displacement parameter of the Gompertz behavioral model
+
+        phi: int/float
+            steepness parameter of the Gompertz behavioral model
+        
+        economy_SWE_ban_gatherings: pd.Series
+            ban on large gatherings (NACE 64 classification). 0: open. 1: closed.
+
+        output
+        ======
+
+        N: dict
+            Keys: "work" and "other"
+            Contact matrix per spatial patch at work and in all other locations.
+        """
+
+        ############
+        ## memory ##
+        ############
+
+        # get total number of hospitalisations per spatial patch per 100 K inhabitants
+        I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=1)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, tau)
+
+        #######################
+        ## behavioral models ##
+        #######################
+
+        # leisure and general effectivity of contacts
+        M_eff = 1-self.gompertz(max(self.I_star), ypsilon_eff, phi_eff)
+        # voluntary switch to telework or absenteism
+        M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
+        
+        ##############
+        ## policies ##
+        ##############
+
+        # key dates
+        t_ban_gatherings_1 = datetime(2020, 2, 28)
+        t_ban_gatherings_2 = datetime(2020, 11, 24)
+
+        # ramp length
+        l = 10
+
+        if t < t_ban_gatherings_1:
+            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+        elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
+            policy_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), M_eff, 0, tuple(economy_SWE_ban_gatherings_1))
+            return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
+        else:
+            policy_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), M_eff, 0, tuple(economy_SWE_ban_gatherings_2))
+            return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
     @staticmethod
     def gompertz(x, a, b):
