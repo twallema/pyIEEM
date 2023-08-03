@@ -214,7 +214,7 @@ class make_social_contact_function():
         # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=1)
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, tau)
 
@@ -232,7 +232,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_lockdown_1 = datetime(2020, 3, 16)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 7)
@@ -298,7 +298,7 @@ class make_social_contact_function():
         # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=1)
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, tau)
 
@@ -393,13 +393,13 @@ class make_social_contact_function():
 
         return memory_index, memory_values, I_star, t
 
-
-    def initialize_memory(self, t, I, simulation_start, G, time_threshold=21, hosp_threshold=3):
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
         """
+        time_threshold=0.5
         # if hosp. threshold is surpassed within 21 days after simulation then memory is started
-        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold) & (max(I) <= hosp_threshold)):
+        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold)):#  & (max(I) <= hosp_threshold)):
             # re-initialize memory
             memory_index = [0,] 
             memory_values = [[I[g],] for g in range(G)]
