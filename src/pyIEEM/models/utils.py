@@ -88,22 +88,24 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     convmat = convmat.fillna(0).values
 
     # memory length
-    l=6*28
+    l=12*28
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start, l).get_contacts
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
+                                                            f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
+                                                            l, country).get_contacts
 
     # define economic policies
     economic_closures = pd.Series(1, index=NACE64_coordinates, dtype=float)
 
     # add TDPF parameters to dictionary
-    parameters.update({'tau': 31, 'ypsilon_work': 100, 'ypsilon_eff': 10, 'phi_work': 0.005, 'phi_eff': 0.005,  'social_restrictions': 1, 'economic_closures': economic_closures})
+    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'phi_work': 0.05, 'phi_eff': 0.05,  'social_restrictions': 1, 'economic_closures': economic_closures})
 
     # construct seasonality TDPF
     # ==========================
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function()
-    parameters.update({'amplitude': 0.18})
+    parameters.update({'amplitude': 0.0})
 
     # initialize model
     # ================
@@ -273,8 +275,11 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     # disease parameters
     # ==================
 
-    # infectivity
-    parameters = {'beta': 0.027} # reproduction number of 3.0 for Sweden, 2.7 for belgium.
+    # infectivity (R0 = 3.0)
+    if country == 'BE':
+        parameters = {'beta': 0.030}
+    else:
+        parameters = {'beta': 0.027} 
 
     # durations
     parameters.update({'alpha': 4.5,
@@ -366,21 +371,28 @@ def ramp_fun(t, t_start, l, N_old, N_new):
         return N_new
 
 from dateutil.easter import easter
-def is_Belgian_school_holiday(d):
+def is_school_holiday(d, country):
     """
-    A function returning 'True' if a given date is a school holiday or primary and secundary schools in Belgium
-    Tertiary education, which starts Sept. 12 and has exam periods in Dec-Jan and May-June are not considered.
+    A function returning 'True' if a given date is a school holiday or primary and secundary schools in Belgium or Sweden.
+    Tertiary education is not considered in this work.
     
+    Main differences BE and SWE:
+        - Summer holiday. SWE: mid Jun - mid Aug. BE: Jul - Aug.
+        - Easter holiday. SWE: Good Friday + Easter Monday. BE: Two weeks holiday.
+
     Input
-    -----
+    =====
     
     d: datetime.datetime
         Current simulation date
-    
+
+    country: str
+        'BE' or 'SWE'
+
     Returns
-    -------
+    =======
     
-    is_Belgian_school_holiday: bool
+    is_school_holiday: bool
         True: date `d` is a school holiday for primary and secundary schools
     """
     
@@ -400,14 +412,15 @@ def is_Belgian_school_holiday(d):
     # Default logic: Easter holiday starts first monday of April
     # Unless: Easter falls after 04-15: Easter holiday ends with Easter
     # Unless: Easter falls in March: Easter holiday starts with Easter
-    if d_easter >= datetime(year=d.year,month=4,day=15):
-        w_easter_holiday = w_easter - 1
-    elif d_easter.month == 3:
-        w_easter_holiday = w_easter + 1
-    else:
-        w_easter_holiday = datetime(d.year, 4, (8 - datetime(d.year, 4, 1).weekday()) % 7).isocalendar().week
-    holiday_weeks.append(w_easter_holiday)
-    holiday_weeks.append(w_easter_holiday+1)
+    if country == 'BE':
+        if d_easter >= datetime(year=d.year,month=4,day=15):
+            w_easter_holiday = w_easter - 1
+        elif d_easter.month == 3:
+            w_easter_holiday = w_easter + 1
+        else:
+            w_easter_holiday = datetime(d.year, 4, (8 - datetime(d.year, 4, 1).weekday()) % 7).isocalendar().week
+        holiday_weeks.append(w_easter_holiday)
+        holiday_weeks.append(w_easter_holiday+1)
 
     # Krokusvakantie
     holiday_weeks.append(w_easter-6)
@@ -435,6 +448,8 @@ def is_Belgian_school_holiday(d):
     # Define Belgian Public holidays
     public_holidays = [
         datetime(year=d.year, month=1, day=1),       # New Year
+        d_easter - timedelta(days=2),                # Good Friday
+        d_easter + timedelta(days=1),                # Easter
         d_easter + timedelta(days=1),                # Easter monday
         datetime(year=d.year, month=5, day=1),       # Labor day
         d_easter + timedelta(days=40),               # Acension Day
@@ -446,12 +461,21 @@ def is_Belgian_school_holiday(d):
     ]
     
     # Logic
-    if ((d.isocalendar().week in holiday_weeks) | \
-            (d in public_holidays)) | \
-                ((datetime(year=d.year, month=7, day=1) <= d < datetime(year=d.year, month=9, day=1))):
-        return True
+    if country == 'BE':
+        if ((d.isocalendar().week in holiday_weeks) | \
+                (d in public_holidays)) | \
+                    ((datetime(year=d.year, month=7, day=1) <= d < datetime(year=d.year, month=9, day=1))):
+            return True
+        else:
+            return False
     else:
-        return False
+        # Summer holiday is shifted two weaks in Sweden
+        if ((d.isocalendar().week in holiday_weeks) | \
+                (d in public_holidays)) | \
+                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=8, day=15))):
+            return True
+        else:
+            return False        
 
 def aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type):
     """

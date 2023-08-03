@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from functools import lru_cache
 from datetime import datetime, timedelta
-from pyIEEM.models.utils import ramp_fun, is_Belgian_school_holiday, aggregate_simplify_contacts
+from pyIEEM.models.utils import ramp_fun, is_school_holiday, aggregate_simplify_contacts
 
 #####################
 ## Social contacts ##
@@ -10,7 +10,7 @@ from pyIEEM.models.utils import ramp_fun, is_Belgian_school_holiday, aggregate_s
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l, country):
         """
         Time-dependent parameter function of social contacts
 
@@ -64,6 +64,9 @@ class make_social_contact_function():
         
         l: int
             Memory length. Should be quite large (2-3 months)
+
+        country: str
+            'BE' or 'SWE'
         """
 
         # input checks
@@ -91,6 +94,7 @@ class make_social_contact_function():
         self.conversion_matrix = conversion_matrix
         self.l = l
         self.hesitancy = hesitancy
+        self.country = country
 
         # pre-allocate simulation start
         if not isinstance(simulation_start, (str, datetime)):
@@ -107,7 +111,7 @@ class make_social_contact_function():
     def __call__(self, t, M_work, M_eff, social_restrictions, economic_closures):
 
         # check daytype
-        vacation = is_Belgian_school_holiday(t)
+        vacation = is_school_holiday(t, self.country)
         if self.distinguish_day_type:
             if ((t.weekday() == 5) | (t.weekday() == 6)):
                 type_day = 'weekendday'
@@ -214,38 +218,41 @@ class make_social_contact_function():
         ## memory ##
         ############
 
+        # get total number of hospitalisations per spatial patch per 100 K inhabitants
+        I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
         # if timestep is less then 0.5 day from start the user wants a simulation restart
-        start_tol = 0.5
-        if abs((t - self.simulation_start)/timedelta(days=1)) < start_tol:
-            # re-initialize a clean memory
-            self.memory_index = [0,] #list(range(-(int(abs(self.l))), 1))
-            self.memory_values = [0,] #list(np.zeros(len(self.memory_index)))
-            self.I_star = 0
-        # Get total number of hospitalisations (sum over all ages and spatial units)
-        I = np.sum(np.sum(states['Ih'], axis=0))
+        case_tol = 31
+        threshold = 3
+        if ((abs((t - self.simulation_start)/timedelta(days=1)) < case_tol) & (max(I) <= threshold)):
+            # re-initialize memory
+            self.memory_index = [0,] 
+            self.memory_values = [[I[g],] for g in range(self.G)]
+            self.I_star = I 
         # determine length of timestep
         delta_t = (t - self.t)/timedelta(days=1)
         self.t = t
-        # add case count to memory (RK23 can step backwards)
+        # add case count to memory (RK can step backwards)
         if delta_t > 0:
             # copy values
             new_index = self.memory_index
             new_values = self.memory_values
             # append new values
+            for g in range(self.G):
+                new_values[g].append(I[g])
             new_index.append(new_index[-1] + delta_t)
-            new_values.append(I)
             # subtract the new timestep
             new_index = np.array(new_index) - new_index[-1]
             # cut of values and index to not exceed memory length l
-            new_values = np.array(new_values)[new_index >= -self.l]
+            for g in range(self.G):
+                new_values[g] = list(np.array(new_values[g])[new_index >= -self.l])
             new_index = new_index[new_index >= -self.l]
             # compute exponential weights at new_index
             weights = np.exp((1/tau)*new_index)/sum(np.exp((1/tau)*new_index))
             # multiply weights with case count and sum to compute average
-            I_star = sum(new_values*weights)
+            I_star = np.sum(np.array(new_values)*weights, axis=1)
             # update memory
             self.memory_index = list(new_index)
-            self.memory_values = list(new_values)
+            self.memory_values = new_values
             # update I_star
             self.I_star = I_star
 
@@ -254,10 +261,10 @@ class make_social_contact_function():
         #######################
 
         # leisure and general effectivity of contacts
-        M_eff = 1-self.gompertz(self.I_star*(1-0.838), ypsilon_eff, phi_eff)
+        M_eff = 1-self.gompertz(max(self.I_star), ypsilon_eff, phi_eff)
 
         # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(self.I_star*(1-0.838), ypsilon_work, (phi_work*self.hesitancy).values)
+        M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
         
         ##############
         ## policies ##
@@ -269,11 +276,12 @@ class make_social_contact_function():
         if t < t_start_lockdown:
             return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
         elif t_start_lockdown < t < t_end_lockdown:
-            return self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
+            policy_old = self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), M_eff, social_restrictions, tuple(economic_closures))
+            return {'other': ramp_fun(t, t_start_lockdown, 7, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_start_lockdown, 7, policy_old['work'], policy_new['work'])}
         else:
-            economic_policy = np.zeros(63, dtype=float)
-            economic_policy[54] = 1
-            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(economic_policy))
+            return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
 
     @staticmethod
     def gompertz(x, a, b):

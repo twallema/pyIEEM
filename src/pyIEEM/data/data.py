@@ -36,11 +36,13 @@ def get_hospitalisation_incidence(country):
         data = (data[data.columns[data.columns != 'Missing']] +
                 fraction.multiply(data['Missing'].values, axis=0)).fillna(0)
         # format and sort alphabetically
-        data = data.stack().sort_index()
+        data = data.stack()
         data = data.rename('hospital incidence')
         data.index.names = ['date', 'spatial_unit']
         # data is weekly incidence --> divide by seven
         data /= 7
+        # sort alphabetically
+        data = data.sort_index()
 
     else:
         # simplify spelling
@@ -56,15 +58,12 @@ def get_hospitalisation_incidence(country):
         dates = data.reset_index()['DATE'].unique()
         provinces = data['PROVINCE'].unique()
         iterables = [dates, provinces]
-        desired_data = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='hospital incidence', dtype=int)          
+        desired_data = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='hospital incidence', dtype=float).sort_index()     
         # slice right column and set the index
         data = data[['PROVINCE', 'NEW_IN']].groupby(by=['DATE', 'PROVINCE']).sum()
         data = data.squeeze().rename('hospital incidence')
         data.index.names = ['date', 'spatial_unit']
         # merge dataframes
-        data = desired_data.reset_index().join(data.reset_index(), lsuffix="", rsuffix="_2")
-        data["hospital incidence"] = data["hospital incidence"].combine_first(data["hospital incidence_2"])
-        data = data[['date', 'spatial_unit', 'hospital incidence']]
-        data = data.groupby(by=['date', 'spatial_unit']).last().sort_index().squeeze()
+        data = desired_data.combine_first(data).fillna(0)
 
     return data
