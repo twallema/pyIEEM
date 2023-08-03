@@ -10,7 +10,7 @@ from pyIEEM.models.utils import ramp_fun, is_school_holiday, aggregate_simplify_
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, l, country):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
         """
         Time-dependent parameter function of social contacts
 
@@ -62,9 +62,6 @@ class make_social_contact_function():
             Simulation startdate. Note that this implies you can't change the simulation startdate without re-initializing the model.
             Sadly, there is no way around this (that I can think of for now).
         
-        l: int
-            Memory length. Should be quite large (2-3 months)
-
         country: str
             'BE' or 'SWE'
         """
@@ -92,7 +89,6 @@ class make_social_contact_function():
         self.lav = lav
         self.f_employees = f_employees
         self.conversion_matrix = conversion_matrix
-        self.l = l
         self.hesitancy = hesitancy
         self.country = country
 
@@ -104,7 +100,7 @@ class make_social_contact_function():
                 simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
             except:
                 raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
-        self.t = simulation_start
+        self.t_prev = simulation_start
         self.simulation_start = simulation_start
 
     @lru_cache()
@@ -220,41 +216,10 @@ class make_social_contact_function():
 
         # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
-        # if timestep is less then 0.5 day from start the user wants a simulation restart
-        case_tol = 31
-        threshold = 3
-        if ((abs((t - self.simulation_start)/timedelta(days=1)) < case_tol) & (max(I) <= threshold)):
-            # re-initialize memory
-            self.memory_index = [0,] 
-            self.memory_values = [[I[g],] for g in range(self.G)]
-            self.I_star = I 
-        # determine length of timestep
-        delta_t = (t - self.t)/timedelta(days=1)
-        self.t = t
-        # add case count to memory (RK can step backwards)
-        if delta_t > 0:
-            # copy values
-            new_index = self.memory_index
-            new_values = self.memory_values
-            # append new values
-            for g in range(self.G):
-                new_values[g].append(I[g])
-            new_index.append(new_index[-1] + delta_t)
-            # subtract the new timestep
-            new_index = np.array(new_index) - new_index[-1]
-            # cut of values and index to not exceed memory length l
-            for g in range(self.G):
-                new_values[g] = list(np.array(new_values[g])[new_index >= -self.l])
-            new_index = new_index[new_index >= -self.l]
-            # compute exponential weights at new_index
-            weights = np.exp((1/tau)*new_index)/sum(np.exp((1/tau)*new_index))
-            # multiply weights with case count and sum to compute average
-            I_star = np.sum(np.array(new_values)*weights, axis=1)
-            # update memory
-            self.memory_index = list(new_index)
-            self.memory_values = new_values
-            # update I_star
-            self.I_star = I_star
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, tau)
 
         #######################
         ## behavioral models ##
@@ -262,7 +227,6 @@ class make_social_contact_function():
 
         # leisure and general effectivity of contacts
         M_eff = 1-self.gompertz(max(self.I_star), ypsilon_eff, phi_eff)
-
         # voluntary switch to telework or absenteism
         M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
         
@@ -307,6 +271,54 @@ class make_social_contact_function():
 
         """
         return np.exp(-a*np.exp(-b*x))
+
+    @staticmethod
+    def update_memory(memory_index, memory_values, t, t_prev, I, I_star, G, tau, l=365):
+        """
+        A function to update the memory of the hospitalisation load
+        """
+
+        # determine length of timestep
+        dt = (t - t_prev)/timedelta(days=1)
+        # add case count to memory (RK can step backwards)
+        if dt > 0:
+            # copy values
+            new_index = memory_index
+            new_values = memory_values
+            # append new values
+            for g in range(G):
+                new_values[g].append(I[g])
+            new_index.append(new_index[-1] + dt)
+            # subtract the new timestep
+            new_index = np.array(new_index) - new_index[-1]
+            # cut of values and index to not exceed memory length l
+            for g in range(G):
+                new_values[g] = list(np.array(new_values[g])[new_index >= -l])
+            new_index = new_index[new_index >= -l]
+            # compute exponential weights at new_index
+            weights = np.exp((1/tau)*new_index)/sum(np.exp((1/tau)*new_index))
+            # multiply weights with case count and sum to compute average
+            I_star = np.sum(np.array(new_values)*weights, axis=1)
+            # update memory
+            memory_index = list(new_index)
+            memory_values = new_values
+
+        return memory_index, memory_values, I_star, t
+
+
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold=21, hosp_threshold=3):
+        """
+        A function to initialize the memory at an appropriate moment in time
+        """
+        # if hosp. threshold is surpassed within 21 days after simulation then memory is started
+        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold) & (max(I) <= hosp_threshold)):
+            # re-initialize memory
+            memory_index = [0,] 
+            memory_values = [[I[g],] for g in range(G)]
+            I_star = I 
+            return memory_index, memory_values, I_star
+        else:
+            return self.memory_index, self.memory_values, self.I_star
 
     def slice_matrices(self, type_day, vacation):
         """
