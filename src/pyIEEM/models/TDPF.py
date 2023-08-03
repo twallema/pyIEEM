@@ -240,7 +240,7 @@ class make_social_contact_function():
         t_BE_lockdown_2 = datetime(2020, 10, 19)
 
         # ramp length
-        l=10
+        l=7
 
         if t < t_BE_lockdown_1:
             return self.__call__(t, tuple(M_work), M_eff, 0, tuple(np.zeros(63, dtype=float)))
