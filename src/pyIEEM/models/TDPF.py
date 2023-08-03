@@ -218,15 +218,16 @@ class make_social_contact_function():
         ## memory ##
         ############
 
-        # if timestep is less then 0.5 day from start the user wants a simulation restart
-        start_tol = 0.5
-        if abs((t - self.simulation_start)/timedelta(days=1)) < start_tol:
-            # re-initialize a clean memory
-            self.memory_index = [0,] 
-            self.memory_values = [[0,] for _ in range(self.G)]
-            self.I_star = np.zeros(self.G, dtype=float)
-        # Get total number of hospitalisations per spatial patch per 100 K inhabitants
+        # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
+        # if timestep is less then 0.5 day from start the user wants a simulation restart
+        case_tol = 31
+        threshold = 3
+        if ((abs((t - self.simulation_start)/timedelta(days=1)) < case_tol) & (max(I) <= threshold)):
+            # re-initialize memory
+            self.memory_index = [0,] 
+            self.memory_values = [[I[g],] for g in range(self.G)]
+            self.I_star = I 
         # determine length of timestep
         delta_t = (t - self.t)/timedelta(days=1)
         self.t = t
