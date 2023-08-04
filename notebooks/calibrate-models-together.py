@@ -20,9 +20,9 @@ abs_dir = os.path.dirname(__file__)
 
 # settings calibration
 start_calibration = ['2020-03-07','2020-03-07']
-end_calibration = '2021-01-01'
+end_calibration = '2020-12-01'
 processes = 6
-max_iter = 100
+max_iter = 200
 multiplier_mcmc = 6
 n_mcmc = 200
 print_n = 10
@@ -73,8 +73,7 @@ objective_function = log_posterior_probability(models, pars, bounds, datasets, s
 ## NM calibration ##
 ####################
 
-theta = [0.5, 14, 0.62, 0.05, 10, 0.05, 10, 0.05, 0.40] # 
-#theta = [0.5, 13, 0.62, 0.05, 17, 0.01, 15, 0.16, 0.375] # spatial, ll: -14610
+theta = [2, 14, 0.62, 0.05, 10, 0.05, 10, 0.05, 0.30] 
 
 #theta = pso.optimize(objective_function, bounds, swarmsize=5*processes, max_iter=max_iter, processes=processes, debug=True)[0]
 theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
@@ -146,7 +145,7 @@ if __name__ == '__main__':
 
     # Write settings to a .txt
     settings={'start_calibration': start_calibration, 'end_calibration': end_calibration, 'n_chains': nwalkers,
-                'dispersion': alpha, 'labels': labels, 'starting_estimate': theta}
+                'dispersion': alpha, 'labels': labels, 'starting_estimate': list(theta)}
 
 
     print(f'Using {processes} cores for {ndim} parameters, in {nwalkers} chains.\n')
