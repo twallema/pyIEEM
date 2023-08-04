@@ -103,7 +103,7 @@ class make_social_contact_function():
         self.t_prev = simulation_start
         self.simulation_start = simulation_start
 
-    @lru_cache()
+    #@lru_cache()
     def __call__(self, t, M_work, M_eff, M_leisure, social_restrictions, economic_closures):
 
         # check daytype
@@ -141,20 +141,24 @@ class make_social_contact_function():
         M_work = np.array(M_work, dtype=float)
 
         # compare to involuntary changes and take minimum as limiting
-        economic_closures = np.minimum(economic_closures, M_work)
+        economic_closures = np.minimum(economic_closures[:, np.newaxis], M_work)
 
         # assert degree of school opennness
-        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0]]
+        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
 
         ##################################
         ## voluntary response (leisure) ##
         ##################################
 
+        assert ((isinstance(M_eff, tuple)) & (isinstance(M_leisure, tuple)))
+        M_eff = np.array(M_eff, dtype=float)
+        M_leisure = np.array(M_leisure, dtype=float)
+
         # public leisure contacts
-        f_leisure_public = min(f_leisure_public, M_leisure)
+        f_leisure_public = np.minimum(f_leisure_public, M_leisure)
 
         # private leisure contacts
-        f_leisure_private = min((1-social_restrictions), M_leisure)
+        f_leisure_private = np.minimum((1-social_restrictions), M_leisure)
 
         ########################
         ## construct matrices ##
@@ -162,12 +166,9 @@ class make_social_contact_function():
 
         ## work
         # convert economic policy from NACE 64 to NACE 21
-        economic_closures = np.matmul(economic_closures*self.f_employees.values, self.conversion_matrix)
-        # multiply the work contacts (age, age, NACE 21) with the openness of the sectors
-        N_work = N_work*economic_closures[np.newaxis, np.newaxis, :]
-        # convert work contacts to (age, age, spatial_unit) using the labor market structure
-        N_work = np.einsum('ijk, kl -> ijl', N_work, np.transpose(self.lmc_df.values.reshape([self.G, len(economic_closures)])))
-        
+        economic_closures = np.transpose(np.squeeze(np.transpose(np.expand_dims(economic_closures*self.f_employees.values[:, np.newaxis], axis=2)) @ self.conversion_matrix))
+        N_work = N_work @ (economic_closures * np.transpose(self.lmc_df.values.reshape([self.G, economic_closures.shape[0]])))
+
         ## school
         N_school *= f_school
 
@@ -179,12 +180,16 @@ class make_social_contact_function():
 
         return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
 
-    def get_contacts_BE(self, t, states, param, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+    def get_contacts_BE(self, t, states, param, zeta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
         input
         =====
+
+        zeta: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            zeta = 0: only look at own patch, zeta=inf: only look at patch with maximum infectivity
 
         tau: int/float
             half-life of the hospital load memory.
@@ -221,14 +226,16 @@ class make_social_contact_function():
         #######################
         ## behavioral models ##
         #######################
-
-        # leisure and general effectivity of contacts
-        M_eff = 1-self.gompertz(max(self.I_star), ypsilon_eff, phi_eff)
-        # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
-        # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(max(self.I_star), ypsilon_leisure, ypsilon_leisure)
         
+        # compute perceived hospital load per spatial patch as average between patch with maximum hospital load and own patch
+        I_star_average =  (self.I_star + zeta*self.I_star[np.argmax(self.I_star)])/(1+zeta)
+        # leisure and general effectivity of contacts
+        M_eff = 1-self.gompertz(I_star_average, ypsilon_eff, phi_eff)
+        # voluntary switch to telework or absenteism
+        M_work = 1-self.gompertz(I_star_average, ypsilon_work, (phi_work*self.hesitancy).values)
+        # reduction of leisure contacts
+        M_leisure = 1-self.gompertz(I_star_average, ypsilon_leisure, phi_leisure)
+
         ##############
         ## policies ##
         ##############
@@ -245,32 +252,36 @@ class make_social_contact_function():
         l=7
 
         if t <= t_BE_lockdown_1:
-            return self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            policy_old = self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), M_eff, M_leisure, 1, tuple(economy_BE_lockdown_1))
+            policy_old = self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_lockdown_1))
             return {'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
         elif t_BE_phase_I <= t < t_BE_phase_II:
-            return self.__call__(t, tuple(M_work), M_eff, M_leisure, 1, tuple(economy_BE_phaseI))
+            return self.__call__(t, tuple(M_work),tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_phaseI))
         elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
-            return self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
-            return self.__call__(t, tuple(M_work), M_eff, M_leisure, 1, tuple(economy_BE_lockdown_Antwerp))
+            return self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_lockdown_Antwerp))
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
-            return self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
         else:
-            policy_old = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), M_eff, M_leisure, 1, tuple(economy_BE_lockdown_2))
+            policy_old = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_lockdown_2))
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
-    def get_contacts_SWE(self, t, states, param, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_contacts_SWE(self, t, states, param, zeta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
         input
         =====
+
+        zeta: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            zeta = 0: only look at own patch, zeta=inf: only look at patch with maximum infectivity
 
         tau: int/float
             half-life of the hospital load memory.
@@ -308,13 +319,15 @@ class make_social_contact_function():
         ## behavioral models ##
         #######################
 
-        # general effectivity of contacts
-        M_eff = 1-self.gompertz(max(self.I_star), ypsilon_eff, phi_eff)
+        # compute perceived hospital load per spatial patch as average between patch with maximum hospital load and own patch
+        I_star_average =  (self.I_star + zeta*self.I_star[np.argmax(self.I_star)])/(1+zeta)
+        # leisure and general effectivity of contacts
+        M_eff = 1-self.gompertz(I_star_average, ypsilon_eff, phi_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
+        M_work = 1-self.gompertz(I_star_average, ypsilon_work, (phi_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(max(self.I_star), ypsilon_leisure, ypsilon_leisure)
-        
+        M_leisure = 1-self.gompertz(I_star_average, ypsilon_leisure, phi_leisure)
+
         ##############
         ## policies ##
         ##############
@@ -327,15 +340,15 @@ class make_social_contact_function():
         l = 7
 
         if t <= t_ban_gatherings_1:
-            return self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            policy_old = self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(economy_SWE_ban_gatherings_1))
+            policy_old = self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(economy_SWE_ban_gatherings_1))
             return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
         else:
-            policy_old = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(economy_SWE_ban_gatherings_2))
+            policy_old = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(economy_SWE_ban_gatherings_2))
             return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
@@ -362,7 +375,7 @@ class make_social_contact_function():
             output value. range: [0,1]
 
         """
-        return np.exp(-a*np.exp(-b*x))
+        return np.squeeze(np.exp(-a*np.exp(-np.outer(b,x))))
 
     @staticmethod
     def update_memory(memory_index, memory_values, t, t_prev, I, I_star, G, tau, l=365):

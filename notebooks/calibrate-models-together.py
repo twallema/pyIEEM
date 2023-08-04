@@ -19,14 +19,10 @@ abs_dir = os.path.dirname(__file__)
 ##########################
 
 # settings calibration
-#start_calibration = ['2020-03-13','2020-02-27'] # moment BE and SWE pass 4 hospitalised COVID-19 patients per 100K inhabitants
-#start_calibration = ['2020-03-14','2020-02-28'] # moment BE and SWE pass 5 hospitalised COVID-19 patients per 100K inhabitants
-start_calibration = ['2020-03-15','2020-02-29'] # moment BE and SWE pass 6 hospitalised COVID-19 patients per 100K inhabitants
-#start_calibration = ['2020-03-16','2020-03-01'] # moment BE and SWE pass 7 hospitalised COVID-19 patients per 100K inhabitants
-
-end_calibration = '2020-10-01'
+start_calibration = ['2020-03-01','2020-03-01']
+end_calibration = '2021-01-01'
 processes = 6
-max_iter = 50
+max_iter = 100
 multiplier_mcmc = 6
 n_mcmc = 200
 print_n = 10
@@ -51,22 +47,24 @@ data_SWE = get_hospitalisation_incidence('SWE').loc[slice(start_calibration[1], 
 
 
 ## load model BE and SWE
-age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
-        35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
+age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
 model_BE = initialize_model('BE', age_classes, True, start_calibration[0])
 model_SWE = initialize_model('SWE', age_classes, True, start_calibration[1])
 
 ## set up log likelihood function
 models = [model_BE, model_SWE]
 datasets = [data_BE, data_SWE]
+#datasets = [data_BE.groupby(by='date').sum(), data_SWE.groupby(by='date').sum()]
+dt = [data_BE, data_SWE]
 states = ["Hin", "Hin"]
 log_likelihood_fnc = [ll_negative_binomial, ll_negative_binomial] 
 alpha = 0.03
+#log_likelihood_fnc_args = [0.03, 0.03]
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
                             len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]
-pars = ['tau', 'ypsilon_eff', 'phi_eff', 'ypsilon_work', 'phi_work', 'amplitude']
-bounds=((5,100),(0,100),(0,100),(5,100),(0,100),(0,1))
-labels = [r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\upsilon_{work}$', r'$\phi_{work}$', r'$A$']
+pars = ['tau', 'ypsilon_eff', 'phi_eff', 'ypsilon_work', 'phi_work', 'ypsilon_leisure', 'phi_leisure', 'amplitude']
+bounds=((5,100),(0,100),(0,100),(0,100),(0,100),(0,100),(0,100),(0,1))
+labels = [r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\upsilon_{work}$', r'$\phi_{work}$', r'$\upsilon_{leisure}$', r'$\phi_{leisure}$', r'$A$']
 weights = [1/len(data_BE), 1/len(data_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc,
                                                 log_likelihood_fnc_args, start_sim=start_calibration, labels=labels)
@@ -75,19 +73,18 @@ objective_function = log_posterior_probability(models, pars, bounds, datasets, s
 ## NM calibration ##
 ####################
 
-theta = [7,  0.60,  0.03, 10, 0.20,  0.40] ## ll: 1.209e+04 
-theta = [10.63413066,  0.64575617,  0.02872299, 15.19161523,  0.07914095,  0.47191358]
+theta = [14,  1,  0.05, 10, 0.10, 10, 0.20, 0.40] ## ll: 1.209e+04 
+theta = [1.29622186e+01, 6.21760218e-01, 4.96343021e-02, 1.67679210e+01, 1.00939834e-02, 1.47134829e+01, 1.57029663e-01, 3.77772349e-01] # spatial, ll: -14610
 
-theta = pso.optimize(objective_function, bounds, swarmsize=5*processes, max_iter=max_iter, processes=processes, debug=True)[0]
-
-#theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[0.50,], processes=processes, max_iter=max_iter)[0]
+#theta = pso.optimize(objective_function, bounds, swarmsize=5*processes, max_iter=max_iter, processes=processes, debug=True)[0]
+#theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
 ## visualisation
 for i, country in enumerate(['BE', 'SWE']):
 
     # set right model and data
     model = models[i]
-    data = datasets[i]
+    data = dt[i]
     start_sim = start_calibration[i]
 
     # set optimal parameters
@@ -138,6 +135,9 @@ for i, country in enumerate(['BE', 'SWE']):
         plt.savefig(f'calibrate_together_{country}_part_{n_figs}.png', dpi=600)
         #plt.show()
         plt.close()
+
+import sys
+sys.exit()
 
 ##########
 ## MCMC ##
