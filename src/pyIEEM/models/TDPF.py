@@ -234,7 +234,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 16)
+        t_BE_lockdown_1 = datetime(2020, 3, 13)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 1)
@@ -244,10 +244,10 @@ class make_social_contact_function():
         # ramp length
         l=7
 
-        if t < t_BE_lockdown_1:
-            return self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+        if t <= t_BE_lockdown_1:
+            return self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            policy_old = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+            policy_old = self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
             policy_new = self.__call__(t, tuple(M_work), M_eff, M_leisure, 1, tuple(economy_BE_lockdown_1))
             return {'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
@@ -319,17 +319,17 @@ class make_social_contact_function():
         ## policies ##
         ##############
 
-        # key dates
-        t_ban_gatherings_1 = datetime(2020, 2, 28)
+        # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
+        t_ban_gatherings_1 = datetime(2020, 3, 10)
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         # ramp length
-        l = 10
+        l = 7
 
-        if t < t_ban_gatherings_1:
-            return self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+        if t <= t_ban_gatherings_1:
+            return self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            policy_old = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
+            policy_old = self.__call__(t, tuple(M_work), 1, M_leisure, 0, tuple(np.zeros(63, dtype=float)))
             policy_new = self.__call__(t, tuple(M_work), M_eff, M_leisure, 0, tuple(economy_SWE_ban_gatherings_1))
             return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
@@ -401,9 +401,9 @@ class make_social_contact_function():
         """
         A function to initialize the memory at an appropriate moment in time
         """
-        time_threshold=0.5
+        time_threshold = 0.5
         # if hosp. threshold is surpassed within 21 days after simulation then memory is started
-        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold)):#  & (max(I) <= hosp_threshold)):
+        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold)): #  & (max(I) <= hosp_threshold)):
             # re-initialize memory
             memory_index = [0,] 
             memory_values = [[I[g],] for g in range(G)]
