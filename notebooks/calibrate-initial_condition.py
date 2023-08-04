@@ -93,7 +93,7 @@ for country in ['SWE', 'BE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # nicely consistent with one infected in Stockholm
-        theta = np.array([0, 0.01, 0.01, 0.02, 0, 0, 0.02, 0, 0, 0, 0.01, 0.05, 0, 0, 1, 0, 0, 0, 0, 0, 0.05])
+        theta = np.array([0, 0.01, 0.01, 0.02, 0, 0, 0.02, 0, 0, 0.01, 0.01, 0.05, 0, 0, 1, 0, 0, 0, 0, 0, 0.05])
     else:
         theta = np.array([0.163, 0, 0, 0.975, 0.50, 0.50, 0.089, 0, 0.50, 0, 0.097]) # ll: 215, seasonality: 0.0
 

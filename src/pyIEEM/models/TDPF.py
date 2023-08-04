@@ -249,7 +249,7 @@ class make_social_contact_function():
         t_BE_lockdown_2 = datetime(2020, 10, 19)
 
         # ramp length
-        l=7
+        l=5
 
         if t <= t_BE_lockdown_1:
             return self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
@@ -337,7 +337,7 @@ class make_social_contact_function():
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         # ramp length
-        l = 7
+        l = 5
 
         if t <= t_ban_gatherings_1:
             return self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
