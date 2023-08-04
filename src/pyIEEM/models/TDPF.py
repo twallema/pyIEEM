@@ -227,7 +227,7 @@ class make_social_contact_function():
         # voluntary switch to telework or absenteism
         M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(max(self.I_star), ypsilon_leisure, ypsilon_leisure.values)
+        M_leisure = 1-self.gompertz(max(self.I_star), ypsilon_leisure, ypsilon_leisure)
         
         ##############
         ## policies ##
@@ -313,7 +313,7 @@ class make_social_contact_function():
         # voluntary switch to telework or absenteism
         M_work = 1-self.gompertz(max(self.I_star), ypsilon_work, (phi_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(max(self.I_star), ypsilon_leisure, ypsilon_leisure.values)
+        M_leisure = 1-self.gompertz(max(self.I_star), ypsilon_leisure, ypsilon_leisure)
         
         ##############
         ## policies ##
