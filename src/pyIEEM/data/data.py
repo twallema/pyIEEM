@@ -52,7 +52,7 @@ def get_hospitalisation_incidence(country):
         data.loc[data['PROVINCE'] == 'VlaamsBrabant', 'PROVINCE'] = 'Vlaams-Brabant'
         data.loc[data['PROVINCE'] == 'Liège', 'PROVINCE'] = 'Liege'
         # cut of at start of 2021
-        data = data.loc[slice(None, datetime(2021, 1, 1)), :]
+        data = data.loc[slice(None, datetime(2022, 1, 1)), :]
         # make an empty dataframe with all date-province combinations as index
         names = ['date', 'spatial_unit']
         dates = data.reset_index()['DATE'].unique()
