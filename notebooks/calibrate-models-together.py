@@ -24,11 +24,11 @@ abs_dir = os.path.dirname(__file__)
 start_calibration = ['2020-03-15','2020-02-29'] # moment BE and SWE pass 6 hospitalised COVID-19 patients per 100K inhabitants
 #start_calibration = ['2020-03-16','2020-03-01'] # moment BE and SWE pass 7 hospitalised COVID-19 patients per 100K inhabitants
 
-end_calibration = '2021-01-01'
+end_calibration = '2020-10-01'
 processes = 6
 max_iter = 50
-multiplier_mcmc = 3
-n_mcmc = 100
+multiplier_mcmc = 6
+n_mcmc = 200
 print_n = 10
 
 # paths
@@ -64,9 +64,9 @@ log_likelihood_fnc = [ll_negative_binomial, ll_negative_binomial]
 alpha = 0.03
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
                             len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]
-pars = ['tau', 'ypsilon_eff', 'phi_eff', 'amplitude']
-bounds=((1,100),(0,100),(0,100), (0,0.50))
-labels = ['$\\tau$', '$\\ypsilon$', '$\\phi$', '$A$']
+pars = ['tau', 'ypsilon_eff', 'phi_eff', 'ypsilon_work', 'phi_work', 'amplitude']
+bounds=((5,100),(0,100),(0,100),(5,100),(0,100),(0,1))
+labels = [r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\upsilon_{work}$', r'$\phi_{work}$', r'$A$']
 weights = [1/len(data_BE), 1/len(data_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc,
                                                 log_likelihood_fnc_args, start_sim=start_calibration, labels=labels)
@@ -75,7 +75,11 @@ objective_function = log_posterior_probability(models, pars, bounds, datasets, s
 ## NM calibration ##
 ####################
 
-theta = [20.61694904,  0.59388808,  0.05006028,  0.34140456] ## ll: 1.209e+04 
+theta = [7,  0.60,  0.03, 10, 0.20,  0.40] ## ll: 1.209e+04 
+theta = [10.63413066,  0.64575617,  0.02872299, 15.19161523,  0.07914095,  0.47191358]
+
+theta = pso.optimize(objective_function, bounds, swarmsize=5*processes, max_iter=max_iter, processes=processes, debug=True)[0]
+
 #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[0.50,], processes=processes, max_iter=max_iter)[0]
 
 ## visualisation
@@ -141,7 +145,7 @@ for i, country in enumerate(['BE', 'SWE']):
 
 if __name__ == '__main__':
         
-    ndim, nwalkers, pos = perturbate_theta(theta, len(pars)*[0.50,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
+    ndim, nwalkers, pos = perturbate_theta(theta, len(pars)*[0.25,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
 
     # Write settings to a .txt
     settings={'start_calibration': start_calibration, 'end_calibration': end_calibration, 'n_chains': nwalkers,
