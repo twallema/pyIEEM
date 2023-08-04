@@ -77,7 +77,7 @@ for country in ['SWE', 'BE']:
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-03-22'
+        end_calibration = '2020-04-01'
     else:
         end_calibration = '2020-03-22'
     data = data.loc[slice(start_calibration, end_calibration)]
@@ -93,9 +93,8 @@ for country in ['SWE', 'BE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # nicely consistent with one infected in Stockholm
-        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
+        theta = np.array([0, 0.01, 0.01, 0.02, 0, 0, 0.02, 0, 0, 0, 0.01, 0.05, 0, 0, 1, 0, 0, 0, 0, 0, 0.05])
     else:
-        #theta = np.array([0.072, 1e-12, 1e-12, 0.416, 0.080, 0.149, 0.037, 1e-12, 0.143, 1e-12, 0.040]) # ll: 232, seasonality: 0.18
         theta = np.array([0.163, 0, 0, 0.975, 0.50, 0.50, 0.089, 0, 0.50, 0, 0.097]) # ll: 215, seasonality: 0.0
 
     # nelder-mead minimization
