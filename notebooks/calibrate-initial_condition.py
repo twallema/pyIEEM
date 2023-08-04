@@ -27,8 +27,6 @@ ncols = 4
 ######################
 
 # helper function to adjust initial condition
-
-
 def update_initial_condition(infected, initial_condition, N_other, N_work):
     assert len(infected) == initial_condition.shape[1]
     # compute number of contacts per age group per spatial patch (N x G)
@@ -46,8 +44,6 @@ def update_initial_condition(infected, initial_condition, N_other, N_work):
     return output
 
 # custom SSE function
-
-
 def poisson_ll(theta, data, model, start_calibration, end_calibration):
     """
     A custom Poisson log-likelihood function
@@ -74,14 +70,14 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 #################
 
 
-for country in ['BE', 'SWE']:
+for country in ['SWE', 'BE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-03-08'
+        end_calibration = '2020-03-22'
     else:
         end_calibration = '2020-03-22'
     data = data.loc[slice(start_calibration, end_calibration)]
@@ -96,18 +92,8 @@ for country in ['BE', 'SWE']:
 
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
-        #theta = np.array([9.19690491e-13, 3.17408476e-01, 6.80078567e-01, 6.06827393e-02,
-        #                    5.07275195e-01, 1.22507688e-01, 1.21471281e+00, 9.42726855e-10,
-        #                    1.99797734e-02, 9.17475815e-02, 3.61440029e-01, 2.34834215e+00,
-        #                    5.29518851e-01, 5.06425016e-01, 2.01321879e+01, 1.31557345e-01,
-        #                    8.65823844e-02, 4.74567997e-02, 7.30118316e-02, 1.04102086e-01,
-        #                    1.16747254e+00]) # ll: 73.5, seasonality: 0.18
-        theta = np.array([4.90557688e-13, 9.29359510e-01, 1.46439472e+00, 5.15682933e-02,
-                            6.43880705e-01, 4.11241512e-01, 2.25351502e+00, 1.96398501e-09,
-                            3.10444846e-02, 3.80312191e-01, 1.04567025e+00, 4.14069887e+00,
-                            1.30441599e+00, 5.83208265e-01, 4.06855042e+01, 3.22849811e-01,
-                            1.57385393e-01, 4.67295827e-02, 2.32268994e-01, 1.59717878e-01,
-                            4.05288009e+00])
+        # nicely consistent with one infected in Stockholm
+        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
     else:
         #theta = np.array([0.072, 1e-12, 1e-12, 0.416, 0.080, 0.149, 0.037, 1e-12, 0.143, 1e-12, 0.040]) # ll: 232, seasonality: 0.18
         theta = np.array([0.163, 0, 0, 0.975, 0.50, 0.50, 0.089, 0, 0.50, 0, 0.097]) # ll: 215, seasonality: 0.0
@@ -162,7 +148,7 @@ for country in ['BE', 'SWE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
-        #plt.show()
+        plt.show()
         plt.close()
 
     #################
