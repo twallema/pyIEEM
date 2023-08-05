@@ -95,7 +95,7 @@ for country in ['SWE', 'BE']:
         # nicely consistent with one infected in Stockholm
         theta = np.array([0, 0.01, 0.01, 0.02, 0, 0, 0.02, 0, 0, 0.01, 0.01, 0.05, 0, 0, 1, 0, 0, 0, 0, 0, 0.05])
     else:
-        theta = np.array([0.163, 0, 0, 0.975, 0.50, 0.50, 0.089, 0, 0.50, 0, 0.097]) # ll: 215, seasonality: 0.0
+        theta = np.array([0.25, 0, 0, 1.2, 0.60, 0.80, 0.15, 0, 0.75, 0, 0.25]) # ll: 215, seasonality: 0.0
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
@@ -147,7 +147,7 @@ for country in ['SWE', 'BE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
-        plt.show()
+        #plt.show()
         plt.close()
 
     #################
