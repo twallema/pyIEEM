@@ -180,7 +180,7 @@ class make_social_contact_function():
 
         return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
 
-    def get_contacts_BE(self, t, states, param, G, zeta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+    def get_contacts_BE(self, t, states, param, G, eta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -228,7 +228,6 @@ class make_social_contact_function():
         #######################
         
         # compute perceived hospital load per spatial patch as average between patch with maximum hospital load and own patch
-        #I_star_average =  (self.I_star + zeta*self.I_star[np.argmax(self.I_star)])/(1+zeta)
         # based on degree-connectivity
         idxmax = np.argmax(self.I_star)
         col = np.copy(G[:, idxmax])
@@ -236,7 +235,7 @@ class make_social_contact_function():
         mask = np.ones(col.shape, bool)
         mask[idxmax] = False
         connectivity = col/np.mean(col[mask])
-        I_star_average = (self.I_star + zeta*connectivity*self.I_star[idxmax])/(1 + zeta*connectivity)
+        I_star_average = (self.I_star + eta*connectivity*self.I_star[idxmax])/(1 + eta*connectivity)
         # leisure and general effectivity of contacts
         M_eff = 1-self.gompertz(I_star_average, ypsilon_eff, phi_eff)
         # voluntary switch to telework or absenteism
@@ -268,7 +267,7 @@ class make_social_contact_function():
         # ramp length
         l=3
 
-        if t <= t_BE_lockdown_1:
+        if t < t_BE_lockdown_1:
             return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
             policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
@@ -289,7 +288,7 @@ class make_social_contact_function():
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
-    def get_contacts_SWE(self, t, states, param, G, zeta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_contacts_SWE(self, t, states, param, G, eta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -337,7 +336,6 @@ class make_social_contact_function():
         #######################
 
         # compute perceived hospital load per spatial patch as average between patch with maximum hospital load and own patch
-        #I_star_average =  (self.I_star + zeta*self.I_star[np.argmax(self.I_star)])/(1+zeta)
         # based on degree-connectivity
         idxmax = np.argmax(self.I_star)
         col = np.copy(G[:, idxmax])
@@ -345,7 +343,7 @@ class make_social_contact_function():
         mask = np.ones(col.shape, bool)
         mask[idxmax] = False
         connectivity = col/np.mean(col[mask])
-        I_star_average = (self.I_star + zeta*connectivity*self.I_star[idxmax])/(1 + zeta*connectivity)
+        I_star_average = (self.I_star + eta*connectivity*self.I_star[idxmax])/(1 + eta*connectivity)
         # leisure and general effectivity of contacts
         M_eff = 1-self.gompertz(I_star_average, ypsilon_eff, phi_eff)
         # voluntary switch to telework or absenteism
@@ -364,7 +362,7 @@ class make_social_contact_function():
         # ramp length
         l = 3
 
-        if t <= t_ban_gatherings_1:
+        if t < t_ban_gatherings_1:
             return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
             policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
