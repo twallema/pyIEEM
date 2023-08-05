@@ -1,3 +1,4 @@
+from selectors import EpollSelector
 import numpy as np
 import pandas as pd
 from functools import lru_cache
@@ -104,7 +105,7 @@ class make_social_contact_function():
         self.simulation_start = simulation_start
 
     #@lru_cache()
-    def __call__(self, t, M_work, M_eff, M_leisure, social_restrictions, economic_closures):
+    def __call__(self, t, M_work, M_eff, M_leisure, social_restrictions, mandated_telework, economic_closures):
 
         # check daytype
         vacation = is_school_holiday(t, self.country)
@@ -131,6 +132,13 @@ class make_social_contact_function():
 
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
         economic_closures = self.f_workplace.values[:, np.newaxis] + economic_closures*(1-self.f_workplace.values[:, np.newaxis])
+
+        # compare with telework obligation
+        if isinstance(mandated_telework, (int,float)):
+            f_telework = np.expand_dims(1 - self.f_remote.values*mandated_telework, axis=1)
+        else:
+            f_telework = 1 - self.f_remote.values[:, np.newaxis]*mandated_telework
+        economic_closures = np.minimum(economic_closures, f_telework)
 
         ###############################
         ## voluntary response (work) ##
@@ -236,8 +244,8 @@ class make_social_contact_function():
         t_BE_lockdown_1 = datetime(2020, 3, 13)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
-        t_BE_lockdown_Antwerp = datetime(2020, 8, 7)
-        t_BE_end_lockdown_Antwerp = datetime(2020, 9, 1)
+        t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
+        t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
         t_BE_lockdown_2 = datetime(2020, 10, 19)
 
         # construct vector of social restrictions in Antwerp only
@@ -253,23 +261,23 @@ class make_social_contact_function():
         l=5
 
         if t <= t_BE_lockdown_1:
-            return self.__call__(t, M_work,np.ones(self.G, dtype=float), M_leisure, 0,np.zeros([63,1], dtype=float))
+            return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 1, economy_BE_lockdown_1)
+            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_1)
             return {'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
         elif t_BE_phase_I <= t < t_BE_phase_II:
-            return self.__call__(t, M_work, M_eff, M_leisure, 1, economy_BE_phaseI)
+            return self.__call__(t, M_work, M_eff, M_leisure, 1, 1, economy_BE_phaseI)
         elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
-            return self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
+            return self.__call__(t, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
-            return self.__call__(t, M_work, M_eff, M_leisure, social_restrictions_Antwerp, economy_BE_lockdown_Antwerp)
+            return self.__call__(t, M_work, M_eff, M_leisure, social_restrictions_Antwerp, 1, economy_BE_lockdown_Antwerp)
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
-            return self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
+            return self.__call__(t, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         else:
-            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 1, economy_BE_lockdown_2)
+            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2)
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
@@ -341,15 +349,15 @@ class make_social_contact_function():
         l = 5
 
         if t <= t_ban_gatherings_1:
-            return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, np.zeros([63,1], dtype=float))
+            return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, economy_SWE_ban_gatherings_1)
+            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_1)
             return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
         else:
-            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, economy_SWE_ban_gatherings_2)
+            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_2)
             return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
