@@ -21,7 +21,7 @@ abs_dir = os.path.dirname(__file__)
 
 # settings calibration
 start_calibration = '2020-03-07'
-end_calibration = '2020-12-01'
+end_calibration = '2021-03-01'
 processes = 6
 max_iter = 200
 multiplier_mcmc = 6
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     ## NM calibration ##
     ####################
     
-    theta = [1.74251845e-01, 2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01, 2.29369688e-01] # ll: 11180; peak shift 14 days
+    theta = [1.74251845e-01, 2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01, 0.25] # ll: 11180; peak shift 14 days
     theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # visualisation

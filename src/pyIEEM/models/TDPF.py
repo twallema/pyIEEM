@@ -486,7 +486,7 @@ class make_seasonality_function():
         amplitude : float
             maximum deviation of output with respect to the average (1)
         """
-        maxdate = datetime(2021, 1, 1) + timedelta(days=7)
+        maxdate = datetime(2021, 1, 1) + timedelta(days=14)
         # One period is one year long (seasonality)
         t = (t - maxdate)/timedelta(days=1)/365
         rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))
