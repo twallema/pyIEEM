@@ -89,7 +89,7 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
 
     # memory parameters
     from pyIEEM.models.TDPF import make_social_contact_function
-    parameters.update({'zeta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10, 'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
+    parameters.update({'eta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10, 'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
     policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
 
     # define economic policies
@@ -294,6 +294,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
                       'gamma': 0.7,
                       'delta': 5,
                       'epsilon': 14,
+                      'zeta': 365/2,
                       'N': {'other': N_other, 'work': N_work},
                       'G': mob,
                   })
