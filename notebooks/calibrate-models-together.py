@@ -62,84 +62,86 @@ alpha = 0.03
 #log_likelihood_fnc_args = [0.03, 0.03]
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
                             len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]
-pars = ['zeta', 'tau', 'ypsilon_eff', 'phi_eff', 'ypsilon_work', 'phi_work', 'ypsilon_leisure', 'phi_leisure', 'amplitude']
-bounds=((0,100),(5,100),(0,100),(0,100),(0,100),(0,100),(0,100),(0,100),(0,1))
-labels = [r'$\zeta$', r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\upsilon_{work}$', r'$\phi_{work}$', r'$\upsilon_{leisure}$', r'$\phi_{leisure}$', r'$A$']
+pars = ['zeta', 'tau', 'ypsilon_eff', 'phi_eff', 'phi_work', 'phi_leisure', 'amplitude']
+bounds=((0,100),(5,100),(0,100),(0,100),(0,100),(0,100),(0,1))
+labels = [r'$\zeta$', r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\phi_{work}$', r'$\phi_{leisure}$', r'$A$']
 weights = [1/len(data_BE), 1/len(data_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc,
                                                 log_likelihood_fnc_args, start_sim=start_calibration, labels=labels)
 
-####################
-## NM calibration ##
-####################
-
-theta = [2, 14, 0.62, 0.05, 10, 0.05, 10, 0.05, 0.30] 
-
-#theta = pso.optimize(objective_function, bounds, swarmsize=5*processes, max_iter=max_iter, processes=processes, debug=True)[0]
-theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
-
-## visualisation
-for i, country in enumerate(['BE', 'SWE']):
-
-    # set right model and data
-    model = models[i]
-    data = dt[i]
-    start_sim = start_calibration[i]
-
-    # set optimal parameters
-    for k, par in enumerate(pars):
-        model.parameters.update({par: theta[k]})
-
-    # simulate model
-    out = model.sim([start_sim, end_calibration])
-
-    # visualise
-    dates = data.index.get_level_values('date').unique()
-    spatial_units = data.index.get_level_values('spatial_unit').unique()
-    n_figs = 0
-    counter = 0
-    while counter <= len(spatial_units):
-        fig, axes = plt.subplots(
-            nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
-        axes = axes.flatten()
-        for j, ax in enumerate(axes):
-            if j+counter <= len(spatial_units):
-                if j + counter < len(spatial_units):
-                    # plot data
-                    ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
-                                edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-                    # plot model prediction
-                    ax.plot(out.date, out.Hin.sum(dim='age_class').sel(
-                        spatial_unit=spatial_units[j+counter]), color='red')
-                    # set title
-                    ax.set_title(spatial_units[j+counter])
-                else:
-                    # plot data
-                    ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
-                        None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-                    # plot model prediction
-                    ax.plot(out.date, out.Hin.sum(
-                        dim=['age_class', 'spatial_unit']), color='red')
-                    # set title
-                    ax.set_title(country)
-                # set maximum number of labels
-                ax.xaxis.set_major_locator(MaxNLocator(5))
-                # rotate labels
-                for tick in ax.get_xticklabels():
-                    tick.set_rotation(60)
-            else:
-                fig.delaxes(ax)
-        n_figs += 1
-        counter += nrows*ncols
-        plt.savefig(f'calibrate_together_{country}_part_{n_figs}.png', dpi=600)
-        #plt.show()
-        plt.close()
-
-##########
-## MCMC ##
-##########
-
 if __name__ == '__main__':
+
+    ####################
+    ## NM calibration ##
+    ####################
+
+    theta = [1, 14, 6.21760218e-01, 4.96343021e-02, 1.00939834e-02, 1.57029663e-01, 0.40] # no peak shift = good fit
+    #theta = pso.optimize(objective_function, bounds, swarmsize=5*processes, max_iter=max_iter, processes=processes, debug=True)[0]
+    #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
+
+    ## visualisation
+    for i, country in enumerate(['BE', 'SWE']):
+
+        # set right model and data
+        model = models[i]
+        data = dt[i]
+        start_sim = start_calibration[i]
+
+        # set optimal parameters
+        for k, par in enumerate(pars):
+            model.parameters.update({par: theta[k]})
+
+        # simulate model
+        out = model.sim([start_sim, end_calibration])
+
+        # visualise
+        dates = data.index.get_level_values('date').unique()
+        spatial_units = data.index.get_level_values('spatial_unit').unique()
+        n_figs = 0
+        counter = 0
+        while counter <= len(spatial_units):
+            fig, axes = plt.subplots(
+                nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
+            axes = axes.flatten()
+            for j, ax in enumerate(axes):
+                if j+counter <= len(spatial_units):
+                    if j + counter < len(spatial_units):
+                        # plot data
+                        ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
+                                    edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+                        # plot model prediction
+                        ax.plot(out.date, out.Hin.sum(dim='age_class').sel(
+                            spatial_unit=spatial_units[j+counter]), color='red')
+                        # set title
+                        ax.set_title(spatial_units[j+counter])
+                    else:
+                        # plot data
+                        ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
+                            None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+                        # plot model prediction
+                        ax.plot(out.date, out.Hin.sum(
+                            dim=['age_class', 'spatial_unit']), color='red')
+                        # set title
+                        ax.set_title(country)
+                    # set maximum number of labels
+                    ax.xaxis.set_major_locator(MaxNLocator(5))
+                    # rotate labels
+                    for tick in ax.get_xticklabels():
+                        tick.set_rotation(60)
+                else:
+                    fig.delaxes(ax)
+            n_figs += 1
+            counter += nrows*ncols
+            plt.savefig(f'calibrate_together_{country}_part_{n_figs}.png', dpi=600)
+            #plt.show()
+            plt.close()
+
+    import sys
+    sys.exit()
+
+    ##########
+    ## MCMC ##
+    ##########
         
     ndim, nwalkers, pos = perturbate_theta(theta, len(pars)*[0.25,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
 
@@ -152,14 +154,14 @@ if __name__ == '__main__':
     sys.stdout.flush()
 
     # Setup sampler
-    sampler = run_EnsembleSampler(pos, 100, identifier, objective_function,print_n=print_n, backend=None, processes=processes,
+    sampler = run_EnsembleSampler(pos, n_mcmc, identifier, objective_function,print_n=print_n, backend=None, processes=processes,
                                     samples_path=samples_path, fig_path=fig_path, progress=True, settings_dict=settings) 
 
     # Sample up to 40*n_mcmc more
     import emcee
     for i in range(40):
         backend = emcee.backends.HDFBackend(os.path.join(os.getcwd(),samples_path+identifier+'_BACKEND_'+run_date+'.hdf5'))
-        sampler = run_EnsembleSampler(pos, 100, identifier, objective_function,print_n=print_n, backend=backend, processes=processes,
+        sampler = run_EnsembleSampler(pos, n_mcmc, identifier, objective_function,print_n=print_n, backend=backend, processes=processes,
                                         samples_path=samples_path, fig_path=fig_path, progress=True, settings_dict=settings)   
 
     #####################
