@@ -94,16 +94,16 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
 
     # define economic policies
     if country == 'BE':
-        parameters.update({'economy_BE_lockdown_1': policies_df['lockdown_1'],
-                            'economy_BE_phaseI': policies_df['lockdown_release_phaseI'],
-                            'economy_BE_lockdown_Antwerp': policies_df['lockdown_Antwerp'],
-                            'economy_BE_lockdown_2': policies_df['lockdown_2']})
+        parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
+                            'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
+                            'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
+                            'economy_BE_lockdown_2': np.expand_dims(policies_df['lockdown_2'].values, axis=1)})
         social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
                                                             f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
                                                             country).get_contacts_BE
     else:
-        parameters.update({'economy_SWE_ban_gatherings_1': policies_df['ban_gatherings_1'],
-                            'economy_SWE_ban_gatherings_2': policies_df['ban_gatherings_2']})
+        parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
+                            'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
         social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
                                                             f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
                                                             country).get_contacts_SWE

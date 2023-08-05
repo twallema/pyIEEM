@@ -124,24 +124,20 @@ class make_social_contact_function():
         #####################
 
         # convert economic policy from tuple to numpy array
-        assert isinstance(economic_closures, tuple)
-        economic_closures = 1-np.array(economic_closures, dtype=float)
+        economic_closures = 1-economic_closures
 
         # convert the leisure_public contacts depending on the economic policy
-        f_leisure_public = sum(self.lav * economic_closures)
+        f_leisure_public = sum(self.lav.values[:, np.newaxis] * economic_closures)
 
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
-        economic_closures = self.f_workplace.values + economic_closures*(1-self.f_workplace.values)
+        economic_closures = self.f_workplace.values[:, np.newaxis] + economic_closures*(1-self.f_workplace.values[:, np.newaxis])
 
         ###############################
         ## voluntary response (work) ##
         ###############################
 
-        assert isinstance(M_work, tuple)
-        M_work = np.array(M_work, dtype=float)
-
         # compare to involuntary changes and take minimum as limiting
-        economic_closures = np.minimum(economic_closures[:, np.newaxis], M_work)
+        economic_closures = np.minimum(economic_closures, M_work)
 
         # assert degree of school opennness
         f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
@@ -149,10 +145,6 @@ class make_social_contact_function():
         ##################################
         ## voluntary response (leisure) ##
         ##################################
-
-        assert ((isinstance(M_eff, tuple)) & (isinstance(M_leisure, tuple)))
-        M_eff = np.array(M_eff, dtype=float)
-        M_leisure = np.array(M_leisure, dtype=float)
 
         # public leisure contacts
         f_leisure_public = np.minimum(f_leisure_public, M_leisure)
@@ -244,31 +236,40 @@ class make_social_contact_function():
         t_BE_lockdown_1 = datetime(2020, 3, 13)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
-        t_BE_lockdown_Antwerp = datetime(2020, 8, 1)
+        t_BE_lockdown_Antwerp = datetime(2020, 8, 7)
         t_BE_end_lockdown_Antwerp = datetime(2020, 9, 1)
         t_BE_lockdown_2 = datetime(2020, 10, 19)
+
+        # construct vector of social restrictions in Antwerp only
+        social_restrictions_Antwerp = np.zeros(self.G)
+        social_restrictions_Antwerp[0] = 1
+
+        # construct economic closures in Antwerp only
+        economy_BE_lockdown_Antwerp_mat = np.zeros([63, self.G], dtype=float)
+        economy_BE_lockdown_Antwerp_mat[:,0] = np.squeeze(economy_BE_lockdown_Antwerp)
+        economy_BE_lockdown_Antwerp = economy_BE_lockdown_Antwerp_mat
 
         # ramp length
         l=5
 
         if t <= t_BE_lockdown_1:
-            return self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, M_work,np.ones(self.G, dtype=float), M_leisure, 0,np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            policy_old = self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_lockdown_1))
+            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 1, economy_BE_lockdown_1)
             return {'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
         elif t_BE_phase_I <= t < t_BE_phase_II:
-            return self.__call__(t, tuple(M_work),tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_phaseI))
+            return self.__call__(t, M_work, M_eff, M_leisure, 1, economy_BE_phaseI)
         elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
-            return self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
-            return self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_lockdown_Antwerp))
+            return self.__call__(t, M_work, M_eff, M_leisure, social_restrictions_Antwerp, economy_BE_lockdown_Antwerp)
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
-            return self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
         else:
-            policy_old = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 1, tuple(economy_BE_lockdown_2))
+            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 1, economy_BE_lockdown_2)
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
@@ -340,15 +341,15 @@ class make_social_contact_function():
         l = 5
 
         if t <= t_ban_gatherings_1:
-            return self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
+            return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, np.zeros([63,1], dtype=float))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            policy_old = self.__call__(t, tuple(M_work), tuple(np.ones(self.G, dtype=float)), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(economy_SWE_ban_gatherings_1))
+            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, economy_SWE_ban_gatherings_1)
             return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
         else:
-            policy_old = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(np.zeros(63, dtype=float)))
-            policy_new = self.__call__(t, tuple(M_work), tuple(M_eff), tuple(M_leisure), 0, tuple(economy_SWE_ban_gatherings_2))
+            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, economy_SWE_ban_gatherings_2)
             return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
@@ -463,7 +464,7 @@ class make_seasonality_function():
         amplitude : float
             maximum deviation of output with respect to the average (1)
         """
-        maxdate = datetime(2021,1,1) + timedelta(days=28)
+        maxdate = datetime(2021, 1, 1) + timedelta(days=21)
         # One period is one year long (seasonality)
         t = (t - maxdate)/timedelta(days=1)/365
         rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))
