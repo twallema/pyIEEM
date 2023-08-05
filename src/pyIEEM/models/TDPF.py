@@ -254,7 +254,7 @@ class make_social_contact_function():
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
-        t_BE_lockdown_2 = datetime(2020, 10, 19)
+        t_BE_lockdown_2 = datetime(2020, 11, 19)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
@@ -266,7 +266,7 @@ class make_social_contact_function():
         economy_BE_lockdown_Antwerp = economy_BE_lockdown_Antwerp_mat
 
         # ramp length
-        l=2
+        l=3
 
         if t <= t_BE_lockdown_1:
             return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
@@ -362,7 +362,7 @@ class make_social_contact_function():
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         # ramp length
-        l = 2
+        l = 3
 
         if t <= t_ban_gatherings_1:
             return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
@@ -488,7 +488,7 @@ class make_seasonality_function():
         amplitude : float
             maximum deviation of output with respect to the average (1)
         """
-        maxdate = datetime(2021, 1, 1) + timedelta(days=0)
+        maxdate = datetime(2021, 1, 1) + timedelta(days=7)
         # One period is one year long (seasonality)
         t = (t - maxdate)/timedelta(days=1)/365
         rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))
