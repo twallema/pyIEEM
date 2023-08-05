@@ -342,6 +342,91 @@ def get_epi_params(country, age_classes, spatial, contact_type):
 
     return initial_states, parameters, coordinates
 
+################################################
+## Aggregation functions Brussels and Brabant ##
+################################################
+
+
+import xarray as xr
+def aggregate_Brussels_Brabant_Dataset(simulation_in):
+    """
+    A wrapper for `aggregate_Brussels_Brabant()`, converting all model states into the aggregated format
+
+    Input
+    =====
+    
+    simulation_in: xarray.Dataset
+        Simulation result (arrondissement or provincial level)
+    
+    Output
+    ======
+    
+    simulation_out: xarray.Dataset
+        Simulation result. Provincial spatial aggregation with Bruxelles and Brabant aggregated into NIS 21000
+    """
+    output = []
+    for state in simulation_in.keys():
+        o = aggregate_Brussels_Brabant_DataArray(simulation_in[state])
+        o.name = state
+        output.append(o)
+    return xr.merge(output)
+
+def dummy_aggregation(simulation_in):
+    return simulation_in
+
+def aggregate_Brussels_Brabant_DataArray(simulation_in):
+    """
+    A function to aggregate an arrondissement simulation to the provincial level.
+    A function to aggregate the provinces of Brussels, Brabant Wallon and Vlaams Brabant into one province.
+    
+    Input
+    =====
+    
+    simulation_in: xarray.DataArray
+        Simulation result (arrondissement or provincial level)
+    
+    Output
+    ======
+    
+    simulation_out: xarray.DataArray
+        Simulation result. Provincial spatial aggregation with Bruxelles and Brabant aggregated into NIS 21000
+    """
+
+    # define new names
+    new_names = ['Antwerpen', 'Brussels and Brabant', 'Hainaut', 'Liege', 'Limburg', 'Luxembourg', 'Namur', 'Oost-Vlaanderen', 'West-Vlaanderen']
+    # preallocate tensor for the converted output
+    if 'draws' in simulation_in.dims:
+        data = np.zeros([len(new_names),
+                        len(simulation_in.coords['draws']),
+                        len(simulation_in.coords['date']),
+                        len(simulation_in.coords['age_class'])])
+    else:
+        data = np.zeros([len(new_names),
+                        len(simulation_in.coords['date']),
+                        len(simulation_in.coords['age_class'])])
+    # aggregate Brussels and Brabant
+    for i, prov in enumerate(new_names):
+        if prov != 'Brussels and Brabant':
+            data[i,...] = simulation_in.sel(spatial_unit=prov).values
+        else:
+            data[i,...] = simulation_in.sel(spatial_unit='Brussels').values + simulation_in.sel(spatial_unit='Vlaams-Brabant').values + \
+                            simulation_in.sel(spatial_unit='Brabant Wallon').values        
+    # Send to simulation out
+    if 'draws' in simulation_in.dims:
+        data=np.swapaxes(np.swapaxes(data,0,1), 1,2)
+        coords=dict(spatial_unit=(['spatial_unit'], new_names),
+                    draws = simulation_in.coords['draws'],
+                    date = simulation_in.coords['date'],
+                    age_class = simulation_in.coords['age_class'],
+                    )
+    else:
+        data=np.swapaxes(np.swapaxes(data,0,1), 1, 2)
+        coords=dict(date = simulation_in.coords['date'],
+                    spatial_unit=(['spatial_unit'], new_names),
+                    age_class = simulation_in.coords['age_class'],
+            )
+    return xr.DataArray(data, dims=simulation_in.dims, coords=coords)
+
 ########################################
 ## Time-dependent Parameter Functions ##
 ########################################

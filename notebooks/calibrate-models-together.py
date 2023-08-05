@@ -6,11 +6,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from datetime import date
-from pyIEEM.models.utils import initialize_model
+from pyIEEM.models.utils import initialize_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
 from pyIEEM.data.data import get_hospitalisation_incidence
 from pySODM.optimization import pso, nelder_mead
 from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial
 from pySODM.optimization.mcmc import perturbate_theta, run_EnsembleSampler, emcee_sampler_to_dictionary
+
 
 abs_dir = os.path.dirname(__file__)
 
@@ -19,7 +20,7 @@ abs_dir = os.path.dirname(__file__)
 ##########################
 
 # settings calibration
-start_calibration = ['2020-03-07','2020-03-07']
+start_calibration = '2020-03-07'
 end_calibration = '2020-12-01'
 processes = 6
 max_iter = 200
@@ -42,32 +43,30 @@ ncols = 4
 #########################
 
 ## load data BE and SWE
-data_BE = get_hospitalisation_incidence('BE').loc[slice(start_calibration[0], end_calibration)]
-data_SWE = get_hospitalisation_incidence('SWE').loc[slice(start_calibration[1], end_calibration)]
-
+data_BE = get_hospitalisation_incidence('BE', aggregate_bxl_brabant=True).loc[slice(start_calibration, end_calibration)]
+data_SWE = get_hospitalisation_incidence('SWE').loc[slice(start_calibration, end_calibration)]
 
 ## load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-model_BE = initialize_model('BE', age_classes, True, start_calibration[0])
-model_SWE = initialize_model('SWE', age_classes, True, start_calibration[1])
+model_BE = initialize_model('BE', age_classes, True, start_calibration)
+model_SWE = initialize_model('SWE', age_classes, True, start_calibration)
 
 ## set up log likelihood function
 models = [model_BE, model_SWE]
 datasets = [data_BE, data_SWE]
-#datasets = [data_BE.groupby(by='date').sum(), data_SWE.groupby(by='date').sum()]
 dt = [data_BE, data_SWE]
 states = ["Hin", "Hin"]
 log_likelihood_fnc = [ll_negative_binomial, ll_negative_binomial] 
+aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation]
 alpha = 0.03
-#log_likelihood_fnc_args = [0.03, 0.03]
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
                             len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]
 pars = ['zeta', 'tau', 'ypsilon_eff', 'phi_eff', 'phi_work', 'phi_leisure', 'amplitude']
 bounds=((0,100),(5,100),(0,100),(0,100),(0,100),(0,100),(0,1))
 labels = [r'$\zeta$', r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\phi_{work}$', r'$\phi_{leisure}$', r'$A$']
 weights = [1/len(data_BE), 1/len(data_SWE)]
-objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc,
-                                                log_likelihood_fnc_args, start_sim=start_calibration, labels=labels)
+objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
+                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
 
 if __name__ == '__main__':
 
@@ -85,14 +84,16 @@ if __name__ == '__main__':
         # set right model and data
         model = models[i]
         data = dt[i]
-        start_sim = start_calibration[i]
 
         # set optimal parameters
         for k, par in enumerate(pars):
             model.parameters.update({par: theta[k]})
 
         # simulate model
-        out = model.sim([start_sim, end_calibration])
+        out = model.sim([start_calibration, end_calibration])
+
+        # aggregate model
+        out = aggregation_functions[i](out.Hin)
 
         # visualise
         dates = data.index.get_level_values('date').unique()
@@ -110,7 +111,7 @@ if __name__ == '__main__':
                         ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
                                     edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
                         # plot model prediction
-                        ax.plot(out.date, out.Hin.sum(dim='age_class').sel(
+                        ax.plot(out.date, out.sum(dim='age_class').sel(
                             spatial_unit=spatial_units[j+counter]), color='red')
                         # set title
                         ax.set_title(spatial_units[j+counter])
@@ -119,7 +120,7 @@ if __name__ == '__main__':
                         ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
                             None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
                         # plot model prediction
-                        ax.plot(out.date, out.Hin.sum(
+                        ax.plot(out.date, out.sum(
                             dim=['age_class', 'spatial_unit']), color='red')
                         # set title
                         ax.set_title(country)
