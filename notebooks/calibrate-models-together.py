@@ -1,5 +1,5 @@
 from pySODM.optimization.mcmc import perturbate_theta, run_EnsembleSampler, emcee_sampler_to_dictionary
-from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial
+from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial, ll_poisson
 from pySODM.optimization import pso, nelder_mead
 from pyIEEM.data.data import get_hospitalisation_incidence
 from pyIEEM.models.utils import initialize_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
@@ -21,7 +21,7 @@ abs_dir = os.path.dirname(__file__)
 
 # settings calibration
 start_calibration = '2020-03-07'
-end_calibration = '2020-12-01'
+end_calibration = '2021-01-01'
 processes = 6
 max_iter = 200
 multiplier_mcmc = 6
@@ -65,6 +65,7 @@ aggregation_functions = [
 alpha = 0.03
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
                            len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]
+#log_likelihood_fnc_args = [[],[]]                    
 pars = ['eta', 'tau', 'ypsilon_eff', 'phi_eff',
         'phi_work', 'phi_leisure', 'amplitude']
 bounds = ((0, 100), (5, 100), (0, 100), (0, 100), (0, 100), (0, 100), (0, 1))
@@ -80,8 +81,17 @@ if __name__ == '__main__':
     ## NM calibration ##
     ####################
     
-    theta = [1.74251845e-01, 2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01, 0.25] # ll: 11180; peak shift 14 days; calibration end December 2020
-    #theta = [0.13466359, 5.94766795, 0.59076353, 0.06337433, 0.03032856, 0.07281656, 0.40077309] # ll: 1529; peak shift 14 days; calibration end March 2021
+    # starting points: obtained using negative binomial ll function, peak shift 14 days
+    # 1: very satisfactory fit to both countries data, good approximation beyond calibrated range for both countries
+    theta = [1.74251845e-01, 2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01, 0.25] # ll: 11180; calibration end December 2020
+    # 2: okay fit to both countries data, excellent approximation for BE after calibrated range, poorer approximation for SWE after calibrated range
+    #theta = [0.13466359, 5.94766795, 0.59076353, 0.06337433, 0.03032856, 0.07281656, 0.40077309] # ll: 1529; calibration end March 2021
+    
+    # optimise 1 above using mcmc until Dec 2020, negbinom
+    theta = [0.08, 50, 0.50, 0.10, 0.02, 0.18, 0.06] # --> has clearly improved its fit on SWE but BE is less good + extended range has become less good
+    # optimise 1 above using mcmc until March 2020, negbinom
+    #theta = [0.20, 5, 0.7, 0.07, 0.005, 1, 0.35] # --> clearly bullshit
+    
     #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # visualisation
@@ -143,9 +153,6 @@ if __name__ == '__main__':
                 f'calibrate_together_{country}_part_{n_figs}.png', dpi=600)
             # plt.show()
             plt.close()
-
-    import sys
-    sys.exit()
 
     ##########
     ## MCMC ##
