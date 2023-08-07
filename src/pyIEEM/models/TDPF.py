@@ -238,7 +238,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 14)
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)

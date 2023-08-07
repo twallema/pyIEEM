@@ -11,7 +11,10 @@ import numpy as np
 import sys
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
-
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
 abs_dir = os.path.dirname(__file__)
 
@@ -29,7 +32,7 @@ n_mcmc = 50
 print_n = 5
 
 # paths
-identifier = 'test'
+identifier = 'poisson_enddate_20210201'
 run_date = str(date.today())
 fig_path = f''
 samples_path = f''
@@ -62,15 +65,12 @@ states = ["Hin", "Hin"]
 log_likelihood_fnc = [ll_negative_binomial, ll_negative_binomial]
 aggregation_functions = [
     aggregate_Brussels_Brabant_DataArray, dummy_aggregation]
-alpha = 0.03
+alpha = 0.027
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
-                           len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]
-#log_likelihood_fnc_args = [[],[]]                    
-pars = ['eta', 'tau', 'ypsilon_eff', 'phi_eff',
-        'phi_work', 'phi_leisure', 'amplitude']
-bounds = ((0, 100), (5, 100), (0, 100), (0, 100), (0, 100), (0, 100), (0, 1))
-labels = [r'$\eta$', r'$\tau$',
-          r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\phi_{work}$', r'$\phi_{leisure}$', r'$A$']
+                           len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]                  
+pars = ['tau', 'ypsilon_eff', 'phi_eff', 'phi_work', 'phi_leisure']
+bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
+labels = [r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\phi_{work}$', r'$\phi_{leisure}$']
 weights = [1/len(data_BE), 1/len(data_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
@@ -81,18 +81,10 @@ if __name__ == '__main__':
     ## NM calibration ##
     ####################
     
-    # starting points: obtained using negative binomial ll function, peak shift 14 days
-    # 1: very satisfactory fit to both countries data, good approximation beyond calibrated range for both countries
-    theta = [1.74251845e-01, 2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01, 0.25] # ll: 11180; calibration end December 2020
-    # 2: okay fit to both countries data, excellent approximation for BE after calibrated range, poorer approximation for SWE after calibrated range
-    #theta = [0.13466359, 5.94766795, 0.59076353, 0.06337433, 0.03032856, 0.07281656, 0.40077309] # ll: 1529; calibration end March 2021
-    
-    # optimise 1 above using mcmc until Dec 2020, negbinom
-    theta = [0.08, 50, 0.50, 0.10, 0.02, 0.18, 0.06] # --> has clearly improved its fit on SWE but BE is less good + extended range has become less good
-    # optimise 1 above using mcmc until March 2020, negbinom
-    #theta = [0.20, 5, 0.7, 0.07, 0.005, 1, 0.35] # --> clearly bullshit
-    
-    #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
+    # starting point
+    theta = [2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01] # ll: 13130; calibration begin Jan 2020
+    theta = [1.83288315e+01, 4.84588154e-01, 5.35750249e-02, 1.54308721e-02, 2.79468411e-01] ## ll: 12370; calibration begin Jan 2020
+    theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # visualisation
     for i, country in enumerate(['BE', 'SWE']):
@@ -151,15 +143,18 @@ if __name__ == '__main__':
             counter += nrows*ncols
             plt.savefig(
                 f'calibrate_together_{country}_part_{n_figs}.png', dpi=600)
-            # plt.show()
+            #plt.show()
             plt.close()
+
+    import sys
+    sys.exit()
 
     ##########
     ## MCMC ##
     ##########
 
     ndim, nwalkers, pos = perturbate_theta(theta, len(
-        pars)*[0.25,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
+        pars)*[0.05,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
 
     # Write settings to a .txt
     settings = {'start_calibration': start_calibration, 'end_calibration': end_calibration, 'n_chains': nwalkers,
