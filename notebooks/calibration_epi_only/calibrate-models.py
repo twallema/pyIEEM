@@ -27,12 +27,12 @@ start_calibration = '2020-03-07'
 end_calibration = '2021-01-01'
 processes = 6
 max_iter = 200
-multiplier_mcmc = 6
+multiplier_mcmc = 12
 n_mcmc = 50
 print_n = 5
 
 # paths
-identifier = 'poisson_enddate_20210201'
+identifier = 'enddate_20210101'
 run_date = str(date.today())
 fig_path = f''
 samples_path = f''
@@ -83,8 +83,7 @@ if __name__ == '__main__':
     
     # starting point
     theta = [2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 1.18561822e-02, 3.24334640e-01] # ll: 13130; calibration begin Jan 2020
-    theta = [1.83288315e+01, 4.84588154e-01, 5.35750249e-02, 1.54308721e-02, 2.79468411e-01] ## ll: 12370; calibration begin Jan 2020
-    theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
+    #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # visualisation
     for i, country in enumerate(['BE', 'SWE']):
@@ -145,9 +144,6 @@ if __name__ == '__main__':
                 f'calibrate_together_{country}_part_{n_figs}.png', dpi=600)
             #plt.show()
             plt.close()
-
-    import sys
-    sys.exit()
 
     ##########
     ## MCMC ##

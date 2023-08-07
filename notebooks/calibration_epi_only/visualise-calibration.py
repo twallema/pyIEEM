@@ -63,7 +63,8 @@ def draw_function(param_dict, samples_dict):
     param_dict['phi_eff'] = samples_dict['phi_eff'][i]
     param_dict['phi_work'] = samples_dict['phi_work'][i]
     param_dict['phi_leisure'] = samples_dict['phi_leisure'][i]
-    param_dict['amplitude'] = samples_dict['amplitude'][i]
+    #param_dict['amplitude'] = samples_dict['amplitude'][i]
+    #param_dict['eta'] = samples_dict['eta'][i]
     return param_dict
 
 ###########################
@@ -85,8 +86,8 @@ for model, data, country, aggfunc in zip(models, datasets, countries, aggregatio
     out = aggfunc(out)
 
     # add observational noise
-    out_obs = add_negative_binomial_noise(out, alpha = 0.03)
-    out_nat_obs = add_negative_binomial_noise(out.sum(dim='spatial_unit'), alpha = 0.03)
+    out_obs = add_negative_binomial_noise(out, alpha = 0.027)
+    out_nat_obs = add_negative_binomial_noise(out.sum(dim='spatial_unit'), alpha = 0.027)
     
     # slice right states
     out = out.Hin
