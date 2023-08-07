@@ -84,12 +84,11 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     
     # NACE 64 to NACE 21 conversion matrix
     convmat = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/misc/conversion_matrix_NACE64_NACE21.csv'), index_col=[0], header=[0])
-    NACE64_coordinates = convmat.index.values
     convmat = convmat.fillna(0).values
 
     # memory parameters
     from pyIEEM.models.TDPF import make_social_contact_function
-    parameters.update({'eta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10, 'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
+    parameters.update({'l': 1, 'eta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10, 'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
     policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
 
     # define economic policies
@@ -113,7 +112,11 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function()
-    parameters.update({'amplitude': 0.0})
+    
+    if country == 'SWE':
+        parameters.update({'amplitude': 0.30, 'peak_shift': 14})
+    else: 
+        parameters.update({'amplitude': 0.30, 'peak_shift': -14})    
 
     # initialize model
     # ================
@@ -414,11 +417,11 @@ def aggregate_Brussels_Brabant_DataArray(simulation_in):
                             simulation_in.sel(spatial_unit='Brabant Wallon').values        
     # Send to simulation out
     if 'draws' in simulation_in.dims:
-        data=np.swapaxes(np.swapaxes(data,0,1), 1,2)
-        coords=dict(spatial_unit=(['spatial_unit'], new_names),
-                    draws = simulation_in.coords['draws'],
+        data=np.swapaxes(np.swapaxes(np.swapaxes(data,0,1), 1,2), 2,3)
+        coords=dict(draws = simulation_in.coords['draws'],
                     date = simulation_in.coords['date'],
                     age_class = simulation_in.coords['age_class'],
+                    spatial_unit=(['spatial_unit'], new_names),
                     )
     else:
         data=np.swapaxes(np.swapaxes(data,0,1), 1, 2)
@@ -566,7 +569,7 @@ def is_school_holiday(d, country):
         # Summer holiday is shifted two weaks in Sweden
         if ((d.isocalendar().week in holiday_weeks) | \
                 (d in public_holidays)) | \
-                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=8, day=15))):
+                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=9, day=1))):
             return True
         else:
             return False        

@@ -1,7 +1,5 @@
-from selectors import EpollSelector
 import numpy as np
 import pandas as pd
-from functools import lru_cache
 from datetime import datetime, timedelta
 from pyIEEM.models.utils import ramp_fun, is_school_holiday, aggregate_simplify_contacts
 
@@ -104,7 +102,6 @@ class make_social_contact_function():
         self.t_prev = simulation_start
         self.simulation_start = simulation_start
 
-    #@lru_cache()
     def __call__(self, t, M_work, M_eff, M_leisure, social_restrictions, mandated_telework, economic_closures):
 
         # check daytype
@@ -180,7 +177,7 @@ class make_social_contact_function():
 
         return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
 
-    def get_contacts_BE(self, t, states, param, G, eta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+    def get_contacts_BE(self, t, states, param, l, G, eta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -227,15 +224,8 @@ class make_social_contact_function():
         ## behavioral models ##
         #######################
         
-        # compute perceived hospital load per spatial patch as average between patch with maximum hospital load and own patch
-        # based on degree-connectivity
-        idxmax = np.argmax(self.I_star)
-        col = np.copy(G[:, idxmax])
-        col[idxmax] = 0
-        mask = np.ones(col.shape, bool)
-        mask[idxmax] = False
-        connectivity = col/np.mean(col[mask])
-        I_star_average = (self.I_star + eta*connectivity*self.I_star[idxmax])/(1 + eta*connectivity)
+        # compute average perceived hospital load per spatial patch 
+        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, eta)
         # leisure and general effectivity of contacts
         M_eff = 1-self.gompertz(I_star_average, ypsilon_eff, phi_eff)
         # voluntary switch to telework or absenteism
@@ -248,7 +238,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 13)
+        t_BE_lockdown_1 = datetime(2020, 3, 14)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
@@ -263,9 +253,6 @@ class make_social_contact_function():
         economy_BE_lockdown_Antwerp_mat = np.zeros([63, self.G], dtype=float)
         economy_BE_lockdown_Antwerp_mat[:,0] = np.squeeze(economy_BE_lockdown_Antwerp)
         economy_BE_lockdown_Antwerp = economy_BE_lockdown_Antwerp_mat
-
-        # ramp length
-        l=3
 
         if t < t_BE_lockdown_1:
             return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
@@ -288,7 +275,7 @@ class make_social_contact_function():
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
-    def get_contacts_SWE(self, t, states, param, G, eta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_contacts_SWE(self, t, states, param, l, G, eta, tau, ypsilon_work, phi_work, ypsilon_eff, phi_eff, ypsilon_leisure, phi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -335,15 +322,8 @@ class make_social_contact_function():
         ## behavioral models ##
         #######################
 
-        # compute perceived hospital load per spatial patch as average between patch with maximum hospital load and own patch
-        # based on degree-connectivity
-        idxmax = np.argmax(self.I_star)
-        col = np.copy(G[:, idxmax])
-        col[idxmax] = 0
-        mask = np.ones(col.shape, bool)
-        mask[idxmax] = False
-        connectivity = col/np.mean(col[mask])
-        I_star_average = (self.I_star + eta*connectivity*self.I_star[idxmax])/(1 + eta*connectivity)
+        # compute average perceived hospital load per spatial patch
+        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, eta)
         # leisure and general effectivity of contacts
         M_eff = 1-self.gompertz(I_star_average, ypsilon_eff, phi_eff)
         # voluntary switch to telework or absenteism
@@ -356,11 +336,8 @@ class make_social_contact_function():
         ##############
 
         # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
-        t_ban_gatherings_1 = datetime(2020, 3, 10)
+        t_ban_gatherings_1 = datetime(2020, 3, 11)
         t_ban_gatherings_2 = datetime(2020, 11, 24)
-
-        # ramp length
-        l = 3
 
         if t < t_ban_gatherings_1:
             return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
@@ -433,6 +410,45 @@ class make_social_contact_function():
 
         return memory_index, memory_values, I_star, t
 
+    @staticmethod
+    def compute_perceived_hospital_load(I, G, eta):
+        """
+        Computes the average perceived I on every spatial patch j
+        Computed as the average between the own spatial patch (j) and the spatial patch with the maximum I (i)
+
+        input
+        =====
+
+        I: np.array/list
+            'I' per spatial patch
+
+        G: np.ndarray
+            recurrent mobility matrix
+
+        eta: float
+            0: perceived hospital load only determined by own spatial patch.
+            1: perceived hospital load is average between own spatial patch and patch with maximum I
+            inf: perceived hosptial load is determined solely by patch with maximum I
+
+        output
+        ======
+
+        I: np.array/list
+            average perceived I on every spatial patch
+        """
+        # get index of spatial patch with maximum number of cases
+        i = np.argmax(I)
+        # copy to avoid global alterations
+        col = list(G[:, i]).copy()
+        col = np.array(col)
+        # compute normalised connectivity to spatial patch i (a patch 'averagely' connected to patch i has connectivity 1)
+        col[i] = 0
+        mask = np.ones(col.shape, bool)
+        mask[i] = False
+        connectivity = col/np.mean(col[mask])
+        # compute weighted average
+        return (I + eta*connectivity*I[i])/(1 + eta*connectivity)
+
     def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
@@ -477,7 +493,7 @@ class make_seasonality_function():
     """
     Simple class to create functions that controls the season-dependent value of the transmission coefficients.
     """
-    def __call__(self, t, states, param, amplitude):
+    def __call__(self, t, states, param, amplitude, peak_shift):
         """
         Default output function. Returns the transmission coefficient beta multiplied with a sinusoid with average value 1.
         
@@ -485,8 +501,10 @@ class make_seasonality_function():
             simulation time
         amplitude : float
             maximum deviation of output with respect to the average (1)
+        peak_shift: float
+            shift of maximum infectivity relative to Jan. 14th
         """
-        maxdate = datetime(2021, 1, 1) + timedelta(days=14)
+        maxdate = datetime(2021, 1, 14) + timedelta(days=peak_shift)
         # One period is one year long (seasonality)
         t = (t - maxdate)/timedelta(days=1)/365
         rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))

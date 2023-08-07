@@ -87,13 +87,16 @@ for country in ['SWE', 'BE']:
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
     model = initialize_model(country, age_classes, True, start_calibration)
 
+    # disable seasonality and shift of peak
+    #model.parameters.update({'amplitude': 0.0, 'peak_shift': 0})
+
     # compute number of spatial patches
     G = model.initial_states['E'].shape[1]
 
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # nicely consistent with one infected in Stockholm
-        theta = np.array([0, 0.01, 0.01, 0.02, 0, 0, 0.02, 0, 0, 0.01, 0.01, 0.05, 0, 0, 1, 0, 0, 0, 0, 0, 0.05])
+        theta = np.array([0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0, 0, 0.075, 0, 0.05, 1, 0.05, 0, 0, 0, 0, 0])
     else:
         theta = np.array([0.25, 0, 0, 1.2, 0.60, 0.80, 0.15, 0, 0.75, 0, 0.25]) # ll: 215, seasonality: 0.0
 
@@ -147,7 +150,7 @@ for country in ['SWE', 'BE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
-        #plt.show()
+        plt.show()
         plt.close()
 
     #################
@@ -157,4 +160,4 @@ for country in ['SWE', 'BE']:
     abs_dir = os.path.dirname(__file__)
     out.coords.update({'age_class': range(len(out.coords['age_class']))})
     out.to_netcdf(os.path.join(
-        abs_dir, f'../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
+        abs_dir, f'../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
