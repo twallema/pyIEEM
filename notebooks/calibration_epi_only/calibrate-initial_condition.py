@@ -1,5 +1,5 @@
 from pySODM.optimization import pso, nelder_mead
-from pyIEEM.models.utils import initialize_model
+from pyIEEM.models.utils import initialize_epidemic_model
 from pyIEEM.data.data import get_hospitalisation_incidence
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
@@ -85,7 +85,7 @@ for country in ['SWE', 'BE']:
     # setup model
     age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-    model = initialize_model(country, age_classes, True, start_calibration)
+    model = initialize_epidemic_model(country, age_classes, True, start_calibration)
 
     # disable seasonality and shift of peak
     #model.parameters.update({'amplitude': 0.0, 'peak_shift': 0})

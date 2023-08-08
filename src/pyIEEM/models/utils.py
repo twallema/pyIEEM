@@ -3,16 +3,22 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from pyIEEM.models.models import SIR
+from pyIEEM.models.models import epidemic_model
 from pyIEEM.data.utils import to_pd_interval, aggregate_contact_matrix, convert_age_stratified_property
 
 abs_dir = os.path.dirname(__file__)
 
-#################################
-## Initialisation of the model ##
-#################################
+###############################
+## Initialise epinomic model ##
+###############################
 
-def initialize_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts'):
+
+
+###############################
+## Initialise epidemic model ##
+###############################
+
+def initialize_epidemic_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts'):
 
     # get model parameters
     # ====================
@@ -121,7 +127,7 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     # initialize model
     # ================
 
-    model = SIR(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function, 'beta': seasonality_function})
+    model = epidemic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function, 'beta': seasonality_function})
 
     return model
 

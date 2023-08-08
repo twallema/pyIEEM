@@ -2,7 +2,7 @@ from pySODM.optimization.mcmc import perturbate_theta, run_EnsembleSampler, emce
 from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial, ll_poisson
 from pySODM.optimization import pso, nelder_mead
 from pyIEEM.data.data import get_hospitalisation_incidence
-from pyIEEM.models.utils import initialize_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
+from pyIEEM.models.utils import initialize_epidemic_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
 from datetime import date
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
@@ -54,8 +54,8 @@ data_SWE = get_hospitalisation_incidence(
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
     35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-model_BE = initialize_model('BE', age_classes, True, start_calibration)
-model_SWE = initialize_model('SWE', age_classes, True, start_calibration)
+model_BE = initialize_epidemic_model('BE', age_classes, True, start_calibration)
+model_SWE = initialize_epidemic_model('SWE', age_classes, True, start_calibration)
 
 # set up log likelihood function
 models = [model_BE, model_SWE]
