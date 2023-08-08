@@ -3,7 +3,7 @@ from pySODM.models.base import ODE
 
 class epidemic_model(ODE):
     """
-    An extendable base class for the disease model
+    the COVID-19 disease model
     """
 
     # state variables and parameters
@@ -48,12 +48,12 @@ class epidemic_model(ODE):
 
 class epinomic_model(ODE):
     """
-    My epinomic model (C)
+    the coupled COVID-19 - economic model
     """
 
     # states
     states_epi = ['S','E','Ip','Ia','Im','Ih','R','D','Hin']
-    states_eco = ['x','c', 'c_desired','f', 'd', 'l','O', 'St']
+    states_eco = ['x','c', 'c_desired', 'f', 'd', 'l','O', 'St']
     states = states_epi + states_eco
     # parameters
     parameters_epi = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
@@ -61,12 +61,15 @@ class epinomic_model(ODE):
     parameters = parameters_epi + parameters_eco
     # dimensions
     dimensions = ['age_class', 'spatial_unit', 'NACE64', 'NACE64_star']
-    dimensions_per_state = [len(states_epi)*['age_class', 'spatial_unit'], (len(states_eco)-1)*['NACE64',] + ['NACE64','NACE64_star']]
+    dimensions_per_state = [
+        ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'],
+        ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64','NACE64_star']
+    ]
 
     @staticmethod
     def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, x, c, c_desired, f, d, l, O, St,
                     alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G, 
-                    x_0, c_0, f_0, l_0, IO, O_j, n, on_site, C, St_0, b, eta, delta_S, theta, iota, appa_F, kappa_H, A, prodfunc):
+                    x_0, c_0, f_0, l_0, IO, O_j, n, on_site, C, St_0, b, eta, delta_S, theta, iota, kappa_F, kappa_H, A, prodfunc):
 
         #######################
         ## epidemic dynamics ##
@@ -110,7 +113,7 @@ class epinomic_model(ODE):
         c_new = c
         c_desired_new = c_desired
         f_new = f
-        d_new = D
+        d_new = d
         l_new = l
         O_new = O
         St_new = St

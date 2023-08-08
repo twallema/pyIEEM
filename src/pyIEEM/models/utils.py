@@ -3,7 +3,7 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from pyIEEM.models.models import epidemic_model
+from pyIEEM.models.models import epidemic_model, epinomic_model
 from pyIEEM.data.utils import to_pd_interval, aggregate_contact_matrix, convert_age_stratified_property
 
 abs_dir = os.path.dirname(__file__)
@@ -12,7 +12,64 @@ abs_dir = os.path.dirname(__file__)
 ## Initialise epinomic model ##
 ###############################
 
+def initialize_epinomic_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts',
+                                prodfunc='half_critical'):
 
+    # get model parameters
+    # ====================
+
+    # get
+    initial_states, parameters, coordinates = get_epi_params(country, age_classes, spatial, contact_type)
+    st, par, coord = get_eco_params(country, prodfunc)
+    # attach
+    initial_states.update(st)
+    parameters.update(par)
+    coordinates.update(coord)
+    
+    # get calibrated epidemiological model states
+    # ===========================================
+
+    sim = xr.open_dataset(os.path.join(abs_dir, f'../../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
+    for data_var in sim.keys():
+        if spatial == True:
+            initial_states.update({data_var: sim.sel(date=simulation_start)[data_var].values})   
+        else:
+            initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
+
+    # construct social contact TDPF
+    # =============================
+
+    # get all necessary parameters
+    parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
+    # define all relevant parameters of the social contact function TDPF here
+    parameters.update({'l': 2, 'mu': 1, 'nu': 31, 'xi_work': 10, 'xi_eff': 10, 'xi_leisure': 10,
+                        'pi_work': 0.10, 'pi_eff': 0.10, 'pi_leisure': 0.10})
+    # make social contact function
+    from pyIEEM.models.TDPF import make_social_contact_function
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav,
+                                                            False, f_employees, convmat, simulation_start, country)
+    if country == 'SWE':
+        social_contact_function = social_contact_function.get_contacts_SWE
+    else:
+        social_contact_function = social_contact_function.get_contacts_BE
+
+    # construct seasonality TDPF
+    # ==========================
+
+    from pyIEEM.models.TDPF import make_seasonality_function
+    seasonality_function = make_seasonality_function()
+    
+    if country == 'SWE':
+        parameters.update({'amplitude': 0.30, 'peak_shift': 14})
+    else: 
+        parameters.update({'amplitude': 0.30, 'peak_shift': -14})    
+
+    # initialize model
+    # ================
+
+    model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function, 'beta': seasonality_function})
+
+    return model
 
 ###############################
 ## Initialise epidemic model ##
@@ -71,9 +128,116 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
 
     return model
 
+######################
+## helper functions ##
+######################
+
+def get_eco_params(country, prodfunc):
+    """
+    A function to load the economic model's parameters (excluding time-dependent parameters), initial states and coordinates
+
+    input
+    =====   
+
+    country: str
+        'BE' or 'SWE'
+
+    output
+    ======
+
+    initial_states: dict
+        Dictionary containing the non-zero initial values of the economic model
+
+    parameters: dict
+        Dictionary containing the (non time-dependent) parameters of the economic model
+
+    coordinates: dict
+        Dictionary containing the dimension names and corresponding coordinates of the economic model
+    """
+
+    # parameters
+    # ==========
+
+    ## Initialize parameters dictionary
+    parameters = {}
+
+    ## Input-Ouput matrix
+    df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/national_accounts/{country}/IO_{country}_NACE64.csv"), sep=',',header=[0],index_col=[0])
+    parameters['IO'] = df.values/365
+    # others.csv
+    df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv"), sep=',',header=[0],index_col=[0])
+    if country == 'SWE':
+        curr = '(Mkr/y)'
+    else:
+        curr = '(M€/y)'
+
+    ## National accounts
+    parameters['x_0'] = np.array(df['Sectoral output ' + curr].values)/365
+    parameters['O_j'] = np.array(df['Intermediate demand ' + curr].values)/365
+    parameters['c_0'] = np.array(df['Household demand ' + curr].values)/365
+    parameters['f_0'] = np.array(df['Total other demand ' + curr].values)/365
+    parameters['l_0'] = np.array(df['Labor compensation ' + curr].values)/365
+
+    ## Pichler et al.
+    # desired stock
+    df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/pichler/desired_stock_NACE64.csv"), sep=',',header=[0],index_col=[0])
+    parameters['n'] = np.expand_dims(np.array(df['Desired stock (days)'].values), axis=1)
+    # on-site consumption
+    df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/pichler/on_site_consumption_NACE64.csv"), sep=',',header=[0],index_col=[0])
+    parameters['on_site'] = np.array(df['On-site consumption (-)'].values)
+    # critical inputs
+    df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/pichler/IHS_critical_NACE64.csv"), sep=',',header=[0],index_col=[0])
+    parameters['C'] = df.values
+
+    ## Computed variables
+
+    # matrix of technical coefficients
+    A = np.zeros([parameters['IO'].shape[0],parameters['IO'].shape[0]])
+    for i in range(parameters['IO'].shape[0]):
+        for j in range(parameters['IO'].shape[0]):
+            A[i,j] = parameters['IO'][i,j]/parameters['x_0'][j]
+    parameters['A'] = A
+
+    # Stock matrix under business as usual
+    S_0 = np.zeros([parameters['IO'].shape[0],parameters['IO'].shape[0]])
+    for i in range(parameters['IO'].shape[0]):
+        for j in range(parameters['IO'].shape[0]):
+            S_0[i,j] = parameters['IO'][i,j]*parameters['n'][j]
+    parameters['St_0'] = S_0
+
+    ## Hardcoded model parameters
+    parameters.update({'eta': 1-(1-0.60)/90,          
+                      'delta_S': 0.75,                                                                                                                                                   
+                      'iota': 14,                                                                                                 
+                      'kappa_H': 56,
+                      'kappa_F': 28,
+                      'prodfunc': prodfunc,
+                      'theta': 1,
+                      'b': 0.7,
+                      })  
+
+    # coordinates
+    # ===========
+
+    coordinates = {'NACE64': df.index.values, 'NACE64_star': df.index.values}
+
+    # initial states
+    # ==============
+
+    initial_states = {'x':parameters['x_0'],
+                     'c': parameters['c_0'],
+                     'c_desired': parameters['c_0'],
+                     'f': parameters['f_0'],
+                     'd': parameters['x_0'],
+                     'l': parameters['l_0'],
+                     'O': parameters['O_j'],
+                     'St': parameters['St_0']}
+
+    return initial_states, parameters, coordinates
+
 def get_epi_params(country, age_classes, spatial, contact_type):
     """
-    A function to load, format and return the epidemiological model's parameters, excluding time-dependent parameters
+    A function to load the epidemiological model's parameters (excluding time-dependent parameters), initial states and coordinates
 
     input
     =====
