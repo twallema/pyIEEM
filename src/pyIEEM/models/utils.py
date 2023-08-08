@@ -39,79 +39,19 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     # construct social contact TDPF
     # =============================
 
-    # load NACE 21 composition per spatial patch
-    if spatial == True:
-        sectors = pd.read_csv(os.path.join(
-            abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['rel'].sort_index()
-    else:
-        sectors = pd.read_csv(os.path.join(
-            abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['abs']
-        sectors = sectors.groupby(by='economic_activity').sum()/sectors.groupby(by='economic_activity').sum().sum()
-
-    # load social contacts
-    contacts = pd.read_csv(os.path.join(abs_dir, '../../../data/interim/epi/contacts/matrices/FR/comesf_formatted_matrices.csv'), index_col=[0, 1, 2, 3, 4, 5],
-                           converters={'age_x': to_pd_interval, 'age_y': to_pd_interval})
-
-    # load national demography
-    demography = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='age').sum().squeeze()
-
-    # load fraction employees in workplace during pandemic
-    f_workplace = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['workplace']
-
-    # load telework fraction observed during pandemic
-    f_remote = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['remote']
-
-    # load and normalise leisure association vector (lav)
-    lav = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['association_leisure']
-    lav = lav/sum(lav)
-
-    # load the number of employees in every sector of the NACE 64 from the national accounts
-    f_employees = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=[0])['Number of employees (-)']
-
-    # load physical proximity index from Pichler et al.
-    FPI = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
-
-    # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
-    hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
-
-    # compute fraction of employees in NACE 64 sector as a percentage of its NACE 21 sector
-    f_employees = f_employees.reset_index()
-    f_employees['NACE 21'] = f_employees['index'].str[0]
-    f_employees = f_employees.rename(columns={'index': 'NACE 64'})
-    f_employees = f_employees.groupby(['NACE 21', 'NACE 64'])['Number of employees (-)'].sum().reset_index()
-    f_employees['fraction_NACE21'] = f_employees['Number of employees (-)'] / f_employees.groupby('NACE 21')['Number of employees (-)'].transform('sum')
-    f_employees = f_employees.drop(columns = ['NACE 21', 'Number of employees (-)']).set_index('NACE 64').squeeze()
-    
-    # NACE 64 to NACE 21 conversion matrix
-    convmat = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/misc/conversion_matrix_NACE64_NACE21.csv'), index_col=[0], header=[0])
-    convmat = convmat.fillna(0).values
-
-    # memory parameters
+    # get all necessary parameters
+    parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
+    # define all relevant parameters of the social contact function TDPF here
+    parameters.update({'l': 2, 'eta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10,
+                    'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
+    # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
-    parameters.update({'l': 2, 'eta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10, 'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
-    policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
-
-    # define economic policies
-    if country == 'BE':
-        parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
-                            'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
-                            'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
-                            'economy_BE_lockdown_2': np.expand_dims(policies_df['lockdown_2'].values, axis=1)})
-        social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
-                                                            f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
-                                                            country).get_contacts_BE
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav,
+                                                            False, f_employees, convmat, simulation_start, country)
+    if country == 'SWE':
+        social_contact_function = social_contact_function.get_contacts_SWE
     else:
-        parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
-                            'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
-        social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
-                                                            f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
-                                                            country).get_contacts_SWE
+        social_contact_function = social_contact_function.get_contacts_BE
 
     # construct seasonality TDPF
     # ==========================
@@ -352,10 +292,82 @@ def get_epi_params(country, age_classes, spatial, contact_type):
 
     return initial_states, parameters, coordinates
 
+
+def get_social_contact_function_parameters(parameters, country, spatial):
+    """
+    A function to load, format and return all parameters necessary to construct the epidemiological model's time-dependent social contact function
+    """
+    # load NACE 21 composition per spatial patch
+    if spatial == True:
+        sectors = pd.read_csv(os.path.join(
+            abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['rel'].sort_index()
+    else:
+        sectors = pd.read_csv(os.path.join(
+            abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['abs']
+        sectors = sectors.groupby(by='economic_activity').sum()/sectors.groupby(by='economic_activity').sum().sum()
+
+    # load social contacts
+    contacts = pd.read_csv(os.path.join(abs_dir, '../../../data/interim/epi/contacts/matrices/FR/comesf_formatted_matrices.csv'), index_col=[0, 1, 2, 3, 4, 5],
+                           converters={'age_x': to_pd_interval, 'age_y': to_pd_interval})
+
+    # load national demography
+    demography = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='age').sum().squeeze()
+
+    # load fraction employees in workplace during pandemic
+    f_workplace = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['workplace']
+
+    # load telework fraction observed during pandemic
+    f_remote = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['remote']
+
+    # load and normalise leisure association vector (lav)
+    lav = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['association_leisure']
+    lav = lav/sum(lav)
+
+    # load the number of employees in every sector of the NACE 64 from the national accounts
+    f_employees = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=[0])['Number of employees (-)']
+
+    # load physical proximity index from Pichler et al.
+    FPI = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
+
+    # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
+    hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
+
+    # compute fraction of employees in NACE 64 sector as a percentage of its NACE 21 sector
+    f_employees = f_employees.reset_index()
+    f_employees['NACE 21'] = f_employees['index'].str[0]
+    f_employees = f_employees.rename(columns={'index': 'NACE 64'})
+    f_employees = f_employees.groupby(['NACE 21', 'NACE 64'])['Number of employees (-)'].sum().reset_index()
+    f_employees['fraction_NACE21'] = f_employees['Number of employees (-)'] / f_employees.groupby('NACE 21')['Number of employees (-)'].transform('sum')
+    f_employees = f_employees.drop(columns = ['NACE 21', 'Number of employees (-)']).set_index('NACE 64').squeeze()
+    
+    # NACE 64 to NACE 21 conversion matrix
+    convmat = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/misc/conversion_matrix_NACE64_NACE21.csv'), index_col=[0], header=[0])
+    convmat = convmat.fillna(0).values
+
+    # memory parameters
+    policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
+
+    # define economic policies
+    if country == 'BE':
+        parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
+                            'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
+                            'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
+                            'economy_BE_lockdown_2': np.expand_dims(policies_df['lockdown_2'].values, axis=1)})
+    else:
+        parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
+                            'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
+
+    return parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat
+
 ################################################
 ## Aggregation functions Brussels and Brabant ##
 ################################################
-
 
 import xarray as xr
 def aggregate_Brussels_Brabant_Dataset(simulation_in):
