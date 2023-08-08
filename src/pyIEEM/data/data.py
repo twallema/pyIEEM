@@ -4,7 +4,7 @@ from datetime import datetime
 
 abs_dir = os.path.dirname(__file__)
 
-def get_hospitalisation_incidence(country):
+def get_hospitalisation_incidence(country, aggregate_bxl_brabant=False):
     """
     A function to load and format the hospitalisation incidence data of country `country`
 
@@ -52,7 +52,7 @@ def get_hospitalisation_incidence(country):
         data.loc[data['PROVINCE'] == 'VlaamsBrabant', 'PROVINCE'] = 'Vlaams-Brabant'
         data.loc[data['PROVINCE'] == 'Liège', 'PROVINCE'] = 'Liege'
         # cut of at start of 2021
-        data = data.loc[slice(None, datetime(2021, 1, 1)), :]
+        data = data.loc[slice(None, datetime(2022, 1, 1)), :]
         # make an empty dataframe with all date-province combinations as index
         names = ['date', 'spatial_unit']
         dates = data.reset_index()['DATE'].unique()
@@ -65,5 +65,12 @@ def get_hospitalisation_incidence(country):
         data.index.names = ['date', 'spatial_unit']
         # merge dataframes
         data = desired_data.combine_first(data).fillna(0)
+        # aggregate brussels and both brabants if desired
+        if aggregate_bxl_brabant:
+            data.loc[slice(None), 'Brussels'] = (data.loc[slice(None), 'Brussels'] + data.loc[slice(None), 'Vlaams-Brabant'] + data.loc[slice(None), 'Brabant Wallon']).values
+            data = data.reset_index()
+            data = data[((data['spatial_unit'] != 'Vlaams-Brabant') & (data['spatial_unit'] != 'Brabant Wallon'))]
+            data['spatial_unit'][data['spatial_unit'] == 'Brussels'] = 'Brussels and Brabant'
+            data = data.groupby(by=['date','spatial_unit']).sum().squeeze()
 
     return data

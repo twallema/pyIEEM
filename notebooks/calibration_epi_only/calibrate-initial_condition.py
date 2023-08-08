@@ -16,7 +16,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # settings calibration
 start_calibration = '2020-02-01'
 processes = 6
-max_iter = 100
+max_iter = 50
 
 # settings visualisation
 nrows = 3
@@ -27,8 +27,6 @@ ncols = 4
 ######################
 
 # helper function to adjust initial condition
-
-
 def update_initial_condition(infected, initial_condition, N_other, N_work):
     assert len(infected) == initial_condition.shape[1]
     # compute number of contacts per age group per spatial patch (N x G)
@@ -46,8 +44,6 @@ def update_initial_condition(infected, initial_condition, N_other, N_work):
     return output
 
 # custom SSE function
-
-
 def poisson_ll(theta, data, model, start_calibration, end_calibration):
     """
     A custom Poisson log-likelihood function
@@ -81,9 +77,9 @@ for country in ['SWE', 'BE']:
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-03-08'
+        end_calibration = '2020-04-01'
     else:
-        end_calibration = '2020-03-20'
+        end_calibration = '2020-03-22'
     data = data.loc[slice(start_calibration, end_calibration)]
 
     # setup model
@@ -91,26 +87,18 @@ for country in ['SWE', 'BE']:
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
     model = initialize_model(country, age_classes, True, start_calibration)
 
+    # disable seasonality and shift of peak
+    #model.parameters.update({'amplitude': 0.0, 'peak_shift': 0})
+
     # compute number of spatial patches
     G = model.initial_states['E'].shape[1]
 
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
-        theta = np.array([9.19690491e-13, 3.17408476e-01, 6.80078567e-01, 6.06827393e-02,
-                            5.07275195e-01, 1.22507688e-01, 1.21471281e+00, 9.42726855e-10,
-                            1.99797734e-02, 9.17475815e-02, 3.61440029e-01, 2.34834215e+00,
-                            5.29518851e-01, 5.06425016e-01, 2.01321879e+01, 1.31557345e-01,
-                            8.65823844e-02, 4.74567997e-02, 7.30118316e-02, 1.04102086e-01,
-                            1.16747254e+00]) # ll: 73.5, seasonality: 0.18
-        theta = np.array([4.90557688e-13, 9.29359510e-01, 1.46439472e+00, 5.15682933e-02,
-                            6.43880705e-01, 4.11241512e-01, 2.25351502e+00, 1.96398501e-09,
-                            3.10444846e-02, 3.80312191e-01, 1.04567025e+00, 4.14069887e+00,
-                            1.30441599e+00, 5.83208265e-01, 4.06855042e+01, 3.22849811e-01,
-                            1.57385393e-01, 4.67295827e-02, 2.32268994e-01, 1.59717878e-01,
-                            4.05288009e+00])
+        # nicely consistent with one infected in Stockholm
+        theta = 0.080*np.array([0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0, 0, 0.075, 0, 0.05, 1, 0.05, 0, 0, 0, 0, 0])
     else:
-        #theta = np.array([0.072, 1e-12, 1e-12, 0.416, 0.080, 0.149, 0.037, 1e-12, 0.143, 1e-12, 0.040]) # ll: 232, seasonality: 0.18
-        theta = np.array([0.163, 1e-12, 1e-12, 0.975, 0.184, 0.364, 0.089, 1e-12, 0.353, 1e-12, 0.097]) # ll: 215, seasonality: 0.0
+        theta = 0.15*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 0.85, 0, 0.25]) # ll: 215, seasonality: 0.0
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
@@ -162,7 +150,7 @@ for country in ['SWE', 'BE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
-        #plt.show()
+        plt.show()
         plt.close()
 
     #################
@@ -172,4 +160,4 @@ for country in ['SWE', 'BE']:
     abs_dir = os.path.dirname(__file__)
     out.coords.update({'age_class': range(len(out.coords['age_class']))})
     out.to_netcdf(os.path.join(
-        abs_dir, f'../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
+        abs_dir, f'../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))

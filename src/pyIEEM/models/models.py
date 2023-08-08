@@ -8,11 +8,11 @@ class SIR(ODE):
 
     # state variables and parameters
     states = ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R', 'D', 'Hin']
-    parameters = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 's', 'a', 'h', 'm', 'N', 'G']
+    parameters = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
     dimensions = ['age_class', 'spatial_unit']
 
     @staticmethod
-    def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, alpha, beta, gamma, delta, epsilon, s, a, h, m, N, G):
+    def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G):
 
         # compute total population
         T = S + E + Ip + Ia + Im + Ih + R + D
@@ -32,13 +32,13 @@ class SIR(ODE):
         n_inf = S * IP_other + S_work * IP_work
 
         # model equations
-        dS = - n_inf
+        dS = - n_inf + (1/zeta)*R
         dE = n_inf - (1/alpha)*E
         dIp = (1/alpha)*E - (1/gamma)*Ip
         dIa = a*(1/gamma)*Ip - (1/delta)*Ia
         dIm = (1-a)*(1/gamma)*Ip - (1/delta)*Im
         dIh = h*(1/delta)*Im - (1/epsilon)*Ih
-        dR = (1/delta)*Ia + (1-h)*(1/delta)*Im + (1-m)*(1/epsilon)*Ih
+        dR = (1/delta)*Ia + (1-h)*(1/delta)*Im + (1-m)*(1/epsilon)*Ih - (1/zeta)*R
         dD = m*(1/epsilon)*Ih
 
         # derivative states

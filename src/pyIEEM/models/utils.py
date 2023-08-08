@@ -84,26 +84,25 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
     
     # NACE 64 to NACE 21 conversion matrix
     convmat = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/misc/conversion_matrix_NACE64_NACE21.csv'), index_col=[0], header=[0])
-    NACE64_coordinates = convmat.index.values
     convmat = convmat.fillna(0).values
 
     # memory parameters
     from pyIEEM.models.TDPF import make_social_contact_function
-    parameters.update({'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'phi_work': 0.05, 'phi_eff': 0.05})
+    parameters.update({'l': 2, 'eta': 1, 'tau': 31, 'ypsilon_work': 10, 'ypsilon_eff': 10, 'ypsilon_leisure': 10, 'phi_work': 0.10, 'phi_eff': 0.10, 'phi_leisure': 0.10})
     policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
 
     # define economic policies
     if country == 'BE':
-        parameters.update({'economy_BE_lockdown_1': policies_df['lockdown_1'],
-                            'economy_BE_phaseI': policies_df['lockdown_release_phaseI'],
-                            'economy_BE_lockdown_Antwerp': policies_df['lockdown_Antwerp'],
-                            'economy_BE_lockdown_2': policies_df['lockdown_2']})
+        parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
+                            'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
+                            'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
+                            'economy_BE_lockdown_2': np.expand_dims(policies_df['lockdown_2'].values, axis=1)})
         social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
                                                             f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
                                                             country).get_contacts_BE
     else:
-        parameters.update({'economy_SWE_ban_gatherings_1': policies_df['ban_gatherings_1'],
-                            'economy_SWE_ban_gatherings_2': policies_df['ban_gatherings_2']})
+        parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
+                            'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
         social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace,
                                                             f_remote, hesitancy, lav, False, f_employees, convmat, simulation_start,
                                                             country).get_contacts_SWE
@@ -113,7 +112,11 @@ def initialize_model(country, age_classes, spatial, simulation_start, contact_ty
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function()
-    parameters.update({'amplitude': 0.0})
+    
+    if country == 'SWE':
+        parameters.update({'amplitude': 0.30, 'peak_shift': 14})
+    else: 
+        parameters.update({'amplitude': 0.30, 'peak_shift': -14})    
 
     # initialize model
     # ================
@@ -294,6 +297,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
                       'gamma': 0.7,
                       'delta': 5,
                       'epsilon': 14,
+                      'zeta': 365/2,
                       'N': {'other': N_other, 'work': N_work},
                       'G': mob,
                   })
@@ -341,6 +345,91 @@ def get_epi_params(country, age_classes, spatial, contact_type):
                    'spatial_unit': spatial_units}
 
     return initial_states, parameters, coordinates
+
+################################################
+## Aggregation functions Brussels and Brabant ##
+################################################
+
+
+import xarray as xr
+def aggregate_Brussels_Brabant_Dataset(simulation_in):
+    """
+    A wrapper for `aggregate_Brussels_Brabant()`, converting all model states into the aggregated format
+
+    Input
+    =====
+    
+    simulation_in: xarray.Dataset
+        Simulation result (arrondissement or provincial level)
+    
+    Output
+    ======
+    
+    simulation_out: xarray.Dataset
+        Simulation result. Provincial spatial aggregation with Bruxelles and Brabant aggregated into NIS 21000
+    """
+    output = []
+    for state in simulation_in.keys():
+        o = aggregate_Brussels_Brabant_DataArray(simulation_in[state])
+        o.name = state
+        output.append(o)
+    return xr.merge(output)
+
+def dummy_aggregation(simulation_in):
+    return simulation_in
+
+def aggregate_Brussels_Brabant_DataArray(simulation_in):
+    """
+    A function to aggregate an arrondissement simulation to the provincial level.
+    A function to aggregate the provinces of Brussels, Brabant Wallon and Vlaams Brabant into one province.
+    
+    Input
+    =====
+    
+    simulation_in: xarray.DataArray
+        Simulation result (arrondissement or provincial level)
+    
+    Output
+    ======
+    
+    simulation_out: xarray.DataArray
+        Simulation result. Provincial spatial aggregation with Bruxelles and Brabant aggregated into NIS 21000
+    """
+
+    # define new names
+    new_names = ['Antwerpen', 'Brussels and Brabant', 'Hainaut', 'Liege', 'Limburg', 'Luxembourg', 'Namur', 'Oost-Vlaanderen', 'West-Vlaanderen']
+    # preallocate tensor for the converted output
+    if 'draws' in simulation_in.dims:
+        data = np.zeros([len(new_names),
+                        len(simulation_in.coords['draws']),
+                        len(simulation_in.coords['date']),
+                        len(simulation_in.coords['age_class'])])
+    else:
+        data = np.zeros([len(new_names),
+                        len(simulation_in.coords['date']),
+                        len(simulation_in.coords['age_class'])])
+    # aggregate Brussels and Brabant
+    for i, prov in enumerate(new_names):
+        if prov != 'Brussels and Brabant':
+            data[i,...] = simulation_in.sel(spatial_unit=prov).values
+        else:
+            data[i,...] = simulation_in.sel(spatial_unit='Brussels').values + simulation_in.sel(spatial_unit='Vlaams-Brabant').values + \
+                            simulation_in.sel(spatial_unit='Brabant Wallon').values        
+    # Send to simulation out
+    if 'draws' in simulation_in.dims:
+        data=np.swapaxes(np.swapaxes(np.swapaxes(data,0,1), 1,2), 2,3)
+        coords=dict(draws = simulation_in.coords['draws'],
+                    date = simulation_in.coords['date'],
+                    age_class = simulation_in.coords['age_class'],
+                    spatial_unit=(['spatial_unit'], new_names),
+                    )
+    else:
+        data=np.swapaxes(np.swapaxes(data,0,1), 1, 2)
+        coords=dict(date = simulation_in.coords['date'],
+                    spatial_unit=(['spatial_unit'], new_names),
+                    age_class = simulation_in.coords['age_class'],
+            )
+    return xr.DataArray(data, dims=simulation_in.dims, coords=coords)
 
 ########################################
 ## Time-dependent Parameter Functions ##
@@ -480,7 +569,7 @@ def is_school_holiday(d, country):
         # Summer holiday is shifted two weaks in Sweden
         if ((d.isocalendar().week in holiday_weeks) | \
                 (d in public_holidays)) | \
-                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=8, day=15))):
+                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=9, day=1))):
             return True
         else:
             return False        
