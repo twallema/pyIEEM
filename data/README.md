@@ -6,6 +6,8 @@
 
 #### cases
 
++ `statistik-covid19-avlidna.xlsx` Retrieved from: https://www.socialstyrelsen.se/globalassets/sharepoint-dokument/dokument-webb/statistik/statistik-covid19-avlidna.xlsx 
+
 + `Statistikdatabasen_06_08_2023 00_28_51.xlsx`: Number of admissions to the hospital per month in the Swedish counties. If you download the .csv version all the numbers have changed, very weird, be sure to download the excel file. Retrieved from: https://sdb.socialstyrelsen.se/if_par/val_eng.aspx
 
 + `41598_2021_3499_MOESM1_ESM.pdf`: Figure S2 contains the weekly number of COVID-19 hospital admission in the 20 regions of Sweden. Supplementary materials of: "Predicting regional COVID-19 hospital admissions in Sweden using mobility data."
