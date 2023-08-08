@@ -58,13 +58,11 @@ model_SWE = initialize_epidemic_model('SWE', age_classes, True, start_calibratio
 
 import random
 def draw_function(param_dict, samples_dict):
-    i, param_dict['tau'] = random.choice(list(enumerate(samples_dict['tau'])))  
-    param_dict['ypsilon_eff'] = samples_dict['ypsilon_eff'][i]
-    param_dict['phi_eff'] = samples_dict['phi_eff'][i]
-    param_dict['phi_work'] = samples_dict['phi_work'][i]
-    param_dict['phi_leisure'] = samples_dict['phi_leisure'][i]
-    #param_dict['amplitude'] = samples_dict['amplitude'][i]
-    #param_dict['eta'] = samples_dict['eta'][i]
+    i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['tau'])))  
+    param_dict['xi_eff'] = samples_dict['ypsilon_eff'][i]
+    param_dict['pi_eff'] = samples_dict['phi_eff'][i]
+    param_dict['pi_work'] = samples_dict['phi_work'][i]
+    param_dict['pi_leisure'] = samples_dict['phi_leisure'][i]
     return param_dict
 
 ###########################

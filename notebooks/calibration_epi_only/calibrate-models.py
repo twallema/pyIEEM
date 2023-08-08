@@ -68,9 +68,9 @@ aggregation_functions = [
 alpha = 0.027
 log_likelihood_fnc_args = [len(data_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
                            len(data_SWE.index.get_level_values('spatial_unit').unique())*[alpha,]]                  
-pars = ['tau', 'ypsilon_eff', 'phi_eff', 'phi_work', 'phi_leisure']
+pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
 bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
-labels = [r'$\tau$', r'$\upsilon_{eff}$', r'$\phi_{eff}$', r'$\phi_{work}$', r'$\phi_{leisure}$']
+labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$']
 weights = [1/len(data_BE), 1/len(data_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
