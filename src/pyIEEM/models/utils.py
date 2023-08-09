@@ -36,8 +36,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         else:
             initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
 
-    # construct social contact TDPF
-    # =============================
+    # construct social contact TDPF (epidemic)
+    # ========================================
 
     # get all necessary parameters
     parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
@@ -53,8 +53,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     else:
         social_contact_function = social_contact_function.get_contacts_BE
 
-    # construct seasonality TDPF
-    # ==========================
+    # construct seasonality TDPF (epidemic)
+    # =====================================
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function()
@@ -64,10 +64,49 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     else: 
         parameters.update({'amplitude': 0.30, 'peak_shift': -14})    
 
+    # construct labor supply shock TDPF (economic)
+    # ============================================
+
+    from pyIEEM.models.TDPF import make_labor_supply_shock_function
+    # get labor market composition
+    lmc_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1], header=0)['abs'].sort_index()
+    # load fraction employees in workplace during pandemic
+    f_workplace = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['workplace']
+    # load telework fraction observed during pandemic
+    f_remote = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['remote']
+    # load the number of employees in every sector of the NACE 64 from the national accounts
+    f_employees = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=[0])['Number of employees (-)']
+    # load physical proximity index from Pichler et al.
+    FPI = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
+    # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
+    hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
+    # compute fraction of employees in NACE 64 sector as a percentage of its NACE 21 sector
+    f_employees = f_employees.reset_index()
+    f_employees['NACE 21'] = f_employees['index'].str[0]
+    f_employees = f_employees.rename(columns={'index': 'NACE 64'})
+    f_employees = f_employees.groupby(['NACE 21', 'NACE 64'])['Number of employees (-)'].sum().reset_index()
+    f_employees['fraction_NACE21'] = f_employees['Number of employees (-)'] / f_employees.groupby('NACE 21')['Number of employees (-)'].transform('sum')
+    f_employees = f_employees.drop(columns = ['NACE 21', 'Number of employees (-)']).set_index('NACE 64').squeeze()
+    # load TDPF
+    if country == 'SWE':
+        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start).get_economic_policy_SWE
+    else:
+        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start).get_economic_policy_BE
+
     # initialize model
     # ================
 
-    model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters={'N': social_contact_function, 'beta': seasonality_function})
+    time_dependent_parameters = {
+        'N': social_contact_function,
+        'beta': seasonality_function,
+        'mu_S': labor_supply_shock_function
+    }
+
+    model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters=time_dependent_parameters)
 
     return model
 

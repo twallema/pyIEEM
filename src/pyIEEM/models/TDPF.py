@@ -1,7 +1,10 @@
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 from pyIEEM.models.utils import ramp_fun, is_school_holiday, aggregate_simplify_contacts
+
+abs_dir = os.path.dirname(__file__)
 
 #####################
 ## Social contacts ##
@@ -121,7 +124,7 @@ class make_social_contact_function():
         ## forced response ##
         #####################
 
-        # convert economic policy from tuple to numpy array
+        # invert
         economic_closures = 1-economic_closures
 
         # convert the leisure_public contacts depending on the economic policy
@@ -224,20 +227,20 @@ class make_social_contact_function():
         # initialize memory if necessary
         memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
         # update memory
-        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, xi)
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, xi)
 
         #######################
         ## behavioral models ##
         #######################
         
         # compute average perceived hospital load per spatial patch 
-        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, nu)
+        I_star_average = compute_perceived_hospital_load(self.I_star, G, nu)
         # leisure and general effectivity of contacts
-        M_eff = 1-self.gompertz(I_star_average, pi_eff, rho_eff)
+        M_eff = 1-gompertz(I_star_average, pi_eff, rho_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(I_star_average, pi_work, (rho_work*self.hesitancy).values)
+        M_work = 1-gompertz(I_star_average, pi_work, (rho_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(I_star_average, pi_leisure, rho_leisure)
+        M_leisure = 1-gompertz(I_star_average, pi_leisure, rho_leisure)
 
         ##############
         ## policies ##
@@ -328,20 +331,20 @@ class make_social_contact_function():
         # initialize memory if necessary
         memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
         # update memory
-        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, xi)
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, xi)
 
         #######################
         ## behavioral models ##
         #######################
 
         # compute average perceived hospital load per spatial patch
-        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, nu)
+        I_star_average = compute_perceived_hospital_load(self.I_star, G, nu)
         # leisure and general effectivity of contacts
-        M_eff = 1-self.gompertz(I_star_average, pi_eff, rho_eff)
+        M_eff = 1-gompertz(I_star_average, pi_eff, rho_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(I_star_average, pi_work, (rho_work*self.hesitancy).values)
+        M_work = 1-gompertz(I_star_average, pi_work, (rho_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(I_star_average, pi_leisure, rho_leisure)
+        M_leisure = 1-gompertz(I_star_average, pi_leisure, rho_leisure)
 
         ##############
         ## policies ##
@@ -363,103 +366,6 @@ class make_social_contact_function():
             policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_2)
             return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
-
-    @staticmethod
-    def gompertz(x, a, b):
-        """
-        A Gompertz behavioral model
-
-        input
-        =====
-        x: float or np.ndarray
-            input value. range: [-infinity --> infinity]
-
-        a: float
-            displacement along x-axis + y(0). higher values displace to the right and lower y(0) to zero. (if alpha > 5 then y(0) approx. 0)
-        
-        b: float
-            steepness parameter.
-
-        output
-        ======
-
-        y: float or np.ndarray
-            output value. range: [0,1]
-
-        """
-        return np.squeeze(np.exp(-a*np.exp(-np.outer(b,x))))
-
-    @staticmethod
-    def update_memory(memory_index, memory_values, t, t_prev, I, I_star, G, xi, l=365):
-        """
-        A function to update the memory of the hospitalisation load
-        """
-
-        # determine length of timestep
-        dt = (t - t_prev)/timedelta(days=1)
-        # add case count to memory (RK can step backwards)
-        if dt > 0:
-            # copy values
-            new_index = memory_index
-            new_values = memory_values
-            # append new values
-            for g in range(G):
-                new_values[g].append(I[g])
-            new_index.append(new_index[-1] + dt)
-            # subtract the new timestep
-            new_index = np.array(new_index) - new_index[-1]
-            # cut of values and index to not exceed memory length l
-            for g in range(G):
-                new_values[g] = list(np.array(new_values[g])[new_index >= -l])
-            new_index = new_index[new_index >= -l]
-            # compute exponential weights at new_index
-            weights = np.exp((1/xi)*new_index)/sum(np.exp((1/xi)*new_index))
-            # multiply weights with case count and sum to compute average
-            I_star = np.sum(np.array(new_values)*weights, axis=1)
-            # update memory
-            memory_index = list(new_index)
-            memory_values = new_values
-
-        return memory_index, memory_values, I_star, t
-
-    @staticmethod
-    def compute_perceived_hospital_load(I, G, mu):
-        """
-        Computes the average perceived I on every spatial patch j
-        Computed as the average between the own spatial patch (j) and the spatial patch with the maximum I (i)
-
-        input
-        =====
-
-        I: np.array/list
-            'I' per spatial patch
-
-        G: np.ndarray
-            recurrent mobility matrix
-
-        mu: float
-            0: perceived hospital load only determined by own spatial patch.
-            1: perceived hospital load is average between own spatial patch and patch with maximum I
-            inf: perceived hosptial load is determined solely by patch with maximum I
-
-        output
-        ======
-
-        I: np.array/list
-            average perceived I on every spatial patch
-        """
-        # get index of spatial patch with maximum number of cases
-        i = np.argmax(I)
-        # copy to avoid global alterations
-        col = list(G[:, i]).copy()
-        col = np.array(col)
-        # compute normalised connectivity to spatial patch i (a patch 'averagely' connected to patch i has connectivity 1)
-        col[i] = 0
-        mask = np.ones(col.shape, bool)
-        mask[i] = False
-        connectivity = col/np.mean(col[mask])
-        # compute weighted average
-        return (I + mu*connectivity*I[i])/(1 + mu*connectivity)
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
         """
@@ -526,3 +432,402 @@ class make_seasonality_function():
 ## Economy ##
 #############
 
+class make_labor_supply_shock_function():
+
+    def __init__(self, age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start):
+        """
+        A class to update the labor supply shock based on 1) government policy, 2) sickness, 3) absenteism
+
+        input
+        =====
+
+        age_classes: pd.IntervalIndex
+            age classes of the model
+
+        lmc_df: pd.Series
+            Labor market composition (absolute number of employed in economic activity of NACE 21) per spatial patch in the model. 
+
+        f_remote: pd.series
+            Fraction of employees working from home per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
+            Index: NACE64 sectors
+
+        f_workplace: pd.Series
+            Fraction of employees at workplace per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
+            Index: NACE64 sectors
+
+        f_employees: pd.Series
+            Fraction of employees in a given NACE 21 sector, working in a NACE 64 sector
+
+        hesitancy: pd.Series
+            Normalized product of `f_remote` (fraction employees able to work remotely) and the physical proximity of workplace contacts (Pichler).
+            Informs the hesitancy to stay home from work
+
+        simulation_start: datetime.datetime
+            Simulation startdate. Note that this implies you can't change the simulation startdate without re-initializing the model.
+            Sadly, there is no way around this (that I can think of for now).
+        """
+
+        if 'spatial_unit' in lmc_df.index.names:
+            # derive number of spatial patches
+            self.G = len(lmc_df.index.get_level_values('spatial_unit').unique().values)
+            # convert to the fraction of laborers in spatial patch 'i' working in sector 'X' of the total number of laborers working in sector 'X' (NACE 21)
+            lmc_df = lmc_df/lmc_df.groupby('economic_activity').transform('sum')
+            # convert from NACE 21 to NACE 64 using the ratios found in the national accounts
+            iterables = [lmc_df.index.get_level_values('spatial_unit').unique().values, f_employees.index]
+            names = ['spatial_unit', 'economic_activity']
+            out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees')
+            for act in f_employees.index.values:
+                out.loc[slice(None), act] = f_employees.loc[act]*lmc_df.loc[slice(None), act[0]].values
+            self.lmc_df = out
+        else:
+            self.G = 1
+            self.lmc_df = self.lmc_df
+
+        # pre-allocate simulation start
+        if not isinstance(simulation_start, (str, datetime)):
+            raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
+        if isinstance(simulation_start, str):
+            iterables = []
+            try:
+                simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
+            except:
+                raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
+        self.t_prev = simulation_start
+        self.simulation_start = simulation_start
+
+        # other variables
+        self.hesitancy = hesitancy
+        self.age_classes = age_classes
+        self.f_remote = f_remote.values
+        self.f_workplace = f_workplace.values
+
+    def __call__(self, t, shock_absenteism, shock_sickness, economic_closures):
+
+        # zeros: no closure, ones: full closure (Belgian lockdown)
+        economic_closures = economic_closures*(1 - (self.f_remote[:, np.newaxis] + self.f_workplace[:, np.newaxis]))
+        
+        # compute maximum of three shocks per spatial patch (63, 11)
+        maximum_values = np.maximum(np.maximum(economic_closures, shock_absenteism), shock_sickness)
+
+        # convert to national shock using labor market composition
+        print(t, np.sum(maximum_values*np.transpose(self.lmc_df.values.reshape([self.G, 63])), axis=1))
+        return np.sum(maximum_values*np.transpose(self.lmc_df.values.reshape([self.G, 63])), axis=1)
+
+    def get_economic_policy_BE(self, t, states, param, l, G, nu, xi, pi_work, rho_work, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+        """
+        Function returning the labor supply shock during the 2020 COVID-19 pandemic in Belgium
+
+        input
+        =====
+
+        l: int/float
+            length of ramp function to smoothly ease in mentality change at beginning of pandemic (step functions cause stifness in the solution)
+
+        G: np.ndarray
+            recurrent mobility matrix
+
+        nu: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
+
+        xi: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        pi_work: int/float
+            displacement parameter of the Gompertz behavioral model for work contacts
+
+        rho_work: int/float
+            steepness parameter of the Gompertz behavioral model for work contacts
+        
+        economy_BE_lockdown_1: pd.Series
+            closure of economic sectors (NACE 64 classification). 0: open. 1: closed.
+
+        output
+        ======
+
+        mu_S: np.array
+            Length: 63 (NACE 64)
+            Labor supply shock at time 't'
+        """
+
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, xi)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, nu)
+        # voluntary switch to either telework or absenteism
+        M_work = gompertz(Ih_star_average, pi_work, (rho_work*self.hesitancy).values) # 63 x 11
+        # only accounts for absenteism above telework threshold
+        shock_absenteism = np.where(M_work < self.f_remote[:, np.newaxis], 0, M_work - self.f_remote[:, np.newaxis])
+
+        # volgens mij kan de berekening van M_work simpeler
+        # --> ipv rho_work te vermingvuldigen met self.hesitancy en te veronderstellen dat er pas een shock plaatsvind wanneer M_work onder 1-f_telework duikt kan je
+        # M_work reduceren tot een (11,) vector en veronderstellen dat de shock verdeeld wordt conform f_telework
+        # bvb. M_work = 0.5: f_telework = 0 --> shock = 0.5; f_telework = 0.5 --> shock = 0.25
+
+        ##############
+        ## sickness ##
+        ##############
+
+        # get fraction of symptomatic individuals in the active population (20-60 years old) per spatial patch
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state][4:12], axis=0)
+        # TODO: do a proper demographic conversion
+        Im = np.sum(states['Im'][4:12], axis=0)/T
+        # expand to 63 x 11 for convenience --> assumes sickness affects all sectors equally --> sickness will not play any noticable role in COVID-19 but this should be addressed at a later point
+        # Idea: normalized (around 1) amount of prepandemic social contact multiplied with M_work? --> ignores government policies
+        shock_sickness = np.tile(Im, (63, 1))
+
+        #########################
+        ## government policies ##
+        #########################
+
+        # key dates
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_phase_I = datetime(2020, 5, 1)
+        t_BE_phase_II = datetime(2020, 6, 1)
+        t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
+        t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
+        t_BE_lockdown_2 = datetime(2020, 11, 19)
+
+        # construct vector of social restrictions in Antwerp only
+        social_restrictions_Antwerp = np.zeros(self.G)
+        social_restrictions_Antwerp[0] = 1
+
+        # construct economic closures in Antwerp only
+        economy_BE_lockdown_Antwerp_mat = np.zeros([63, self.G], dtype=float)
+        economy_BE_lockdown_Antwerp_mat[:,0] = np.squeeze(economy_BE_lockdown_Antwerp)
+        economy_BE_lockdown_Antwerp = economy_BE_lockdown_Antwerp_mat
+
+        if t < t_BE_lockdown_1:
+            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+        elif t_BE_lockdown_1 <= t < t_BE_phase_I:
+            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_lockdown_1)
+        elif t_BE_phase_I <= t < t_BE_phase_II:
+            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_phaseI)
+        elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
+            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+        elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
+            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_lockdown_Antwerp)
+        elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
+            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+        else:
+            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_lockdown_2)
+
+    def get_economic_policy_SWE(self, t, states, param, l, G, nu, xi, pi_work, rho_work, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+        """
+        Function returning the labor supply shock during the 2020 COVID-19 pandemic in Sweden
+
+        input
+        =====
+
+        l: int/float
+            length of ramp function to smoothly ease in mentality change at beginning of pandemic (step functions cause stifness in the solution)
+
+        G: np.ndarray
+            recurrent mobility matrix
+
+        nu: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
+
+        xi: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        pi_work: int/float
+            displacement parameter of the Gompertz behavioral model for work contacts
+
+        rho_work: int/float
+            steepness parameter of the Gompertz behavioral model for work contacts
+        
+        economy_SWE_ban_gatherings_1: pd.Series
+            closure of economic sectors (NACE 64 classification). 0: open. 1: closed.
+
+        output
+        ======
+
+        mu_S: np.array
+            Length: 63 (NACE 64)
+            Labor supply shock at time 't'
+        """
+
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, xi)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, nu)
+        # voluntary switch to either telework or absenteism
+        M_work = gompertz(Ih_star_average, pi_work, (rho_work*self.hesitancy).values) # 63 x 11
+        # only accounts for absenteism above telework threshold
+        shock_absenteism = np.where(M_work < self.f_remote[:, np.newaxis], 0, M_work - self.f_remote[:, np.newaxis])
+
+        # volgens mij kan de berekening van M_work simpeler
+        # --> ipv rho_work te vermingvuldigen met self.hesitancy en te veronderstellen dat er pas een shock plaatsvind wanneer M_work onder 1-f_telework duikt kan je
+        # M_work reduceren tot een (11,) vector en veronderstellen dat de shock verdeeld wordt conform f_telework
+        # bvb. M_work = 0.5: f_telework = 0 --> shock = 0.5; f_telework = 0.5 --> shock = 0.25
+
+        ##############
+        ## sickness ##
+        ##############
+
+        # get fraction of symptomatic individuals in the active population (20-60 years old) per spatial patch
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state][4:12], axis=0)
+        # TODO: do a proper demographic conversion
+        Im = np.sum(states['Im'][4:12], axis=0)/T
+        # expand to 63 x 11 for convenience --> assumes sickness affects all sectors equally --> sickness will not play any noticable role in COVID-19 but this should be addressed at a later point
+        # Idea: normalized (around 1) amount of prepandemic social contact multiplied with M_work? --> ignores government policies
+        shock_sickness = np.tile(Im, (63, 1))
+
+        #########################
+        ## government policies ##
+        #########################
+
+        # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
+        t_ban_gatherings_1 = datetime(2020, 3, 11)
+        t_ban_gatherings_2 = datetime(2020, 11, 24)
+
+        if t < t_ban_gatherings_1:
+            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+        elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
+            return self.__call__(t, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_1)
+        else:
+            return self.__call__(t, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_2)
+
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+        """
+        A function to initialize the memory at an appropriate moment in time
+        """
+        time_threshold = 0.5
+        # if hosp. threshold is surpassed within 21 days after simulation then memory is started
+        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold)): #  & (max(I) <= hosp_threshold)):
+            # re-initialize memory
+            memory_index = [0,] 
+            memory_values = [[I[g],] for g in range(G)]
+            I_star = I 
+            return memory_index, memory_values, I_star
+        else:
+            return self.memory_index, self.memory_values, self.I_star
+
+
+#############################
+## shared helper functions ##
+#############################
+
+def gompertz(x, a, b):
+    """
+    A Gompertz behavioral model
+
+    input
+    =====
+    x: float or np.ndarray
+        input value. range: [-infinity --> infinity]
+
+    a: float
+        displacement along x-axis + y(0). higher values displace to the right and lower y(0) to zero. (if alpha > 5 then y(0) approx. 0)
+    
+    b: float
+        steepness parameter.
+
+    output
+    ======
+
+    y: float or np.ndarray
+        output value. range: [0,1]
+
+    """
+    return np.squeeze(np.exp(-a*np.exp(-np.outer(b,x))))
+
+def update_memory(memory_index, memory_values, t, t_prev, I, I_star, G, xi, l=365):
+    """
+    A function to update the memory of the hospitalisation load
+    """
+
+    # determine length of timestep
+    dt = (t - t_prev)/timedelta(days=1)
+    # add case count to memory (RK can step backwards)
+    if dt > 0:
+        # copy values
+        new_index = memory_index
+        new_values = memory_values
+        # append new values
+        for g in range(G):
+            new_values[g].append(I[g])
+        new_index.append(new_index[-1] + dt)
+        # subtract the new timestep
+        new_index = np.array(new_index) - new_index[-1]
+        # cut of values and index to not exceed memory length l
+        for g in range(G):
+            new_values[g] = list(np.array(new_values[g])[new_index >= -l])
+        new_index = new_index[new_index >= -l]
+        # compute exponential weights at new_index
+        weights = np.exp((1/xi)*new_index)/sum(np.exp((1/xi)*new_index))
+        # multiply weights with case count and sum to compute average
+        I_star = np.sum(np.array(new_values)*weights, axis=1)
+        # update memory
+        memory_index = list(new_index)
+        memory_values = new_values
+
+    return memory_index, memory_values, I_star, t
+
+def compute_perceived_hospital_load(I, G, mu):
+    """
+    Computes the average perceived I on every spatial patch j
+    Computed as the average between the own spatial patch (j) and the spatial patch with the maximum I (i)
+
+    input
+    =====
+
+    I: np.array/list
+        'I' per spatial patch
+
+    G: np.ndarray
+        recurrent mobility matrix
+
+    mu: float
+        0: perceived hospital load only determined by own spatial patch.
+        1: perceived hospital load is average between own spatial patch and patch with maximum I
+        inf: perceived hosptial load is determined solely by patch with maximum I
+
+    output
+    ======
+
+    I: np.array/list
+        average perceived I on every spatial patch
+    """
+    # get index of spatial patch with maximum number of cases
+    i = np.argmax(I)
+    # copy to avoid global alterations
+    col = list(G[:, i]).copy()
+    col = np.array(col)
+    # compute normalised connectivity to spatial patch i (a patch 'averagely' connected to patch i has connectivity 1)
+    col[i] = 0
+    mask = np.ones(col.shape, bool)
+    mask[i] = False
+    connectivity = col/np.mean(col[mask])
+    # compute weighted average
+    return (I + mu*connectivity*I[i])/(1 + mu*connectivity)
