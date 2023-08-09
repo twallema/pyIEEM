@@ -97,13 +97,20 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     else:
         labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start).get_economic_policy_BE
 
+    # construct household demand shock TDPF (economic)
+    # ================================================
+
+    from pyIEEM.models.TDPF import make_household_demand_shock_function
+    household_demand_shock_function = make_household_demand_shock_function()
+
     # initialize model
     # ================
 
     time_dependent_parameters = {
         'N': social_contact_function,
         'beta': seasonality_function,
-        'mu_S': labor_supply_shock_function
+        'mu_S': labor_supply_shock_function,
+        'mu_D': household_demand_shock_function,
     }
 
     model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters=time_dependent_parameters)
@@ -256,7 +263,8 @@ def get_eco_params(country, prodfunc):
                       })  
 
     ## Parameters that will be varied over time
-    parameters.update({'mu_S': np.zeros(63, dtype=float)})
+    parameters.update({'mu_S': np.zeros(63, dtype=float),
+                       'mu_D': np.zeros(63, dtype=float)})
 
     # coordinates
     # ===========

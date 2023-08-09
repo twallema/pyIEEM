@@ -432,6 +432,11 @@ class make_seasonality_function():
 ## Economy ##
 #############
 
+class make_household_demand_shock_function():
+     def __init__(self):
+         pass
+        
+
 class make_labor_supply_shock_function():
 
     def __init__(self, age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start):
