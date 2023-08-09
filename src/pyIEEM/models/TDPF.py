@@ -568,9 +568,7 @@ class make_labor_supply_shock_function():
         M_work = gompertz(Ih_star_average, pi_work, (rho_work*self.hesitancy).values) # 63 x 11
         # only accounts for absenteism above telework threshold
         shock_absenteism = np.where(M_work < self.f_remote[:, np.newaxis], 0, M_work - self.f_remote[:, np.newaxis])
-        print(self.f_remote)
-        import sys
-        sys.exit()
+
         # volgens mij kan de berekening van M_work simpeler
         # --> ipv rho_work te vermingvuldigen met self.hesitancy en te veronderstellen dat er pas een shock plaatsvind wanneer M_work onder 1-f_telework duikt kan je
         # M_work reduceren tot een (11,) vector en veronderstellen dat de shock verdeeld wordt conform f_telework
