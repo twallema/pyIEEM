@@ -30,11 +30,6 @@ def get_hospitalisation_incidence(country, aggregate_bxl_brabant=False):
         abs_dir, f'../../../data/interim/epi/cases/hospital_incidence_{country}.csv'), index_col=[0], parse_dates=True)
 
     if country == 'SWE':
-        # divide number of hosp. in spatial patch 'Missing' over other spatial patches using fraction of hospitalisations occuring in every spatial patch
-        fraction = data[data.columns[data.columns != 'Missing']].div(
-            data[data.columns[data.columns != 'Missing']].sum(axis=1), axis=0)
-        data = (data[data.columns[data.columns != 'Missing']] +
-                fraction.multiply(data['Missing'].values, axis=0)).fillna(0)
         # format and sort alphabetically
         data = data.stack()
         data = data.rename('hospital incidence')
@@ -43,7 +38,6 @@ def get_hospitalisation_incidence(country, aggregate_bxl_brabant=False):
         data /= 7
         # sort alphabetically
         data = data.sort_index()
-
     else:
         # simplify spelling
         data.loc[data['PROVINCE'] == 'WestVlaanderen', 'PROVINCE'] = 'West-Vlaanderen'
