@@ -475,9 +475,9 @@ class make_labor_supply_shock_function():
             # convert from NACE 21 to NACE 64 using the ratios found in the national accounts
             iterables = [lmc_df.index.get_level_values('spatial_unit').unique().values, f_employees.index]
             names = ['spatial_unit', 'economic_activity']
-            out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees')
+            out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees', dtype=float)
             for act in f_employees.index.values:
-                out.loc[slice(None), act] = f_employees.loc[act]*lmc_df.loc[slice(None), act[0]].values
+                out.loc[slice(None), act] = lmc_df.loc[slice(None), act[0]].values # *f_employees.loc[act]
             self.lmc_df = out
         else:
             self.G = 1
@@ -501,17 +501,15 @@ class make_labor_supply_shock_function():
         self.f_remote = f_remote.values
         self.f_workplace = f_workplace.values
 
-    def __call__(self, t, shock_absenteism, shock_sickness, economic_closures):
+    def __call__(self, t, G, shock_absenteism, shock_sickness, economic_closures):
 
         # zeros: no closure, ones: full closure (Belgian lockdown)
         economic_closures = economic_closures*(1 - (self.f_remote[:, np.newaxis] + self.f_workplace[:, np.newaxis]))
-        
-        # compute maximum of three shocks per spatial patch (63, 11)
-        maximum_values = np.maximum(np.maximum(economic_closures, shock_absenteism), shock_sickness)
-
+        # sickness shock = fraction of active population sick in spatial patch * fraction with a job per spatial patch * (1 - fraction already at home due to pandemic per spatial patch)
+        shock_sickness = shock_sickness*np.sum(G, axis=1)[np.newaxis, :]*(1-np.maximum(economic_closures, shock_absenteism))
+        shock = shock_sickness + (1-shock_sickness)*np.maximum(economic_closures, shock_absenteism)
         # convert to national shock using labor market composition
-        print(t, np.sum(maximum_values*np.transpose(self.lmc_df.values.reshape([self.G, 63])), axis=1))
-        return np.sum(maximum_values*np.transpose(self.lmc_df.values.reshape([self.G, 63])), axis=1)
+        return np.sum(shock*np.transpose(self.lmc_df.values.reshape([self.G, 63])), axis=1)
 
     def get_economic_policy_BE(self, t, states, param, l, G, nu, xi, pi_work, rho_work, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
@@ -570,7 +568,9 @@ class make_labor_supply_shock_function():
         M_work = gompertz(Ih_star_average, pi_work, (rho_work*self.hesitancy).values) # 63 x 11
         # only accounts for absenteism above telework threshold
         shock_absenteism = np.where(M_work < self.f_remote[:, np.newaxis], 0, M_work - self.f_remote[:, np.newaxis])
-
+        print(self.f_remote)
+        import sys
+        sys.exit()
         # volgens mij kan de berekening van M_work simpeler
         # --> ipv rho_work te vermingvuldigen met self.hesitancy en te veronderstellen dat er pas een shock plaatsvind wanneer M_work onder 1-f_telework duikt kan je
         # M_work reduceren tot een (11,) vector en veronderstellen dat de shock verdeeld wordt conform f_telework
@@ -612,19 +612,19 @@ class make_labor_supply_shock_function():
         economy_BE_lockdown_Antwerp = economy_BE_lockdown_Antwerp_mat
 
         if t < t_BE_lockdown_1:
-            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_lockdown_1)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_1)
         elif t_BE_phase_I <= t < t_BE_phase_II:
-            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_phaseI)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseI)
         elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
-            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
-            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_lockdown_Antwerp)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_Antwerp)
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
-            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
         else:
-            return self.__call__(t, shock_absenteism, shock_sickness, economy_BE_lockdown_2)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_2)
 
     def get_economic_policy_SWE(self, t, states, param, l, G, nu, xi, pi_work, rho_work, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
@@ -712,11 +712,11 @@ class make_labor_supply_shock_function():
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         if t < t_ban_gatherings_1:
-            return self.__call__(t, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            return self.__call__(t, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_1)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_1)
         else:
-            return self.__call__(t, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_2)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_2)
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
         """
