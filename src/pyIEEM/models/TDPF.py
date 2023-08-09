@@ -177,7 +177,7 @@ class make_social_contact_function():
 
         return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
 
-    def get_contacts_BE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+    def get_contacts_BE(self, t, states, param, l, G, nu, xi, pi_work, rho_work, pi_eff, rho_eff, pi_leisure, rho_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -190,18 +190,18 @@ class make_social_contact_function():
         G: np.ndarray
             recurrent mobility matrix
 
-        mu: int/float
+        nu: int/float
             governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
             mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
 
-        nu: int/float
+        xi: int/float
             half-life of the hospital load memory.
             implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
 
-        xi: int/float
+        pi: int/float
             displacement parameter of the Gompertz behavioral model
 
-        pi: int/float
+        rho: int/float
             steepness parameter of the Gompertz behavioral model
         
         economy_BE_lockdown_1: pd.Series
@@ -224,20 +224,20 @@ class make_social_contact_function():
         # initialize memory if necessary
         memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
         # update memory
-        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, xi)
 
         #######################
         ## behavioral models ##
         #######################
         
         # compute average perceived hospital load per spatial patch 
-        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, mu)
+        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, nu)
         # leisure and general effectivity of contacts
-        M_eff = 1-self.gompertz(I_star_average, xi_eff, pi_eff)
+        M_eff = 1-self.gompertz(I_star_average, pi_eff, rho_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        M_work = 1-self.gompertz(I_star_average, pi_work, (rho_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(I_star_average, xi_leisure, pi_leisure)
+        M_leisure = 1-self.gompertz(I_star_average, pi_leisure, rho_leisure)
 
         ##############
         ## policies ##
@@ -281,7 +281,7 @@ class make_social_contact_function():
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
-    def get_contacts_SWE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_contacts_SWE(self, t, states, param, l, G, nu, xi, pi_work, rho_work, pi_eff, rho_eff, pi_leisure, rho_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -294,18 +294,18 @@ class make_social_contact_function():
         G: np.ndarray
             recurrent mobility matrix
 
-        mu: int/float
+        nu: int/float
             governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
             mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
 
-        nu: int/float
+        xi: int/float
             half-life of the hospital load memory.
             implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
 
-        xi: int/float
+        pi: int/float
             displacement parameter of the Gompertz behavioral model
 
-        pi: int/float
+        rho: int/float
             steepness parameter of the Gompertz behavioral model
         
         economy_SWE_ban_gatherings: pd.Series
@@ -328,20 +328,20 @@ class make_social_contact_function():
         # initialize memory if necessary
         memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
         # update memory
-        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = self.update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, xi)
 
         #######################
         ## behavioral models ##
         #######################
 
         # compute average perceived hospital load per spatial patch
-        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, mu)
+        I_star_average = self.compute_perceived_hospital_load(self.I_star, G, nu)
         # leisure and general effectivity of contacts
-        M_eff = 1-self.gompertz(I_star_average, xi_eff, pi_eff)
+        M_eff = 1-self.gompertz(I_star_average, pi_eff, rho_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-self.gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        M_work = 1-self.gompertz(I_star_average, pi_work, (rho_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-self.gompertz(I_star_average, xi_leisure, pi_leisure)
+        M_leisure = 1-self.gompertz(I_star_average, pi_leisure, rho_leisure)
 
         ##############
         ## policies ##
@@ -390,7 +390,7 @@ class make_social_contact_function():
         return np.squeeze(np.exp(-a*np.exp(-np.outer(b,x))))
 
     @staticmethod
-    def update_memory(memory_index, memory_values, t, t_prev, I, I_star, G, nu, l=365):
+    def update_memory(memory_index, memory_values, t, t_prev, I, I_star, G, xi, l=365):
         """
         A function to update the memory of the hospitalisation load
         """
@@ -413,7 +413,7 @@ class make_social_contact_function():
                 new_values[g] = list(np.array(new_values[g])[new_index >= -l])
             new_index = new_index[new_index >= -l]
             # compute exponential weights at new_index
-            weights = np.exp((1/nu)*new_index)/sum(np.exp((1/nu)*new_index))
+            weights = np.exp((1/xi)*new_index)/sum(np.exp((1/xi)*new_index))
             # multiply weights with case count and sum to compute average
             I_star = np.sum(np.array(new_values)*weights, axis=1)
             # update memory
@@ -521,3 +521,8 @@ class make_seasonality_function():
         t = (t - maxdate)/timedelta(days=1)/365
         rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))
         return param*rescaling
+
+#############
+## Economy ##
+#############
+
