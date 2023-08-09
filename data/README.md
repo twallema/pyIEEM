@@ -6,6 +6,8 @@
 
 #### cases
 
++ `statistik-covid19-inskrivna.xlsx` Number of admissions to the hospital per week in the Swedish counties. Retrieved from: https://www.socialstyrelsen.se/globalassets/sharepoint-dokument/dokument-webb/statistik/statistik-covid19-avlidna.xlsx 
+
 + `Statistikdatabasen_06_08_2023 00_28_51.xlsx`: Number of admissions to the hospital per month in the Swedish counties. If you download the .csv version all the numbers have changed, very weird, be sure to download the excel file. Retrieved from: https://sdb.socialstyrelsen.se/if_par/val_eng.aspx
 
 + `41598_2021_3499_MOESM1_ESM.pdf`: Figure S2 contains the weekly number of COVID-19 hospital admission in the 20 regions of Sweden. Supplementary materials of: "Predicting regional COVID-19 hospital admissions in Sweden using mobility data."
@@ -140,7 +142,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `hospital_incidence_BE.csv`: A copy of `COVID19BE_HOSP.csv` without modifications, renamed to the format `f'hospital_incidence_{country}.csv'` and placed along its Swedish equivalent to use less code.
 
-+ `hospital_incidence_SWE.csv`: Number of hospital admissions per Swedish county (except Gotland) and per week, extracted using WebPlotDigitizer from Figure S2 in `41598_2021_3499_MOESM1_ESM.pdf`. Missing column assumes missing data is 5 % of the available data in March/April 2020 and 3% from May 2020 onwards. These ratios have been computed using the monthly number of hospital admission per Swedish county and per month, available in `Statistikdatabasen_06_07_2023 20_57_17.csv`.
++ `hospital_incidence_SWE.csv`: Number of hospital admissions per Swedish county and per week, converted from file `statistik-covid19-inskrivna.xlsx` by replacing all 'X' with zero.
 
 #### shape
 
