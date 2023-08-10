@@ -12,7 +12,7 @@ abs_dir = os.path.dirname(__file__)
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav_contacts, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
         """
         Time-dependent parameter function of social contacts
 
@@ -47,8 +47,8 @@ class make_social_contact_function():
             Normalized product of `f_remote` (fraction employees able to work remotely) and the physical proximity of workplace contacts (Pichler).
             Informs the hesitancy to stay home from work
 
-        lav: pd.Series
-            Leisure association vector. Contains one if sector of NACE 64 is associated with public leisure contacts. Contains zero otherwise.
+        lav_contacts: pd.Series
+            Association vector between leisure activities and the number of contacts. Contains one if sector of NACE 64 is associated with public leisure contacts. Contains zero otherwise.
             Index: NACE 64 sectors
 
         distinguish_day_type: bool
@@ -88,7 +88,7 @@ class make_social_contact_function():
         self.lmc_df = lmc_df
         self.f_workplace = f_workplace
         self.f_remote = f_remote
-        self.lav = lav
+        self.lav_contacts = lav_contacts
         self.f_employees = f_employees
         self.conversion_matrix = conversion_matrix
         self.hesitancy = hesitancy
@@ -128,7 +128,7 @@ class make_social_contact_function():
         economic_closures = 1-economic_closures
 
         # convert the leisure_public contacts depending on the economic policy
-        f_leisure_public = sum(self.lav.values[:, np.newaxis] * economic_closures)
+        f_leisure_public = sum(self.lav_contacts.values[:, np.newaxis] * economic_closures)
 
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
         economic_closures = self.f_workplace.values[:, np.newaxis] + economic_closures*(1-self.f_workplace.values[:, np.newaxis])
@@ -433,9 +433,128 @@ class make_seasonality_function():
 #############
 
 class make_household_demand_shock_function():
-     def __init__(self):
-         pass
+
+    def __init__(self, lav_consumption, demography, simulation_start):
+        """
+        A class to update the household demand shock based on 1) sickness, 2) fear of infection
+
+        input
+        =====
+
+        lav_consumption: pd.Series
+            association vector between leisurely economic activities and household demand shock
+
+        demography: np.array
+            total population per spatial patch. if no spatial patches, np.array([1,]) is used
+
+        simulation_start: datetime.datetime
+            Simulation startdate. Note that this implies you can't change the simulation startdate without re-initializing the model.
+            Sadly, there is no way around this (that I can think of for now).
+        """
+
+        # derive number of spatial patches
+        self.G = len(demography)
+
+        # pre-allocate simulation start
+        if not isinstance(simulation_start, (str, datetime)):
+            raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
+        if isinstance(simulation_start, str):
+            iterables = []
+            try:
+                simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
+            except:
+                raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
+        self.t_prev = simulation_start
+        self.simulation_start = simulation_start
+
+        # other variables
+        self.lav_consumption = lav_consumption.values
+        self.demography = demography
+
+    def get_household_demand_reduction(self, t, states, param, G, nu, xi, pi_leisure, rho_leisure):
+        """
+        Function returning the household demand shock during the 2020 COVID-19 pandemic
+
+        input
+        =====
+
+        G: np.ndarray
+            recurrent mobility matrix
+
+        nu: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
+
+        xi: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        pi_work: int/float
+            displacement parameter of the Gompertz behavioral model for work contacts
+
+        rho_work: int/float
+            steepness parameter of the Gompertz behavioral model for work contacts
+
+        output
+        ======
+
+        mu_D: np.array
+            Length: 63 (NACE 64)
+            Labor supply shock at time 't' (0: no shock, 1: full shock)
+        """
+
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, xi)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, nu)
         
+        #########################
+        ## voluntary reduction ##
+        #########################
+
+        # reduction of household demand per spatial patch
+        M_leisure = gompertz(Ih_star_average, pi_leisure, rho_leisure)
+        # convert to national reduction of household demand using demography
+        M_leisure = sum(M_leisure*self.demography)
+
+        ##############
+        ## sickness ##
+        ##############
+
+        # get fraction of symptomatic individuals in the population
+        T = 0
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state])
+        Im = np.sum(states['Im'] + states['Ih'])/T
+        
+        return Im*self.lav_consumption + (1-Im)*M_leisure*self.lav_consumption
+
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+        """
+        A function to initialize the memory at an appropriate moment in time
+        """
+        time_threshold = 0.5
+        # if hosp. threshold is surpassed within 21 days after simulation then memory is started
+        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold)): #  & (max(I) <= hosp_threshold)):
+            # re-initialize memory
+            memory_index = [0,] 
+            memory_values = [[I[g],] for g in range(G)]
+            I_star = I 
+            return memory_index, memory_values, I_star
+        else:
+            return self.memory_index, self.memory_values, self.I_star
+
 
 class make_labor_supply_shock_function():
 
@@ -551,7 +670,7 @@ class make_labor_supply_shock_function():
 
         mu_S: np.array
             Length: 63 (NACE 64)
-            Labor supply shock at time 't'
+            Labor supply shock at time 't' (0: no shock, 1: full shock)
         """
 
         #################################
@@ -588,7 +707,7 @@ class make_labor_supply_shock_function():
         for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
             T += np.sum(states[state][4:12], axis=0)
         # TODO: do a proper demographic conversion
-        Im = np.sum(states['Im'][4:12], axis=0)/T
+        Im = np.sum(states['Im'][4:12] + states['Ih'][4:12], axis=0)/T
         # expand to 63 x 11 for convenience --> assumes sickness affects all sectors equally --> sickness will not play any noticable role in COVID-19 but this should be addressed at a later point
         # Idea: normalized (around 1) amount of prepandemic social contact multiplied with M_work? --> ignores government policies
         shock_sickness = np.tile(Im, (63, 1))

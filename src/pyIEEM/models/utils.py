@@ -100,9 +100,21 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # construct household demand shock TDPF (economic)
     # ================================================
 
-    from pyIEEM.models.TDPF import make_household_demand_shock_function
-    household_demand_shock_function = make_household_demand_shock_function()
+    # load and the association vector between leisure and reduction in household demand (lav_leisure)
+    lav_consumption = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/leisure_association_vectors.csv'), index_col=[0])['consumption']
 
+    # load demography per spatial patch
+    demography = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().squeeze()
+    if not spatial:
+        demography = np.array([1,], dtype=float)
+    else:
+        demography = demography.values/sum(demography.values)
+
+    from pyIEEM.models.TDPF import make_household_demand_shock_function
+    household_demand_shock_function = make_household_demand_shock_function(lav_consumption, demography, simulation_start).get_household_demand_reduction
+    
     # initialize model
     # ================
 
@@ -538,7 +550,7 @@ def get_social_contact_function_parameters(parameters, country, spatial):
 
     # load and normalise leisure association vector (lav)
     lav = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['association_leisure']
+        abs_dir, f'../../../data/interim/epi/contacts/proximity/leisure_association_vectors.csv'), index_col=[0])['contacts']
     lav = lav/sum(lav)
 
     # load the number of employees in every sector of the NACE 64 from the national accounts
