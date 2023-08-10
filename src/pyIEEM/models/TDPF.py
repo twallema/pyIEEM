@@ -434,16 +434,103 @@ class make_seasonality_function():
 
 class make_other_demand_shock_function():
 
-    def __init__(self, other_demand_full_shock, demography):
+    def __init__(self, other_demand_full_shock, demography, simulation_start):
+
+        # derive number of spatial patches
+        self.G = len(demography)
+
+        # pre-allocate simulation start
+        if not isinstance(simulation_start, (str, datetime)):
+            raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
+        if isinstance(simulation_start, str):
+            iterables = []
+            try:
+                simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
+            except:
+                raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
+        self.t_prev = simulation_start
+        self.simulation_start = simulation_start
 
         # other variables
-        self.other_demand_full_shock = other_demand_full_shock
+        self.other_demand_full_shock = np.squeeze(other_demand_full_shock)
         self.demography = demography
 
-        pass
+    def get_other_demand_reduction(self, t, states, param, G, nu, xi, pi_leisure, rho_leisure):
+        """
+        Function returning the other demand shock during the 2020 COVID-19 pandemic
+        The other demand is assumed to follow the same time course as the household demand
 
-    def get_other_demand_reduction(self, t, states, param):
-        return np.zeros(63)
+        input
+        =====
+
+        G: np.ndarray
+            recurrent mobility matrix
+
+        nu: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
+
+        xi: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        pi_leisure: int/float
+            displacement parameter of the Gompertz behavioral model for leisure contacts
+
+        rho_leisure: int/float
+            steepness parameter of the Gompertz behavioral model for leisure contacts
+
+        output
+        ======
+
+        mu_F: np.array
+            Length: 63 (NACE 64)
+            Labor supply shock at time 't' (0: no shock, 1: full shock)
+        """
+
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, xi)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, nu)
+        
+        #########################
+        ## voluntary reduction ##
+        #########################
+
+        # reduction of household demand per spatial patch
+        M_leisure = gompertz(Ih_star_average, pi_leisure, rho_leisure)
+        # convert to national reduction of household demand using demography
+        M_leisure = sum(M_leisure*self.demography)
+
+        print(t, M_leisure*self.other_demand_full_shock)
+        return M_leisure*self.other_demand_full_shock
+    
+    # TODO: make a parent class for the TDPFs with initialize memory as a method
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+        """
+        A function to initialize the memory at an appropriate moment in time
+        """
+        time_threshold = 0.5
+        # if hosp. threshold is surpassed within 21 days after simulation then memory is started
+        if ((abs((t -simulation_start)/timedelta(days=1)) < time_threshold)): #  & (max(I) <= hosp_threshold)):
+            # re-initialize memory
+            memory_index = [0,] 
+            memory_values = [[I[g],] for g in range(G)]
+            I_star = I 
+            return memory_index, memory_values, I_star
+        else:
+            return self.memory_index, self.memory_values, self.I_star
 
 class make_household_demand_shock_function():
 
@@ -502,11 +589,11 @@ class make_household_demand_shock_function():
             half-life of the hospital load memory.
             implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
 
-        pi_work: int/float
-            displacement parameter of the Gompertz behavioral model for work contacts
+        pi_leisure: int/float
+            displacement parameter of the Gompertz behavioral model for leisure contacts
 
-        rho_work: int/float
-            steepness parameter of the Gompertz behavioral model for work contacts
+        rho_leisure: int/float
+            steepness parameter of the Gompertz behavioral model for leisure contacts
 
         output
         ======

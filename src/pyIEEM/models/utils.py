@@ -122,7 +122,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         abs_dir, f'../../../data/interim/eco/pichler/other_demand_shock.csv'), index_col=0, header=0).values
 
     from pyIEEM.models.TDPF import make_other_demand_shock_function
-    other_demand_shock_function = make_other_demand_shock_function(other_demand_full_shock, demography).get_other_demand_reduction
+    other_demand_shock_function = make_other_demand_shock_function(other_demand_full_shock, demography, simulation_start).get_other_demand_reduction
 
     # initialize model
     # ================
