@@ -513,10 +513,9 @@ class make_other_demand_shock_function():
         # convert to national reduction of household demand using demography
         M_leisure = sum(M_leisure*self.demography)
 
-        print(t, M_leisure*self.other_demand_full_shock)
         return M_leisure*self.other_demand_full_shock
     
-    # TODO: make a parent class for the TDPFs with initialize memory as a method
+    # TODO: make a parent class for the TDPFs with initialize memory as a method (or couldn't we have the whole memory in there basically?)
     def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
