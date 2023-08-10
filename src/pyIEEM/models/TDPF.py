@@ -434,12 +434,17 @@ class make_seasonality_function():
 
 class make_other_demand_shock_function():
 
-    def __init__(self):
+    def __init__(self, other_demand_full_shock, demography):
+
+        # other variables
+        self.other_demand_full_shock = other_demand_full_shock
+        self.demography = demography
+
         pass
 
     def get_other_demand_reduction(self, t, states, param):
         return np.zeros(63)
-        
+
 class make_household_demand_shock_function():
 
     def __init__(self, lav_consumption, demography, simulation_start):
