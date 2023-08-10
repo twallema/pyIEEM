@@ -296,7 +296,6 @@ def get_eco_params(country, prodfunc):
 
     initial_states = {'x':parameters['x_0'],
                      'c': parameters['c_0'],
-                     'c_desired': parameters['c_0'],
                      'f': parameters['f_0'],
                      'd': parameters['x_0'],
                      'l': parameters['l_0'],

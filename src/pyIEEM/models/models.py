@@ -57,7 +57,7 @@ class epinomic_model(ODE):
 
     # states
     states_epi = ['S','E','Ip','Ia','Im','Ih','R','D','Hin']
-    states_eco = ['x','c', 'c_desired', 'f', 'd', 'l','O', 'St']
+    states_eco = ['x','c', 'f', 'd', 'l','O', 'St']
     states = states_epi + states_eco
     # parameters
     parameters_epi = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
@@ -67,11 +67,11 @@ class epinomic_model(ODE):
     dimensions = ['age_class', 'spatial_unit', 'NACE64', 'NACE64_star']
     dimensions_per_state = [
         ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'],
-        ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64','NACE64_star']
+        ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64','NACE64_star']
     ]
 
     @staticmethod
-    def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, x, c, c_desired, f, d, l, O, St,
+    def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, x, c, f, d, l, O, St,
                     alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G, 
                     x_0, c_0, f_0, l_0, C, St_0, delta_S, eta, iota_F, iota_H, A, prodfunc, kappa_S, kappa_D, kappa_F):
 
@@ -133,7 +133,7 @@ class epinomic_model(ODE):
         # compute shocked consumer preference vector
         epsilon_D = aggregate_demand_shock(kappa_D, c_0/sum(c_0), delta_S)
         # compute shocked household demand
-        c_desired_new = (1 - epsilon_D) * theta * sum(c_0)
+        c_desired = (1 - epsilon_D) * theta * sum(c_0)
 
         # 6. Compute B2B demand
         # ---------------------   
@@ -141,7 +141,7 @@ class epinomic_model(ODE):
 
         # 7. Compute total demand
         # -----------------------
-        d_new = calc_total_demand(O_desired, c_desired_new, f_desired)
+        d_new = calc_total_demand(O_desired, c_desired, f_desired)
 
         # 8. Leontief production function with critical inputs
         # ----------------------------------------------------
@@ -149,7 +149,7 @@ class epinomic_model(ODE):
 
         # 9. Perform rationing
         # --------------------
-        O_new, c_new, f_new = rationing(x_new, d_new, O_desired, c_desired_new, f_desired)
+        O_new, c_new, f_new = rationing(x_new, d_new, O_desired, c_desired, f_desired)
 
         # 10. Update inventories
         # ----------------------
@@ -163,7 +163,7 @@ class epinomic_model(ODE):
         # --------------------------------------------------------------
         O_new = np.sum(O_new,axis=1)
 
-        return dS, dE, dIp, dIa, dIm, dIh, dR, dD, dHin, x_new-x, c_new-c, c_desired_new-c_desired, f-f_new, d_new-d, l_new-l, O_new-O, St_new-St,
+        return dS, dE, dIp, dIa, dIm, dIh, dR, dD, dHin, x_new-x, c_new-c, f-f_new, d_new-d, l_new-l, O_new-O, St_new-St,
 
 
 def calc_labor_restriction(x_0,l_0,l_t):
