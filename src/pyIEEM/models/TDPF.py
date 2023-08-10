@@ -225,7 +225,7 @@ class make_social_contact_function():
         # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
 
@@ -329,7 +329,7 @@ class make_social_contact_function():
         # get total number of hospitalisations per spatial patch per 100 K inhabitants
         I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
 
@@ -367,7 +367,7 @@ class make_social_contact_function():
             return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
-    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
         """
@@ -498,7 +498,7 @@ class make_other_demand_shock_function():
             T += np.sum(states[state], axis=0)
         Ih = 1e5*np.sum(states['Ih'], axis=0)/T
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
@@ -516,7 +516,7 @@ class make_other_demand_shock_function():
         return M_leisure*self.other_demand_full_shock
     
     # TODO: make a parent class for the TDPFs with initialize memory as a method (or couldn't we have the whole memory in there basically?)
-    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
         """
@@ -612,7 +612,7 @@ class make_household_demand_shock_function():
             T += np.sum(states[state], axis=0)
         Ih = 1e5*np.sum(states['Ih'], axis=0)/T
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
@@ -639,7 +639,7 @@ class make_household_demand_shock_function():
         
         return Im*self.lav_consumption + (1-Im)*M_leisure*self.lav_consumption
 
-    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
         """
@@ -782,7 +782,7 @@ class make_labor_supply_shock_function():
             T += np.sum(states[state], axis=0)
         Ih = 1e5*np.sum(states['Ih'], axis=0)/T
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
@@ -895,7 +895,7 @@ class make_labor_supply_shock_function():
             T += np.sum(states[state], axis=0)
         Ih = 1e5*np.sum(states['Ih'], axis=0)/T
         # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31, hosp_threshold=5)
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
         # update memory
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
@@ -939,7 +939,7 @@ class make_labor_supply_shock_function():
         else:
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_2)
 
-    def initialize_memory(self, t, I, simulation_start, G, time_threshold, hosp_threshold):
+    def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
         """
