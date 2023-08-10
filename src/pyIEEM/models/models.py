@@ -57,7 +57,7 @@ class epinomic_model(ODE):
     states = states_epi + states_eco
     # parameters
     parameters_epi = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
-    parameters_eco = ['x_0', 'c_0', 'f_0', 'l_0', 'IO', 'O_j', 'n', 'on_site', 'C', 'St_0','b','eta','delta_S','theta','iota','kappa_F','kappa_H', 'A', 'prodfunc', 'mu_S', 'mu_D']
+    parameters_eco = ['x_0', 'c_0', 'f_0', 'l_0', 'IO', 'O_j', 'n', 'on_site', 'C', 'St_0','b','eta','delta_S','theta','iota','kappa_F','kappa_H', 'A', 'prodfunc', 'mu_S', 'mu_D', 'mu_F']
     parameters = parameters_epi + parameters_eco
     # dimensions
     dimensions = ['age_class', 'spatial_unit', 'NACE64', 'NACE64_star']
@@ -69,7 +69,7 @@ class epinomic_model(ODE):
     @staticmethod
     def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, x, c, c_desired, f, d, l, O, St,
                     alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G, 
-                    x_0, c_0, f_0, l_0, IO, O_j, n, on_site, C, St_0, b, eta, delta_S, theta, iota, kappa_F, kappa_H, A, prodfunc, mu_S, mu_D):
+                    x_0, c_0, f_0, l_0, IO, O_j, n, on_site, C, St_0, b, eta, delta_S, theta, iota, kappa_F, kappa_H, A, prodfunc, mu_S, mu_D, mu_F):
 
         #######################
         ## epidemic dynamics ##
