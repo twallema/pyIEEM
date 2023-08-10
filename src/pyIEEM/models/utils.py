@@ -42,8 +42,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # get all necessary parameters
     parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 2, 'nu': 1, 'xi': 24, 'pi_work': 10, 'pi_eff': 0.50, 'pi_leisure': 10,
-                        'rho_work': 0.02, 'rho_eff': 0.06, 'rho_leisure': 0.30})
+    parameters.update({'l': 2, 'mu': 1, 'nu': 24, 'xi_work': 10, 'xi_eff': 0.50, 'xi_leisure': 10,
+                        'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav,
@@ -130,9 +130,9 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     time_dependent_parameters = {
         'N': social_contact_function,
         'beta': seasonality_function,
-        'mu_S': labor_supply_shock_function,
-        'mu_D': household_demand_shock_function,
-        'mu_F': other_demand_shock_function,
+        'kappa_S': labor_supply_shock_function,
+        'kappa_D': household_demand_shock_function,
+        'kappa_F': other_demand_shock_function,
     }
 
     model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters=time_dependent_parameters)
@@ -167,8 +167,8 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     # get all necessary parameters
     parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 2, 'nu': 1, 'xi': 24, 'pi_work': 10, 'pi_eff': 0.50, 'pi_leisure': 10,
-                        'rho_work': 0.02, 'rho_eff': 0.06, 'rho_leisure': 0.30})
+    parameters.update({'l': 2, 'mu': 1, 'nu': 24, 'xi_work': 10, 'xi_eff': 0.50, 'xi_leisure': 10,
+                        'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav,
@@ -275,16 +275,16 @@ def get_eco_params(country, prodfunc):
 
     ## Hardcoded model parameters
     parameters.update({'delta_S': 0.75,                                                                                                                                                   
-                       'iota': 14,                                                                                                 
-                       'kappa_H': 56,
-                       'kappa_F': 28,
+                       'eta': 14,                                                                                                 
+                       'iota_H': 56,
+                       'iota_F': 28,
                        'prodfunc': prodfunc,
                       })  
 
     ## Parameters that will be varied over time
-    parameters.update({'mu_S': np.zeros(63, dtype=float),
-                       'mu_D': np.zeros(63, dtype=float),
-                       'mu_F': np.zeros(63, dtype=float)})
+    parameters.update({'kappa_S': np.zeros(63, dtype=float),
+                       'kappa_D': np.zeros(63, dtype=float),
+                       'kappa_F': np.zeros(63, dtype=float)})
 
     # coordinates
     # ===========

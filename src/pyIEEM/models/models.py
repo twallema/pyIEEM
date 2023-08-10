@@ -61,7 +61,7 @@ class epinomic_model(ODE):
     states = states_epi + states_eco
     # parameters
     parameters_epi = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
-    parameters_eco = ['x_0', 'c_0', 'f_0', 'l_0', 'C', 'St_0', 'delta_S', 'iota', 'kappa_F','kappa_H', 'A', 'prodfunc', 'mu_S', 'mu_D', 'mu_F']
+    parameters_eco = ['x_0', 'c_0', 'f_0', 'l_0', 'C', 'St_0', 'delta_S', 'eta', 'iota_F','iota_H', 'A', 'prodfunc', 'kappa_S', 'kappa_D', 'kappa_F']
     parameters = parameters_epi + parameters_eco
     # dimensions
     dimensions = ['age_class', 'spatial_unit', 'NACE64', 'NACE64_star']
@@ -73,7 +73,7 @@ class epinomic_model(ODE):
     @staticmethod
     def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, x, c, c_desired, f, d, l, O, St,
                     alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G, 
-                    x_0, c_0, f_0, l_0, C, St_0, delta_S, iota, kappa_F, kappa_H, A, prodfunc, mu_S, mu_D, mu_F):
+                    x_0, c_0, f_0, l_0, C, St_0, delta_S, eta, iota_F, iota_H, A, prodfunc, kappa_S, kappa_D, kappa_F):
 
         #######################
         ## epidemic dynamics ##
@@ -115,7 +115,7 @@ class epinomic_model(ODE):
 
         # 1. Update exogeneous demand with shock vector
         # ---------------------------------------------
-        f_desired = (1-mu_F)*f_0
+        f_desired = (1-kappa_F)*f_0
 
         # 3. Compute productive capacity under labor constraints
         # ------------------------------------------------------
@@ -129,15 +129,15 @@ class epinomic_model(ODE):
         # --------------------------------
 
         # Compute aggregate household demand shock
-        theta = household_preference_shock(mu_D, c_0/sum(c_0))
+        theta = household_preference_shock(kappa_D, c_0/sum(c_0))
         # compute shocked consumer preference vector
-        epsilon_D = aggregate_demand_shock(mu_D, c_0/sum(c_0), delta_S)
+        epsilon_D = aggregate_demand_shock(kappa_D, c_0/sum(c_0), delta_S)
         # compute shocked household demand
         c_desired_new = (1 - epsilon_D) * theta * sum(c_0)
 
         # 6. Compute B2B demand
         # ---------------------   
-        O_desired = calc_intermediate_demand(d, St, A, St_0, iota) # 2D
+        O_desired = calc_intermediate_demand(d, St, A, St_0, eta) # 2D
 
         # 7. Compute total demand
         # -----------------------
@@ -157,7 +157,7 @@ class epinomic_model(ODE):
 
         # 11. Hire/fire workers
         # ---------------------
-        l_new = hiring_firing(l, l_0, x_0, x_inp, x_cap, d_new, kappa_F, kappa_H, mu_S)
+        l_new = hiring_firing(l, l_0, x_0, x_inp, x_cap, d_new, iota_F, iota_H, kappa_S)
 
         # 12. Convert order matrix to total order per sector (2D --> 1D)
         # --------------------------------------------------------------
