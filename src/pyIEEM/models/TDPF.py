@@ -252,7 +252,7 @@ class make_social_contact_function():
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
-        t_BE_lockdown_2 = datetime(2020, 11, 19)
+        t_BE_lockdown_2 = datetime(2020, 10, 19)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
@@ -821,7 +821,7 @@ class make_labor_supply_shock_function():
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
-        t_BE_lockdown_2 = datetime(2020, 11, 19)
+        t_BE_lockdown_2 = datetime(2020, 10, 19)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)

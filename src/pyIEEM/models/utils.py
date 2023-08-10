@@ -210,6 +210,9 @@ def get_eco_params(country, prodfunc):
     country: str
         'BE' or 'SWE'
 
+    prodfunc: str
+        'leontief'/'strongly_critical'/'half_critical'/'weakly_critical'/'linear'
+
     output
     ======
 
@@ -231,7 +234,7 @@ def get_eco_params(country, prodfunc):
 
     ## Input-Ouput matrix
     df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/national_accounts/{country}/IO_{country}_NACE64.csv"), sep=',',header=[0],index_col=[0])
-    parameters['IO'] = df.values/365
+    IO = df.values/365
     # others.csv
     df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv"), sep=',',header=[0],index_col=[0])
     if country == 'SWE':
@@ -241,18 +244,15 @@ def get_eco_params(country, prodfunc):
 
     ## National accounts
     parameters['x_0'] = np.array(df['Sectoral output ' + curr].values)/365
-    parameters['O_j'] = np.array(df['Intermediate demand ' + curr].values)/365
     parameters['c_0'] = np.array(df['Household demand ' + curr].values)/365
     parameters['f_0'] = np.array(df['Total other demand ' + curr].values)/365
     parameters['l_0'] = np.array(df['Labor compensation ' + curr].values)/365
+    O_j = np.array(df['Intermediate demand ' + curr].values)/365
 
     ## Pichler et al.
     # desired stock
     df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/pichler/desired_stock_NACE64.csv"), sep=',',header=[0],index_col=[0])
-    parameters['n'] = np.expand_dims(np.array(df['Desired stock (days)'].values), axis=1)
-    # on-site consumption
-    df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/pichler/on_site_consumption_NACE64.csv"), sep=',',header=[0],index_col=[0])
-    parameters['on_site'] = np.array(df['On-site consumption (-)'].values)
+    n = np.expand_dims(np.array(df['Desired stock (days)'].values), axis=1)
     # critical inputs
     df = pd.read_csv(os.path.join(abs_dir, f"../../../data/interim/eco/pichler/IHS_critical_NACE64.csv"), sep=',',header=[0],index_col=[0])
     parameters['C'] = df.values
@@ -260,28 +260,25 @@ def get_eco_params(country, prodfunc):
     ## Computed variables
 
     # matrix of technical coefficients
-    A = np.zeros([parameters['IO'].shape[0],parameters['IO'].shape[0]])
-    for i in range(parameters['IO'].shape[0]):
-        for j in range(parameters['IO'].shape[0]):
-            A[i,j] = parameters['IO'][i,j]/parameters['x_0'][j]
+    A = np.zeros([IO.shape[0],IO.shape[0]])
+    for i in range(IO.shape[0]):
+        for j in range(IO.shape[0]):
+            A[i,j] = IO[i,j]/parameters['x_0'][j]
     parameters['A'] = A
 
     # Stock matrix under business as usual
-    S_0 = np.zeros([parameters['IO'].shape[0],parameters['IO'].shape[0]])
-    for i in range(parameters['IO'].shape[0]):
-        for j in range(parameters['IO'].shape[0]):
-            S_0[i,j] = parameters['IO'][i,j]*parameters['n'][j]
+    S_0 = np.zeros([IO.shape[0],IO.shape[0]])
+    for i in range(IO.shape[0]):
+        for j in range(IO.shape[0]):
+            S_0[i,j] = IO[i,j]*n[j]
     parameters['St_0'] = S_0
 
     ## Hardcoded model parameters
-    parameters.update({'eta': 1-(1-0.60)/90,          
-                      'delta_S': 0.75,                                                                                                                                                   
-                      'iota': 14,                                                                                                 
-                      'kappa_H': 56,
-                      'kappa_F': 28,
-                      'prodfunc': prodfunc,
-                      'theta': 1,
-                      'b': 0.7,
+    parameters.update({'delta_S': 0.75,                                                                                                                                                   
+                       'iota': 14,                                                                                                 
+                       'kappa_H': 56,
+                       'kappa_F': 28,
+                       'prodfunc': prodfunc,
                       })  
 
     ## Parameters that will be varied over time
@@ -303,7 +300,7 @@ def get_eco_params(country, prodfunc):
                      'f': parameters['f_0'],
                      'd': parameters['x_0'],
                      'l': parameters['l_0'],
-                     'O': parameters['O_j'],
+                     'O': O_j,
                      'St': parameters['St_0']}
 
     return initial_states, parameters, coordinates
