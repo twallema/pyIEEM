@@ -176,11 +176,13 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `pichler_table_5_NACE64.csv`: Remote Labor Index (RLI) of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) S94, S95, S96 equal to G47. 3) R90-92, R93: Set to 0.05 to obtain an employee-weighted average remote labor index of R90-92, R93, S94, S95, S96 (R_S) of 39, which is equal to the value used by Pichler. 4) T: Set to 0.05. Essentiality score of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) R90-92, R93 equal to I. 3) S94, S95, S96: Set to 63 to obtain an employee-weighted average essentiality score for R90-92, R93, S94, S95, S96 (R_S) of 47, which is equal to the value used by Pichler.
 
-`ermg_remote_labor.csv`: Fraction of workers working from home during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when no data was available. Assumptions listed in the data file.
++ `ermg_remote_labor.csv`: Fraction of workers working from home during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when no data was available. Assumptions listed in the data file.
 
-`ermg_at_workplace.csv`: Fraction of workers working in the workplace during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used.Assumptions listed in the data file.
++ `ermg_at_workplace.csv`: Fraction of workers working in the workplace during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used.Assumptions listed in the data file.
 
-`ermg_summary.csv`: Combines `ermg_remote_labor.csv` and `ermg_at_workplace.csv` into a cleaner format.
++ `ermg_summary.csv`: Combines `ermg_remote_labor.csv` and `ermg_at_workplace.csv` into a cleaner format.
+
++ `leisure_association_vectors.csv`: Contains the degree association between economic activities of leisurely nature and changes in contacts and consumption patterns.
 
 #### mobility
 
@@ -242,6 +244,8 @@ sector_structure_by_work_SWE_2019.csv
 + `desired_stock_NACE64.csv`: For every sector in the NACE 64 classification, the number of days production can continue when no inputs are delivered (= stock). Converted version of `table_ratio_inv_go.csv`.
 
 + `on_site_consumption_NACE64.csv`: For every sector in the NACE 64 classification, if the consumption happens on-site.
+
++ `other_demand_shock.csv`: Other demand shock used by Pichler et. al. 
 
 #### misc
 
