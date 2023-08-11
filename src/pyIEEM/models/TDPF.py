@@ -161,15 +161,13 @@ class make_social_contact_function():
         ## forced response (fired workers) ##
         #####################################
 
-        # convert number of fired individuals at the national level to the number of fired individuals per spatial patch (NACE 64 x spatial patches) using the labor market composition
+        # the nation-level number of fired individuals is redistributed spatially,
+        # this will have little to no impact on Belgium as rules are imposed nationally and the spread is very spatially uniform
+        # this will cause some degree of contact lowering in patches with little disease in Sweden, but mainly during the first COVID-19 wave in 2020
+        f_employed = np.transpose(np.tile(f_employed, (self.G, 1))) # 63 x 11
 
-        # compare to previous version of `economic closures`
-
-        print(self.lmc_strateco)
-        print(self.lmc_stratspace)
-        print(f_employed)
-        import sys
-        sys.exit()
+        # take minimum
+        economic_closures = np.minimum(economic_closures, f_employed)
 
         ##################################
         ## voluntary response (leisure) ##
@@ -314,7 +312,7 @@ class make_social_contact_function():
             return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
-    def get_contacts_SWE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_contacts_SWE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -376,6 +374,12 @@ class make_social_contact_function():
         # reduction of leisure contacts
         M_leisure = 1-gompertz(I_star_average, xi_leisure, pi_leisure)
 
+        ###############################
+        ## fraction employed workers ##
+        ###############################
+
+        f_employed = states['l']/np.squeeze(l_0)
+
         ##############
         ## policies ##
         ##############
@@ -385,15 +389,15 @@ class make_social_contact_function():
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         if t < t_ban_gatherings_1:
-            return self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            policy_old = self.__call__(t, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_1)
+            policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_1)
             return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
         else:
-            policy_old = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_2)
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_2)
             return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
