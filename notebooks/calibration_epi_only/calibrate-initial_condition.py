@@ -70,7 +70,7 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 #################
 
 
-for country in ['SWE', 'BE']:
+for country in ['BE', 'SWE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
@@ -95,10 +95,10 @@ for country in ['SWE', 'BE']:
 
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
-        # nicely consistent with one infected in Stockholm
-        theta = 0.080*np.array([0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0, 0, 0.075, 0, 0.05, 1, 0.05, 0, 0, 0, 0, 0])
+        # data is quite consistent with one infected in Stockholm --> start NM from here
+        theta = 0.12*np.array([0, 0.01, 0.01, 0, 0, 0, 0.05, 0, 0, 0, 0, 0.10, 0.01, 0.20, 1, 0.05, 0, 0, 0, 0, 0.02])
     else:
-        theta = 0.15*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 0.85, 0, 0.25]) # ll: 215, seasonality: 0.0
+        theta = 0.175*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 1.25, 0, 0.25]) # ll: 215, seasonality: 0.0
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
