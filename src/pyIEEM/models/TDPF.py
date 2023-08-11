@@ -387,7 +387,7 @@ class make_social_contact_function():
         ##############
 
         # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
-        t_ban_gatherings_1 = datetime(2020, 3, 11)
+        t_ban_gatherings_1 = datetime(2020, 3, 10)
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         if t < t_ban_gatherings_1:

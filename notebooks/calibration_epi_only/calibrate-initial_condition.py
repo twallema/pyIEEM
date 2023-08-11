@@ -70,7 +70,7 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 #################
 
 
-for country in ['BE', 'SWE']:
+for country in ['SWE', 'BE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
@@ -87,6 +87,10 @@ for country in ['BE', 'SWE']:
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
     model = initialize_epidemic_model(country, age_classes, True, start_calibration)
 
+    # disable any awareness triggering
+    model.parameters.update({'l': 21, 'mu': 1, 'nu': 24, 'xi_work': 100, 'xi_eff': 100, 'xi_leisure': 100,
+                        'pi_work': 1, 'pi_eff': 1, 'pi_leisure': 1})
+
     # disable seasonality and shift of peak
     #model.parameters.update({'amplitude': 0.0, 'peak_shift': 0})
 
@@ -96,9 +100,9 @@ for country in ['BE', 'SWE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = 0.12*np.array([0, 0.01, 0.01, 0, 0, 0, 0.05, 0, 0, 0, 0, 0.10, 0.01, 0.20, 1, 0.05, 0, 0, 0, 0, 0.02])
+        theta = 0.12*np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.075, 0, 0.075, 1, 0.05, 0, 0, 0, 0, 0])
     else:
-        theta = 0.175*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 1.25, 0, 0.25]) # ll: 215, seasonality: 0.0
+        theta = 0.13*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 1.25, 0, 0.25]) # ll: 215, seasonality: 0.0
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
@@ -150,7 +154,7 @@ for country in ['BE', 'SWE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
-        plt.show()
+        #plt.show()
         plt.close()
 
     #################
