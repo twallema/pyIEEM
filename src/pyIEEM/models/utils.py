@@ -466,9 +466,9 @@ def get_epi_params(country, age_classes, spatial, contact_type):
 
     # infectivity (R0 = 3.0)
     if country == 'BE':
-        parameters = {'beta': 0.030}
+        parameters = {'beta': 0.0335}
     else:
-        parameters = {'beta': 0.027} 
+        parameters = {'beta': 0.0306} 
 
     # durations
     parameters.update({'alpha': 4.5,
