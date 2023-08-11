@@ -22,14 +22,14 @@ class epidemic_model(ODE):
         S_work = np.matmul(S, G)
         Ip_work = np.matmul(Ip, G)
         Ia_work = np.matmul(Ia, G)
-        Im_work = np.matmul(Im, G)
 
         # compute infection pressure in home patch and work patch
-        IP_work = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip_work + Ia_work + Im_work)/T_work), N['work'])
-        IP_other = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia + Im)/T), N['other'])
+        IP_work = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip_work + Ia_work)/T_work), N['work'])
+        IP_home = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia + Im)/T), N['home'])
+        IP_other = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia)/T), N['other'])
 
         # compute number of infections
-        n_inf = S * IP_other + S_work * IP_work
+        n_inf = S * (IP_other + IP_home) + S_work * IP_work
 
         # model equations
         dS = - n_inf + (1/zeta)*R
@@ -87,14 +87,14 @@ class epinomic_model(ODE):
         S_work = np.matmul(S, G)
         Ip_work = np.matmul(Ip, G)
         Ia_work = np.matmul(Ia, G)
-        Im_work = np.matmul(Im, G)
 
         # compute infection pressure in home patch and work patch
-        IP_work = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip_work + Ia_work + Im_work)/T_work), N['work'])
-        IP_other = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia + Im)/T), N['other'])
+        IP_work = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip_work + Ia_work)/T_work), N['work'])
+        IP_home = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia + Im)/T), N['home'])
+        IP_other = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia)/T), N['other'])
 
         # compute number of infections
-        n_inf = S * IP_other + S_work * IP_work
+        n_inf = S * (IP_other + IP_home) + S_work * IP_work
 
         # model equations
         dS = - n_inf + (1/zeta)*R

@@ -15,8 +15,8 @@ abs_dir = os.path.dirname(__file__)
 def initialize_epinomic_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts',
                                 prodfunc='half_critical'):
 
-    # get model parameters
-    # ====================
+    # get default model parameters
+    # ============================
 
     # get
     initial_states, parameters, coordinates = get_epi_params(country, age_classes, spatial, contact_type)
@@ -97,8 +97,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
     # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
     hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
-    print(lmc_strateco)
-    
+ 
     # load TDPF
     if country == 'SWE':
         labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
@@ -400,12 +399,17 @@ def get_epi_params(country, age_classes, spatial, contact_type):
 
     # other matrices (daytype='average', vacation=False, absolute contacts)
     # gather
-    N_other = contacts.loc['home', 'A', 'average', False,
+    N_home = contacts.loc['home', 'A', 'average', False,
                            slice(None), slice(None)][contact_type]
+    
+    N_other = N_home.copy(deep=True)
     for location in ['leisure_public', 'leisure_private', 'school']:
         N_other += contacts.loc[location, 'A', 'average', False,
                                 slice(None), slice(None)][contact_type].values
     # convert to right demography
+    N_home = aggregate_contact_matrix(N_home, age_classes, pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by=['age']).sum().squeeze())
+
     N_other = aggregate_contact_matrix(N_other, age_classes, pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by=['age']).sum().squeeze())
 
@@ -425,6 +429,9 @@ def get_epi_params(country, age_classes, spatial, contact_type):
             N_work_array[:, :, i] = N_work.values.reshape(
                 2*[len(age_classes),])
         N_work = N_work_array
+        # home contacts to np.array
+        N_home = np.tile(np.expand_dims(N_home.values.reshape(
+            2*[len(age_classes),]), axis=2), len(spatial_units))
         # other contacts to np.array
         N_other = np.tile(np.expand_dims(N_other.values.reshape(
             2*[len(age_classes),]), axis=2), len(spatial_units))
@@ -447,6 +454,9 @@ def get_epi_params(country, age_classes, spatial, contact_type):
         # to np.array
         N_work = np.expand_dims(N_work.values.reshape(
             2*[len(age_classes),]), axis=2)
+        # home contacts to np.array
+        N_home = np.expand_dims(
+            N_home.values.reshape(2*[len(age_classes),]), axis=2)   
         # other contacts to np.array
         N_other = np.expand_dims(
             N_other.values.reshape(2*[len(age_classes),]), axis=2)
@@ -465,8 +475,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
                       'gamma': 0.7,
                       'delta': 5,
                       'epsilon': 14,
-                      'zeta': 365/2,
-                      'N': {'other': N_other, 'work': N_work},
+                      'zeta': 365/2, 
                       'G': mob,
                   })
 
@@ -497,7 +506,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
 
     # mobility and social contact
     parameters.update({
-        'N': {'other': N_other, 'work': N_work},
+        'N': {'home': N_home, 'other': N_other, 'work': N_work},
         'G': mob,
     })
 

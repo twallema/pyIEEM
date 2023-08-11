@@ -197,7 +197,7 @@ class make_social_contact_function():
         ## leisure_private
         N_leisure_private *= f_leisure_private
 
-        return {'other': N_home + M_eff*(N_school + N_leisure_private + N_leisure_public), 'work': M_eff*N_work}
+        return {'home': N_home, 'work': M_eff*N_work, 'other': M_eff*(N_school + N_leisure_private + N_leisure_public)}
 
     def get_contacts_BE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """
@@ -296,7 +296,8 @@ class make_social_contact_function():
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
             policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_1)
-            return {'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
+            return {'home': ramp_fun(t, t_BE_lockdown_1, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
         elif t_BE_phase_I <= t < t_BE_phase_II:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_phaseI)
@@ -309,7 +310,8 @@ class make_social_contact_function():
         else:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2)
-            return {'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
+            return {'home': ramp_fun(t, t_BE_lockdown_2, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
 
     def get_contacts_SWE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
@@ -393,12 +395,14 @@ class make_social_contact_function():
         elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
             policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_1)
-            return {'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
+            return {'home': ramp_fun(t, t_ban_gatherings_1, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
         else:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_2)
-            return {'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
+            return {'home': ramp_fun(t, t_ban_gatherings_2, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
