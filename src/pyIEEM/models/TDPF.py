@@ -135,12 +135,6 @@ class make_social_contact_function():
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
         economic_closures = self.f_workplace.values[:, np.newaxis] + economic_closures*(1-self.f_workplace.values[:, np.newaxis])
 
-        #print('\n')
-        #print(t)
-        #print(np.squeeze(economic_closures))
-        #print(t, self.f_workplace.values)
-        print(t, np.mean(f_employed - (1-economic_shocks)) )
-
         # compare with telework obligation
         if isinstance(mandated_telework, (int,float)):
             f_telework = np.expand_dims(1 - self.f_remote.values*mandated_telework, axis=1)
@@ -253,17 +247,17 @@ class make_social_contact_function():
         #######################
         
         # compute average perceived hospital load per spatial patch 
-        I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        self.I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
         # leisure and general effectivity of contacts
-        M_eff = 1-gompertz(I_star_average, xi_eff, pi_eff)
+        M_eff = 1-gompertz(self.I_star_average, xi_eff, pi_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        M_work = 1-gompertz(self.I_star_average, xi_work, (pi_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-gompertz(I_star_average, xi_leisure, pi_leisure)
+        M_leisure = 1-gompertz(self.I_star_average, xi_leisure, pi_leisure)
 
-        ############################
-        ## fraction fired workers ##
-        ############################
+        ###############################
+        ## fraction employed workers ##
+        ###############################
 
         f_employed = states['l']/np.squeeze(l_0)
 
@@ -679,10 +673,9 @@ class make_household_demand_shock_function():
         else:
             return self.memory_index, self.memory_values, self.I_star
 
-
 class make_labor_supply_shock_function():
 
-    def __init__(self, age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start):
+    def __init__(self, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start):
         """
         A class to update the labor supply shock based on 1) government policy, 2) sickness, 3) absenteism
 
@@ -692,8 +685,10 @@ class make_labor_supply_shock_function():
         age_classes: pd.IntervalIndex
             age classes of the model
 
-        lmc_df: pd.Series
-            Labor market composition (absolute number of employed in economic activity of NACE 21) per spatial patch in the model. 
+        lmc_strateco: pd.Series
+            Labor market composition
+            distribution of employees working on a given economic activity across the spatial patches
+            i.e. lmc_strateco[slice(None), 'A01'] will yield a vector telling us what fraction of the total workforce employed in 'A01' is working in every spatial patch.
 
         f_remote: pd.series
             Fraction of employees working from home per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
@@ -702,9 +697,6 @@ class make_labor_supply_shock_function():
         f_workplace: pd.Series
             Fraction of employees at workplace per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
             Index: NACE64 sectors
-
-        f_employees: pd.Series
-            Fraction of employees in a given NACE 21 sector, working in a NACE 64 sector
 
         hesitancy: pd.Series
             Normalized product of `f_remote` (fraction employees able to work remotely) and the physical proximity of workplace contacts (Pichler).
@@ -715,27 +707,18 @@ class make_labor_supply_shock_function():
             Sadly, there is no way around this (that I can think of for now).
         """
 
-        if 'spatial_unit' in lmc_df.index.names:
-            # derive number of spatial patches
-            self.G = len(lmc_df.index.get_level_values('spatial_unit').unique().values)
-            # convert to the fraction of laborers in spatial patch 'i' working in sector 'X' of the total number of laborers working in sector 'X' (NACE 21)
-            lmc_df = lmc_df/lmc_df.groupby('economic_activity').transform('sum')
-            # convert from NACE 21 to NACE 64 using the ratios found in the national accounts
-            iterables = [lmc_df.index.get_level_values('spatial_unit').unique().values, f_employees.index]
-            names = ['spatial_unit', 'economic_activity']
-            out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees', dtype=float)
-            for act in f_employees.index.values:
-                out.loc[slice(None), act] = lmc_df.loc[slice(None), act[0]].values # *f_employees.loc[act]
-            self.lmc_df = out
+
+        # derive number of spatial patches
+        if 'spatial_unit' in lmc_strateco.index.names:
+            self.G = len(lmc_strateco.index.get_level_values('spatial_unit').unique().values)
         else:
             self.G = 1
-            self.lmc_df = self.lmc_df
+        self.lmc_strateco = lmc_strateco
 
         # pre-allocate simulation start
         if not isinstance(simulation_start, (str, datetime)):
             raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
         if isinstance(simulation_start, str):
-            iterables = []
             try:
                 simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
             except:
@@ -757,7 +740,7 @@ class make_labor_supply_shock_function():
         shock_sickness = shock_sickness*np.sum(G, axis=1)[np.newaxis, :]*(1-np.maximum(economic_closures, shock_absenteism))
         shock = shock_sickness + (1-shock_sickness)*np.maximum(economic_closures, shock_absenteism)
         # convert to national shock using labor market composition
-        return np.sum(shock*np.transpose(self.lmc_df.values.reshape([self.G, 63])), axis=1)
+        return np.sum(shock*np.transpose(self.lmc_strateco.values.reshape([self.G, 63])), axis=1)
 
     def get_economic_policy_BE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
         """

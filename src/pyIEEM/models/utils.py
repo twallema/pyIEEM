@@ -68,8 +68,21 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # ============================================
 
     from pyIEEM.models.TDPF import make_labor_supply_shock_function
+    ## lmc_strateco
     # get labor market composition
     lmc_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1], header=0)['abs'].sort_index()
+    # convert to the fraction of laborers in spatial patch 'i' working in sector 'X' of the total number of laborers working in sector 'X' (NACE 21)
+    lmc_df = lmc_df/lmc_df.groupby('economic_activity').transform('sum')
+    # convert from NACE 21 to NACE 64 using the ratios found in the national accounts
+    iterables = [lmc_df.index.get_level_values('spatial_unit').unique().values, f_employees.index]
+    names = ['spatial_unit', 'economic_activity']
+    out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees', dtype=float)
+    for act in f_employees.index.values:
+        out.loc[slice(None), act] = lmc_df.loc[slice(None), act[0]].values # *f_employees.loc[act]
+    lmc_strateco = out
+    # convert if spatial is false
+    if not spatial:
+        lmc_strateco = lmc_strateco.groupby(by='economic_activity').sum()
     # load fraction employees in workplace during pandemic
     f_workplace = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/contacts/proximity/ermg_summary.csv'), index_col=[0])['workplace']
@@ -84,18 +97,11 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
     # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
     hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
-    # compute fraction of employees in NACE 64 sector as a percentage of its NACE 21 sector
-    f_employees = f_employees.reset_index()
-    f_employees['NACE 21'] = f_employees['index'].str[0]
-    f_employees = f_employees.rename(columns={'index': 'NACE 64'})
-    f_employees = f_employees.groupby(['NACE 21', 'NACE 64'])['Number of employees (-)'].sum().reset_index()
-    f_employees['fraction_NACE21'] = f_employees['Number of employees (-)'] / f_employees.groupby('NACE 21')['Number of employees (-)'].transform('sum')
-    f_employees = f_employees.drop(columns = ['NACE 21', 'Number of employees (-)']).set_index('NACE 64').squeeze()
     # load TDPF
     if country == 'SWE':
-        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start).get_economic_policy_SWE
+        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
     else:
-        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_df, f_remote, f_workplace, f_employees, hesitancy, simulation_start).get_economic_policy_BE
+        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
 
     # construct household demand shock TDPF (economic)
     # ================================================
