@@ -12,7 +12,7 @@ abs_dir = os.path.dirname(__file__)
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_df, f_workplace, f_remote, hesitancy, lav_contacts, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
+    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav_contacts, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
         """
         Time-dependent parameter function of social contacts
 
@@ -31,9 +31,13 @@ class make_social_contact_function():
         contact_df: pd.DataFrame
             number of social contacts per location, sector, daytype and vacation.
         
-        lmc_df: pd.Series
-            Labor market composition (fraction employed in economic activity of NACE 21) per spatial patch in the model. 
-            Index: ['spatial_unit', 'sector']
+        lmc_stratspace: pd.Series
+            Labor market composition (distribution of employees in economic activity of NACE 21) per spatial patch in the model. 
+            i.e. lmc_stratspace.loc['Antwerpen', slice(None)] yields a (63,) vector whos sum is equal to one 
+
+        lmc_strateco: pd.Series
+            Labor market composition (distribution of employees working on a given economic activity across the spatial patches)
+            i.e. lmc_strateco[slice(None), 'A01'] yields a (11,) vector telling us what fraction of the total workforce employed in 'A01' is working in every spatial patch.
 
         f_workplace: pd.Series
             Fraction of employees at workplace per sector of NACE 64 during first 2020 Belgian COVID-19 lockdown.
@@ -74,8 +78,8 @@ class make_social_contact_function():
         assert ((contact_type == 'absolute_contacts') | (contact_type == 'integrated_contacts'))
 
         # infer the number of spatial patches
-        if 'spatial_unit' in lmc_df.index.names:
-            self.G = len(lmc_df.index.get_level_values('spatial_unit').unique().values)
+        if 'spatial_unit' in lmc_stratspace.index.names:
+            self.G = len(lmc_stratspace.index.get_level_values('spatial_unit').unique().values)
         else:
             self.G = 1
 
@@ -85,7 +89,8 @@ class make_social_contact_function():
         # Assign to variables
         self.age_classes = age_classes
         self.distinguish_day_type = distinguish_day_type
-        self.lmc_df = lmc_df
+        self.lmc_stratspace = lmc_stratspace
+        self.lmc_strateco = lmc_strateco
         self.f_workplace = f_workplace
         self.f_remote = f_remote
         self.lav_contacts = lav_contacts
@@ -160,6 +165,12 @@ class make_social_contact_function():
 
         # compare to previous version of `economic closures`
 
+        print(self.lmc_strateco)
+        print(self.lmc_stratspace)
+        print(f_employed)
+        import sys
+        sys.exit()
+
         ##################################
         ## voluntary response (leisure) ##
         ##################################
@@ -177,7 +188,7 @@ class make_social_contact_function():
         ## work
         # convert economic policy from NACE 64 to NACE 21
         economic_closures = np.transpose(np.squeeze(np.transpose(np.expand_dims(economic_closures*self.f_employees.values[:, np.newaxis], axis=2)) @ self.conversion_matrix))
-        N_work = N_work @ (economic_closures * np.transpose(self.lmc_df.values.reshape([self.G, economic_closures.shape[0]])))
+        N_work = N_work @ (economic_closures * np.transpose(self.lmc_stratspace.values.reshape([self.G, economic_closures.shape[0]])))
 
         ## school
         N_school *= f_school

@@ -40,13 +40,13 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # ========================================
 
     # get all necessary parameters
-    parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
+    parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
     # define all relevant parameters of the social contact function TDPF here
     parameters.update({'l': 2, 'mu': 1, 'nu': 24, 'xi_work': 10, 'xi_eff': 0.50, 'xi_leisure': 10,
                         'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav,
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
                                                             False, f_employees, convmat, simulation_start, country)
     if country == 'SWE':
         social_contact_function = social_contact_function.get_contacts_SWE
@@ -69,16 +69,16 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
 
     from pyIEEM.models.TDPF import make_labor_supply_shock_function
     ## lmc_strateco
-    # get labor market composition
-    lmc_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1], header=0)['abs'].sort_index()
+    # get labor market composition (abs)
+    lmc_stratspace = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1], header=0)['abs'].sort_index()
     # convert to the fraction of laborers in spatial patch 'i' working in sector 'X' of the total number of laborers working in sector 'X' (NACE 21)
-    lmc_df = lmc_df/lmc_df.groupby('economic_activity').transform('sum')
+    lmc_stratspace = lmc_stratspace/lmc_stratspace.groupby('economic_activity').transform('sum')
     # convert from NACE 21 to NACE 64 using the ratios found in the national accounts
-    iterables = [lmc_df.index.get_level_values('spatial_unit').unique().values, f_employees.index]
+    iterables = [lmc_stratspace.index.get_level_values('spatial_unit').unique().values, f_employees.index]
     names = ['spatial_unit', 'economic_activity']
     out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees', dtype=float)
     for act in f_employees.index.values:
-        out.loc[slice(None), act] = lmc_df.loc[slice(None), act[0]].values # *f_employees.loc[act]
+        out.loc[slice(None), act] = lmc_stratspace.loc[slice(None), act[0]].values # *f_employees.loc[act]
     lmc_strateco = out
     # convert if spatial is false
     if not spatial:
@@ -97,6 +97,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
     # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
     hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
+    print(lmc_strateco)
+    
     # load TDPF
     if country == 'SWE':
         labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
@@ -171,13 +173,13 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     # =============================
 
     # get all necessary parameters
-    parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
+    parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
     # define all relevant parameters of the social contact function TDPF here
     parameters.update({'l': 2, 'mu': 1, 'nu': 24, 'xi_work': 10, 'xi_eff': 0.50, 'xi_leisure': 10,
                         'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, sectors, f_workplace, f_remote, hesitancy, lav,
+    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
                                                             False, f_employees, convmat, simulation_start, country)
     if country == 'SWE':
         social_contact_function = social_contact_function.get_contacts_SWE
@@ -449,25 +451,6 @@ def get_epi_params(country, age_classes, spatial, contact_type):
         N_other = np.expand_dims(
             N_other.values.reshape(2*[len(age_classes),]), axis=2)
 
-    # labor market composition
-    # ========================
-
-    # Load and sort alphabetically
-    sectors = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['rel'].sort_index()
-
-    if spatial == True:
-        # convert to a np.array
-        sectors = sectors.unstack('economic_activity').values
-    elif spatial == False:
-        # convert to national level
-        sectors = pd.read_csv(os.path.join(
-            abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['abs']
-        sectors = sectors.groupby(by='economic_activity').sum(
-        )/sectors.groupby(by='economic_activity').sum().sum()
-        # convert to a np.array
-        sectors = np.expand_dims(sectors.values, axis=0)
-
     # disease parameters
     # ==================
 
@@ -536,14 +519,32 @@ def get_social_contact_function_parameters(parameters, country, spatial):
     """
     A function to load, format and return all parameters necessary to construct the epidemiological model's time-dependent social contact function
     """
+
     # load NACE 21 composition per spatial patch
     if spatial == True:
-        sectors = pd.read_csv(os.path.join(
+        lmc_stratspace = pd.read_csv(os.path.join(
             abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['rel'].sort_index()
     else:
-        sectors = pd.read_csv(os.path.join(
+        lmc_stratspace = pd.read_csv(os.path.join(
             abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1])['abs']
-        sectors = sectors.groupby(by='economic_activity').sum()/sectors.groupby(by='economic_activity').sum().sum()
+        lmc_stratspace = lmc_stratspace.groupby(by='economic_activity').sum()/lmc_stratspace.groupby(by='economic_activity').sum().sum()
+    
+    # load the number of employees in every sector of the NACE 64 from the national accounts
+    f_employees = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=[0])['Number of employees (-)']
+
+    ## lmc_strateco
+    # get labor market composition (abs)
+    df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1], header=0)['abs'].sort_index()
+    # convert to the fraction of laborers in spatial patch 'i' working in sector 'X' of the total number of laborers working in sector 'X' (NACE 21)
+    lmc_strateco = df/df.groupby('economic_activity').transform('sum')
+    # convert from NACE 21 to NACE 64 using the ratios found in the national accounts
+    iterables = [lmc_strateco.index.get_level_values('spatial_unit').unique().values, f_employees.index]
+    names = ['spatial_unit', 'economic_activity']
+    out = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='f_employees', dtype=float)
+    for act in f_employees.index.values:
+        out.loc[slice(None), act] = lmc_strateco.loc[slice(None), act[0]].values # *f_employees.loc[act]
+    lmc_strateco = out
 
     # load social contacts
     contacts = pd.read_csv(os.path.join(abs_dir, '../../../data/interim/epi/contacts/matrices/FR/comesf_formatted_matrices.csv'), index_col=[0, 1, 2, 3, 4, 5],
@@ -565,10 +566,6 @@ def get_social_contact_function_parameters(parameters, country, spatial):
     lav = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/contacts/proximity/leisure_association_vectors.csv'), index_col=[0])['contacts']
     lav = lav/sum(lav)
-
-    # load the number of employees in every sector of the NACE 64 from the national accounts
-    f_employees = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=[0])['Number of employees (-)']
 
     # load physical proximity index from Pichler et al.
     FPI = pd.read_csv(os.path.join(
@@ -602,7 +599,7 @@ def get_social_contact_function_parameters(parameters, country, spatial):
         parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
                             'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
 
-    return parameters, demography, contacts, sectors, f_workplace, f_remote, hesitancy, lav, f_employees, convmat
+    return parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat
 
 ################################################
 ## Aggregation functions Brussels and Brabant ##
