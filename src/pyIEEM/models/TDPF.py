@@ -285,6 +285,7 @@ class make_social_contact_function():
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
         social_restrictions_Antwerp[0] = 1
+        telework_Antwerp = social_restrictions_Antwerp
 
         # construct economic closures in Antwerp only
         economy_BE_lockdown_Antwerp_mat = np.zeros([63, self.G], dtype=float)
@@ -304,7 +305,7 @@ class make_social_contact_function():
         elif t_BE_phase_II <= t < t_BE_lockdown_Antwerp:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
-            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions_Antwerp, 1, economy_BE_lockdown_Antwerp)
+            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions_Antwerp, telework_Antwerp, economy_BE_lockdown_Antwerp)
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         else:
