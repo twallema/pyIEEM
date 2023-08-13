@@ -70,14 +70,14 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 #################
 
 
-for country in ['SWE', 'BE']:
+for country in ['BE', 'SWE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-04-01'
+        end_calibration = '2020-03-22'
     else:
         end_calibration = '2020-03-22'
     data = data.loc[slice(start_calibration, end_calibration)]
@@ -100,9 +100,10 @@ for country in ['SWE', 'BE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = 0.12*np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.075, 0, 0.075, 1, 0.05, 0, 0, 0, 0, 0])
+        theta = 0.12*np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.050, 0, 0.15, 1, 0.05, 0, 0, 0, 0, 0])
     else:
-        theta = 0.13*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 1.25, 0, 0.25]) # ll: 215, seasonality: 0.0
+        theta = 0.13*np.array([0.75, 0, 0, 3, 0.75, 0.80, 0.25, 0, 1, 0, 0]) # "best" fit
+        #theta = 0.13*np.array([0, 0, 0, 5, 0.75, 1.5, 0, 0, 0, 0, 0]) # Tongeren, Hasselt and Mons first outbreak arrondissements
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
@@ -154,7 +155,7 @@ for country in ['SWE', 'BE']:
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(f'initial_condition_{country}_part_{n_figs}.png', dpi=600)
-        #plt.show()
+        plt.show()
         plt.close()
 
     #################
