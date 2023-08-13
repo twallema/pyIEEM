@@ -102,7 +102,7 @@ for country in ['BE', 'SWE']:
         # data is quite consistent with one infected in Stockholm --> start NM from here
         theta = 0.12*np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.050, 0, 0.15, 1, 0.05, 0, 0, 0, 0, 0])
     else:
-        theta = 0.13*np.array([0.75, 0, 0, 2.5, 0.75, 0.80, 0.25, 0, 1, 0, 0.25]) # "best" fit
+        theta = 0.13*np.array([0.75, 0, 0, 2.75, 1, 1, 0.25, 0, 1, 0, 0.25]) # "best" fit
         #theta = 0.13*np.array([0, 0, 0, 5, 0.75, 1.5, 0, 0, 0, 0, 0]) # Tongeren, Hasselt and Mons first outbreak arrondissements
 
     # nelder-mead minimization
