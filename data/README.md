@@ -134,6 +134,8 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
 
++ `tidsseriefil_juni_20230728.xlsx`: Monthly GDP data for Sweden. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/ovrigt/national-accounts-other/ 
+
 ## Interim
 
 ### epi
@@ -209,6 +211,12 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 + `recurrent_mobility_normactive_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Recurrent mobility matrix `AM0207AC_20230705-141955_format.csv` normalised with the total active population `active_population_2019_format.csv`.
 
 ### eco
+
+#### calibration_data
+
++ `SWE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Sweden. National-level GDP obtained from `AM0401UL_20230706-133646.csv`, unemployment data obtained from `AM0401UL_20230706-133417.csv`. In the unemployment data, there is a clear "jump" in employment between 2019 and 2020 which cannot be attributed to the pandemic, likely something in the data collection process changed. Therefore, the months Jan, Feb and March 2020 were used to normalise the data until July 2021.
+
++ `BE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Belgium. Copied from our COVID-19 project. Synthetic GDP is obtained from the statistics website of the Belgian National Bank (be.stat) while unemployment is proxied by the number of temporarily unemployed workers(survey by the ERMG).
 
 #### labor_market_composition
 
