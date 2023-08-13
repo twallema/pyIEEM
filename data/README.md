@@ -130,8 +130,6 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `AM04011G_20230706-132742.csv`: Unemployed persons aged 15-74 (LFS) in Sweden by month. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401L/
 
-+ `AM0401UL_20230706-133417.csv`: Unemployed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
-
 + `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
 
 + `tidsseriefil_juni_20230728.xlsx`: Monthly GDP data for Sweden. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/ovrigt/national-accounts-other/ 
