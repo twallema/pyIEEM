@@ -199,7 +199,7 @@ class make_social_contact_function():
 
         return {'home': N_home, 'work': M_eff*N_work, 'other': M_eff*(N_school + N_leisure_private + N_leisure_public)}
 
-    def get_contacts_BE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+    def get_contacts_BE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2_1, economy_BE_lockdown_2_2):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -275,12 +275,13 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_lockdown_1 = datetime(2020, 3, 13)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
-        t_BE_lockdown_2 = datetime(2020, 10, 19)
+        t_BE_lockdown_2_1 = datetime(2020, 10, 19)
+        t_BE_lockdown_2_2 = datetime(2020, 11, 2)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
@@ -306,14 +307,20 @@ class make_social_contact_function():
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions_Antwerp, telework_Antwerp, economy_BE_lockdown_Antwerp)
-        elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
+        elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2_1:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-        else:
+        elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2)
-            return {'home': ramp_fun(t, t_BE_lockdown_2, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_BE_lockdown_2, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_BE_lockdown_2, l, policy_old['work'], policy_new['work'])}
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 1, economy_BE_lockdown_2_1)
+            return {'home': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['work'], policy_new['work'])}
+        else:
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 1, economy_BE_lockdown_2_1)
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_2)
+            return {'home': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['work'], policy_new['work'])}
 
     def get_contacts_SWE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
@@ -482,7 +489,6 @@ class make_other_demand_shock_function():
         if not isinstance(simulation_start, (str, datetime)):
             raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
         if isinstance(simulation_start, str):
-            iterables = []
             try:
                 simulation_start = datetime.strptime(simulation_start,  "%Y-%m-%d")
             except:
@@ -762,7 +768,7 @@ class make_labor_supply_shock_function():
         # convert to national shock using labor market composition
         return np.sum(shock*np.transpose(self.lmc_strateco.values.reshape([self.G, 63])), axis=1)
 
-    def get_economic_policy_BE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2):
+    def get_economic_policy_BE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2_1, economy_BE_lockdown_2_2):
         """
         Function returning the labor supply shock during the 2020 COVID-19 pandemic in Belgium
 
@@ -844,12 +850,13 @@ class make_labor_supply_shock_function():
         #########################
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_lockdown_1 = datetime(2020, 3, 13)
         t_BE_phase_I = datetime(2020, 5, 1)
         t_BE_phase_II = datetime(2020, 6, 1)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
-        t_BE_lockdown_2 = datetime(2020, 10, 19)
+        t_BE_lockdown_2_1 = datetime(2020, 10, 19)
+        t_BE_lockdown_2_2 = datetime(2020, 11, 2)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
@@ -870,10 +877,12 @@ class make_labor_supply_shock_function():
             return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_Antwerp)
-        elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2:
+        elif t_BE_end_lockdown_Antwerp <= t < t_BE_lockdown_2_1:
             return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+        elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_2_1)
         else:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_2)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_2_2)
 
     def get_economic_policy_SWE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
         """
