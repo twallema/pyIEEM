@@ -276,8 +276,8 @@ class make_social_contact_function():
 
         # key dates
         t_BE_lockdown_1 = datetime(2020, 3, 13)
-        t_BE_phase_I = datetime(2020, 5, 1)
-        t_BE_phase_II = datetime(2020, 6, 1)
+        t_BE_phase_I = datetime(2020, 5, 18)
+        t_BE_phase_II = datetime(2020, 6, 4)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
         t_BE_lockdown_2_1 = datetime(2020, 10, 19)
@@ -503,7 +503,7 @@ class make_other_demand_shock_function():
     def get_other_demand_reduction(self, t, states, param, G, mu, nu, xi_leisure, pi_leisure):
         """
         Function returning the other demand shock during the 2020 COVID-19 pandemic
-        The other demand is assumed to follow the same time course as the household demand
+        The other demand is assumed to be shocked during the first lockdown and then gradually rises up again (in line with observations)
 
         input
         =====
@@ -533,33 +533,49 @@ class make_other_demand_shock_function():
             Labor supply shock at time 't' (0: no shock, 1: full shock)
         """
 
-        #################################
-        ## memory and behavioral model ##
-        #################################
+        # #################################
+        # ## memory and behavioral model ##
+        # #################################
 
-        # get number of hospitalisations per spatial patch per 100 K inhabitants
-        T = np.zeros(self.G, dtype=float)
-        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
-            T += np.sum(states[state], axis=0)
-        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
-        # initialize memory if necessary
-        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
-        # update memory
-        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
-        # compute average perceived hospital load per spatial patch 
-        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # # get number of hospitalisations per spatial patch per 100 K inhabitants
+        # T = np.zeros(self.G, dtype=float)
+        # for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+        #     T += np.sum(states[state], axis=0)
+        # Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # # initialize memory if necessary
+        # memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
+        # # update memory
+        # self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
+        # # compute average perceived hospital load per spatial patch 
+        # Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
         
+        # #########################
+        # ## voluntary reduction ##
+        # #########################
+
+        # # reduction of household demand per spatial patch
+        # M_leisure = gompertz(Ih_star_average, xi_leisure, pi_leisure)
+        # # convert to national reduction of household demand using demography
+        # M_leisure = sum(M_leisure*self.demography)
+
         #########################
-        ## voluntary reduction ##
+        ## government policies ##
         #########################
 
-        # reduction of household demand per spatial patch
-        M_leisure = gompertz(Ih_star_average, xi_leisure, pi_leisure)
-        # convert to national reduction of household demand using demography
-        M_leisure = sum(M_leisure*self.demography)
+        # key dates
+        t_BE_lockdown_1 = datetime(2020, 3, 13)
+        t_BE_phase_I = datetime(2020, 5, 18)
+        shock_end = datetime(2020, 10, 1)
 
-        return M_leisure*self.other_demand_full_shock
-    
+        if t < t_BE_lockdown_1:
+            return np.zeros(len(self.other_demand_full_shock))
+        elif t_BE_lockdown_1 <= t < t_BE_phase_I:
+            return self.other_demand_full_shock
+        else:
+            policy_old = self.other_demand_full_shock
+            policy_new = np.zeros(len(self.other_demand_full_shock))
+            return ramp_fun(t, t_BE_phase_I, (shock_end-t_BE_phase_I)/timedelta(days=1), policy_old, policy_new)
+
     # TODO: make a parent class for the TDPFs with initialize memory as a method (or couldn't we have the whole memory in there basically?)
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
@@ -851,8 +867,8 @@ class make_labor_supply_shock_function():
 
         # key dates
         t_BE_lockdown_1 = datetime(2020, 3, 13)
-        t_BE_phase_I = datetime(2020, 5, 1)
-        t_BE_phase_II = datetime(2020, 6, 1)
+        t_BE_phase_I = datetime(2020, 5, 18)
+        t_BE_phase_II = datetime(2020, 6, 4)
         t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
         t_BE_lockdown_2_1 = datetime(2020, 10, 19)
