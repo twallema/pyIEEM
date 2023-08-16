@@ -620,6 +620,9 @@ def get_social_contact_function_parameters(parameters, country, spatial):
     if country == 'BE':
         parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
                             'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
+                            'economy_BE_phaseII': np.expand_dims(policies_df['lockdown_release_phaseII'].values, axis=1),
+                            'economy_BE_phaseIII': np.expand_dims(policies_df['lockdown_release_phaseIII'].values, axis=1),
+                            'economy_BE_phaseIV': np.expand_dims(policies_df['lockdown_release_phaseIV'].values, axis=1),
                             'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
                             'economy_BE_lockdown_2_1': np.expand_dims(policies_df['lockdown_2_1'].values, axis=1),
                             'economy_BE_lockdown_2_2': np.expand_dims(policies_df['lockdown_2_2'].values, axis=1),})
