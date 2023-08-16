@@ -69,7 +69,6 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 ## Calibration ##
 #################
 
-
 for country in ['BE', 'SWE']:
 
     # get data
@@ -100,9 +99,9 @@ for country in ['BE', 'SWE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = 0.12*np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.050, 0, 0.15, 1, 0.05, 0, 0, 0, 0, 0])
+        theta = 0.22*np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.050, 0, 0.15, 1, 0.05, 0, 0, 0, 0, 0])
     else:
-        theta = 0.11*np.array([0.75, 0, 0, 2.75, 1, 1.75, 0.25, 0, 1.25, 0, 0.25]) # "best" fit
+        theta = 0.16*np.array([0.75, 0, 0, 3.0, 1.50, 1.75, 0.25, 0, 1.50, 0.25, 0.25]) # "best" fit
         #theta = 0.13*np.array([0, 0, 0, 5, 0.75, 1.5, 0, 0, 0, 0, 0]) # Tongeren, Hasselt and Mons first outbreak arrondissements
 
     # nelder-mead minimization

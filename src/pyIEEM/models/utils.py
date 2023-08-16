@@ -60,9 +60,9 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     seasonality_function = make_seasonality_function()
     
     if country == 'SWE':
-        parameters.update({'amplitude': 0.30, 'peak_shift': 7})
+        parameters.update({'amplitude': 0.20, 'peak_shift': 7})
     else: 
-        parameters.update({'amplitude': 0.30, 'peak_shift': -14})    
+        parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
 
     # construct labor supply shock TDPF (economic)
     # ============================================
@@ -210,9 +210,9 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     seasonality_function = make_seasonality_function()
     
     if country == 'SWE':
-        parameters.update({'amplitude': 0.30, 'peak_shift': 7})
+        parameters.update({'amplitude': 0.20, 'peak_shift': 7})
     else: 
-        parameters.update({'amplitude': 0.30, 'peak_shift': -14})    
+        parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
 
     # initialize model
     # ================
