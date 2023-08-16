@@ -24,15 +24,16 @@ abs_dir = os.path.dirname(__file__)
 
 # settings calibration
 start_calibration = '2020-03-01'
-end_calibration = '2021-02-01'
+end_calibration = '2021-01-01'
+end_calibration_eco = '2020-10-01'
 processes = 6
 max_iter = 200
-multiplier_mcmc = 6
+multiplier_mcmc = 3
 n_mcmc = 50
 print_n = 5
 
 # paths
-identifier = 'enddate_20210201'
+identifier = 'enddate_20210101'
 run_date = str(date.today())
 fig_path = f''
 samples_path = f''
@@ -52,8 +53,8 @@ data_epi_SWE = get_hospitalisation_incidence(
     'SWE').loc[slice(start_calibration, end_calibration)]
 
 # load economic data BE and SWE
-data_eco_BE = get_economic_data('GDP', 'BE')
-data_eco_SWE = get_economic_data('GDP', 'SWE')
+data_eco_BE = get_economic_data('GDP', 'BE').loc[slice(start_calibration, end_calibration_eco)]
+data_eco_SWE = get_economic_data('GDP', 'SWE').loc[slice(start_calibration, end_calibration_eco)]
 
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
@@ -83,6 +84,9 @@ weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_eco_BE), 1/len(da
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
 
+import sys
+sys.exit()
+
 if __name__ == '__main__':
 
     ####################
@@ -91,7 +95,7 @@ if __name__ == '__main__':
     
     # starting point
     theta = [2.40461891e+01, 4.82539554e-01, 5.63209689e-02, 0.05, 3.24334640e-01]
-    #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
+    theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # visualisation epi data
     for i, country in enumerate(['BE', 'SWE']):
@@ -112,9 +116,9 @@ if __name__ == '__main__':
         ax.scatter(data.index.get_level_values('date').unique(), data,
                     edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
         ax.plot(out.date, out.x.sum(dim='NACE64'), color='red')
-        plt.show()
         plt.savefig(
                 f'epinomic_eco_{country}.png', dpi=600)
+        #plt.show()
         plt.close()
 
     # visualisation epi data
@@ -174,11 +178,12 @@ if __name__ == '__main__':
             counter += nrows*ncols
             plt.savefig(
                 f'epinomic_epi_{country}_part_{n_figs}.png', dpi=600)
-            plt.show()
+            #plt.show()
             plt.close()
 
     import sys
     sys.exit()
+
     ##########
     ## MCMC ##
     ##########
