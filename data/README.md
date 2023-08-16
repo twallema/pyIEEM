@@ -90,6 +90,12 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ### eco
 
+#### other_demand
+
++ `DP_LIVE_16082023121712365.csv`: Quarterly investment data by OECD (Quarter-over-Quarter) for BE, SWE and the EU27. Retrieved from: https://data.oecd.org/gdp/investment-gfcf.htm#indicator-chart 
+
++ `figure_2_exports_OECD.png` Change in exports of goods and services during the COVID-19 pandemic, normalised with the export in Jan 2020. (G7 countries). Retrieved from: https://www.oecd.org/coronavirus/policy-responses/international-trade-during-the-covid-19-pandemic-big-shifts-and-uncertainty-d1131663/#figure-d1e95
+
 #### labor_market_composition
 
 + `AM0207I5_20230705-155636.csv`: Gainfully employed 16+ years by Swedish county of residence (RAMS) and industrial classification NACE Rev. 2. Data for 2018. Retrieved from: https://www.statistikdatabasen.scb.se 
