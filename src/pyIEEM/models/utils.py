@@ -625,7 +625,9 @@ def get_social_contact_function_parameters(parameters, country, spatial):
                             'economy_BE_phaseIV': np.expand_dims(policies_df['lockdown_release_phaseIV'].values, axis=1),
                             'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
                             'economy_BE_lockdown_2_1': np.expand_dims(policies_df['lockdown_2_1'].values, axis=1),
-                            'economy_BE_lockdown_2_2': np.expand_dims(policies_df['lockdown_2_2'].values, axis=1),})
+                            'economy_BE_lockdown_2_2': np.expand_dims(policies_df['lockdown_2_2'].values, axis=1),
+                            'economy_BE_plateau': np.expand_dims(policies_df['lockdown_plateau'].values, axis=1),
+                            })
     else:
         parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
                             'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
