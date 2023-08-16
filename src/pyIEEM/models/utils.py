@@ -125,11 +125,29 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # construct other demand shock TDPF (economic)
     # ============================================
 
-    other_demand_full_shock = pd.read_csv(os.path.join(
-        abs_dir, f'../../../data/interim/eco/pichler/other_demand_shock.csv'), index_col=0, header=0).values
-
+    # get other accounts data
+    d = pd.read_csv(os.path.join(
+        abs_dir, f'../../../data/interim/eco/national_accounts/{country}/other_accounts_{country}_NACE64.csv'), index_col=0, header=0)
+    # get right currency
+    if country == 'SWE':
+        curr = '(Mkr/y)'
+        mu_investment = 0.0689 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
+    else:
+        curr = '(M€/y)'
+        mu_investment = 0.1617 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
+    # get total demand and all its core components except inventories
+    total = d['Total other demand '+curr]
+    IZW_government =  d['Other consumption - IZW '+curr] + d['Other consumption - government '+curr]
+    exports = d['Other consumption - exports '+curr]
+    investments = d['Other consumption - investments '+curr]
+    # split exports of goods (A-F) and services (G-T) as these recover differently
+    exports_goods = pd.Series(0, index=exports.index, name='exports_goods')
+    exports_goods.loc[slice('A01','F41-43')] = exports.loc[slice('A01','F41-43')].values
+    exports_services = pd.Series(0, index=exports.index, name='exports_goods')
+    exports_services.loc[slice('G45',None)] = exports.loc[slice('G45',None)].values
+    # initialize TDPF
     from pyIEEM.models.TDPF import make_other_demand_shock_function
-    other_demand_shock_function = make_other_demand_shock_function(other_demand_full_shock, demography, simulation_start).get_other_demand_reduction
+    other_demand_shock_function = make_other_demand_shock_function(total, IZW_government, investments, exports_goods, exports_services, mu_investment, lav_consumption, demography, simulation_start).get_other_demand_reduction
 
     # initialize model
     # ================

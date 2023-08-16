@@ -480,7 +480,7 @@ class make_seasonality_function():
 
 class make_other_demand_shock_function():
 
-    def __init__(self, other_demand_full_shock, demography, simulation_start):
+    def __init__(self, total, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, demography, simulation_start):
 
         # derive number of spatial patches
         self.G = len(demography)
@@ -496,34 +496,21 @@ class make_other_demand_shock_function():
         self.t_prev = simulation_start
         self.simulation_start = simulation_start
 
-        # other variables
-        self.other_demand_full_shock = np.squeeze(other_demand_full_shock)
-        self.demography = demography
+        # components of other demand (except stocks)
+        self.total = total
+        self.IZW_government = IZW_government
+        self.investments = investments
+        self.exports_goods = exports_goods
+        self.exports_services = exports_services
+        self.lav_consumption = lav_consumption
+        self.mu_investment = mu_investment
 
-    def get_other_demand_reduction(self, t, states, param, G, mu, nu, xi_leisure, pi_leisure):
+    def get_other_demand_reduction(self, t, states, param):
         """
         Function returning the other demand shock during the 2020 COVID-19 pandemic
-        The other demand is assumed to be shocked during the first lockdown and then gradually rises up again (in line with observations)
 
         input
         =====
-
-        G: np.ndarray
-            recurrent mobility matrix
-
-        mu: int/float
-            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
-            mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
-
-        nu: int/float
-            half-life of the hospital load memory.
-            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
-
-        xi_leisure: int/float
-            displacement parameter of the Gompertz behavioral model for leisure contacts
-
-        pi_leisure: int/float
-            steepness parameter of the Gompertz behavioral model for leisure contacts
 
         output
         ======
@@ -533,48 +520,36 @@ class make_other_demand_shock_function():
             Labor supply shock at time 't' (0: no shock, 1: full shock)
         """
 
-        # #################################
-        # ## memory and behavioral model ##
-        # #################################
-
-        # # get number of hospitalisations per spatial patch per 100 K inhabitants
-        # T = np.zeros(self.G, dtype=float)
-        # for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
-        #     T += np.sum(states[state], axis=0)
-        # Ih = 1e5*np.sum(states['Ih'], axis=0)/T
-        # # initialize memory if necessary
-        # memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
-        # # update memory
-        # self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
-        # # compute average perceived hospital load per spatial patch 
-        # Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
-        
-        # #########################
-        # ## voluntary reduction ##
-        # #########################
-
-        # # reduction of household demand per spatial patch
-        # M_leisure = gompertz(Ih_star_average, xi_leisure, pi_leisure)
-        # # convert to national reduction of household demand using demography
-        # M_leisure = sum(M_leisure*self.demography)
-
         #########################
         ## government policies ##
         #########################
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 13)
-        t_BE_phase_I = datetime(2020, 5, 18)
-        shock_end = datetime(2020, 10, 1)
+        t_start_max_shock = datetime(2020, 3, 1)
+        t_end_max_shock = datetime(2020, 5, 1)
+        t_end_investment_shock = t_end_goods_shocks = datetime(2020, 9, 1)
+        t_end_services_shock = datetime(2021, 9, 1)
+        
+        # maximum shocks
+        export_shock = 0.30*self.exports_goods + 0.21*self.exports_services
+        investment_shock = self.mu_investment*self.investments
 
-        if t < t_BE_lockdown_1:
-            return np.zeros(len(self.other_demand_full_shock))
-        elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            return self.other_demand_full_shock
+        if t < t_start_max_shock:
+            return np.zeros(len(export_shock))
+        elif t_start_max_shock <= t < t_end_max_shock:
+            policy_old = np.zeros(len(export_shock))
+            policy_new = (1 - (self.total - export_shock - investment_shock)/self.total).fillna(0).values
+            return ramp_fun(t, t_start_max_shock, 28, policy_old, policy_new)
         else:
-            policy_old = self.other_demand_full_shock
-            policy_new = np.zeros(len(self.other_demand_full_shock))
-            return ramp_fun(t, t_BE_phase_I, (shock_end-t_BE_phase_I)/timedelta(days=1), policy_old, policy_new)
+            # investment and goods
+            policy_old = (1 - (self.total - investment_shock - 0.30*self.exports_goods)/self.total).fillna(0).values
+            policy_new = np.zeros(len(export_shock))
+            invgood = ramp_fun(t, t_end_max_shock, (t_end_investment_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
+            # services
+            policy_old = (1 - (self.total - 0.21*self.exports_services)/self.total).fillna(0).values
+            policy_new = np.zeros(len(export_shock))
+            serv = ramp_fun(t, t_end_max_shock, (t_end_services_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
+            return invgood + serv
 
     # TODO: make a parent class for the TDPFs with initialize memory as a method (or couldn't we have the whole memory in there basically?)
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
