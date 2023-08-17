@@ -326,7 +326,7 @@ class make_social_contact_function():
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
-            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 1, economy_BE_lockdown_2_1)
             return {'home': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['home'], policy_new['home']),
                     'other': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['other'], policy_new['other']),
@@ -990,7 +990,7 @@ class make_labor_supply_shock_function():
         #########################
 
         # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
-        t_ban_gatherings_1 = datetime(2020, 3, 11)
+        t_ban_gatherings_1 = datetime(2020, 3, 10)
         t_ban_gatherings_2 = datetime(2020, 11, 24)
 
         if t < t_ban_gatherings_1:
