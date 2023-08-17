@@ -76,7 +76,7 @@ for country in ['SWE', 'BE']:
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-05-08'
+        end_calibration = '2020-05-16'
     else:
         end_calibration = '2020-03-31'
     data = data.loc[slice(start_calibration, end_calibration)]
@@ -107,7 +107,7 @@ for country in ['SWE', 'BE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = 0.22*np.array([0, 0.02, 0.02, 0, 0, 0, 0.02, 0.01, 0, 0.02, 0.03, 0.12, 0.03, 0.15, 1, 0, 0, 0, 0, 0, 0.05]) + 1e-9
+        theta = 0.22*np.array([0, 0, 0.02, 0, 0, 0, 0, 0, 0, 0, 0.03, 0.12, 0.01, 0.15, 1, 0.05, 0, 0, 0, 0, 0.02]) + 1e-9
     else:
         theta = 0.16*np.array([0.75, 0, 0, 3.25, 1.75, 2.00, 0.25, 0, 1.50, 0.25, 0.50]) + 1e-9 # "best" fit
         #theta = 0.13*np.array([0, 0, 0, 5, 0.75, 1.5, 0, 0, 0, 0, 0]) # Tongeren, Hasselt and Mons first outbreak arrondissements
