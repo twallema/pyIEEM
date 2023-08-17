@@ -127,10 +127,6 @@ class make_social_contact_function():
         if ((t.year==2020) & (t.month == 4)):
             vacation = False
 
-        # winter holiday was elongated with one week
-        if datetime(2020, 11, 8) <= t <=datetime(2020, 11, 15):
-            vacation = True
-
         # slice right matrices and convert to right size
         N_home, N_leisure_private, N_leisure_public, N_school, N_work = self.slice_matrices(type_day, vacation)
 
@@ -146,7 +142,11 @@ class make_social_contact_function():
 
         # assert degree of school opennness (before imposing telework obligation)
         f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
-        
+    
+        # winter holiday was elongated with one week
+        if ((datetime(2020, 11, 8) <= t <=datetime(2020, 11, 15)) & (self.country=='BE')):
+            f_school = 0
+
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
         economic_closures = self.f_workplace.values[:, np.newaxis] + economic_closures*(1-self.f_workplace.values[:, np.newaxis])
 
