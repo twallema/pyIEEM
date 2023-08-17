@@ -132,9 +132,11 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     if country == 'SWE':
         curr = '(Mkr/y)'
         mu_investment = 0.0689 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
+        mu_exports_goods = 0.14 # obtained from ``
     else:
         curr = '(M€/y)'
         mu_investment = 0.1617 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
+        mu_exports_goods = 0.27 # obtained from ``
     # get total demand and all its core components except inventories
     total = d['Total other demand '+curr]
     IZW_government =  d['Other consumption - IZW '+curr] + d['Other consumption - government '+curr]
@@ -147,7 +149,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     exports_services.loc[slice('G45',None)] = exports.loc[slice('G45',None)].values
     # initialize TDPF
     from pyIEEM.models.TDPF import make_other_demand_shock_function
-    other_demand_shock_function = make_other_demand_shock_function(total, IZW_government, investments, exports_goods, exports_services, mu_investment, lav_consumption, demography, simulation_start).get_other_demand_reduction
+    other_demand_shock_function = make_other_demand_shock_function(total, IZW_government, investments, exports_goods, exports_services, mu_investment, mu_exports_goods, lav_consumption, demography, simulation_start).get_other_demand_reduction
 
     # initialize model
     # ================

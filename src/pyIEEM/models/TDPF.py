@@ -497,7 +497,7 @@ class make_seasonality_function():
 
 class make_other_demand_shock_function():
 
-    def __init__(self, total, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, demography, simulation_start):
+    def __init__(self, total, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, mu_exports_goods, demography, simulation_start):
 
         # derive number of spatial patches
         self.G = len(demography)
@@ -521,6 +521,7 @@ class make_other_demand_shock_function():
         self.exports_services = exports_services
         self.lav_consumption = lav_consumption
         self.mu_investment = mu_investment
+        self.mu_exports_goods = mu_exports_goods
 
     def get_other_demand_reduction(self, t, states, param):
         """
@@ -545,10 +546,10 @@ class make_other_demand_shock_function():
         t_start_max_shock = datetime(2020, 3, 1)
         t_end_max_shock = datetime(2020, 5, 1)
         t_end_investment_shock = t_end_goods_shocks = datetime(2020, 7, 1) # End of Q2
-        t_end_services_shock = datetime(2021, 9, 1)
+        t_end_services_shock = datetime(2021, 7, 1)
         
         # maximum shocks
-        export_shock = 0.30*self.exports_goods + 0.21*self.exports_services
+        export_shock = self.mu_exports_goods*self.exports_goods + 0.21*self.exports_services
         investment_shock = self.mu_investment*self.investments
 
         if t < t_start_max_shock:
@@ -559,7 +560,7 @@ class make_other_demand_shock_function():
             return ramp_fun(t, t_start_max_shock, 28, policy_old, policy_new)
         else:
             # investment and goods
-            policy_old = (1 - (self.total - investment_shock - 0.30*self.exports_goods)/self.total).fillna(0).values
+            policy_old = (1 - (self.total - investment_shock - self.mu_exports_goods*self.exports_goods)/self.total).fillna(0).values
             policy_new = np.zeros(len(export_shock))
             invgood = ramp_fun(t, t_end_max_shock, (t_end_investment_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
             # services

@@ -92,9 +92,13 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 #### other_demand
 
++ `COMEXT_17082023124307665.csv`: Monthly foreign trade data for Belgium. Use to inform the magnitude of the export shock during the 2020 COVID-19 pandemic. Retrieved from: https://stat.nbb.be/Index.aspx?DataSetCode=EXTTRADEBENAT#
+
 + `DP_LIVE_16082023121712365.csv`: Quarterly investment data by OECD (Quarter-over-Quarter) for BE, SWE and the EU27. Retrieved from: https://data.oecd.org/gdp/investment-gfcf.htm#indicator-chart 
 
-+ `figure_2_exports_OECD.png` Change in exports of goods and services during the COVID-19 pandemic, normalised with the export in Jan 2020. (G7 countries). Retrieved from: https://www.oecd.org/coronavirus/policy-responses/international-trade-during-the-covid-19-pandemic-big-shifts-and-uncertainty-d1131663/#figure-d1e95
++ `figure_2_exports_OECD.png`: Change in exports of goods and services during the COVID-19 pandemic, normalised with the export in Jan 2020. (G7 countries). Retrieved from: https://www.oecd.org/coronavirus/policy-responses/international-trade-during-the-covid-19-pandemic-big-shifts-and-uncertainty-d1131663/#figure-d1e95
+
++ `ha0201_2023m06_di_01_en.xls`: Monthly foreign trade data for Sweden (Trend -> Export). Use to inform the magnitude of the export shock during the 2020 COVID-19 pandemic.
 
 #### labor_market_composition
 
