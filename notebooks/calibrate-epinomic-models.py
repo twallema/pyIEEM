@@ -23,10 +23,10 @@ abs_dir = os.path.dirname(__file__)
 ##########################
 
 # settings calibration
-start_calibration = '2020-03-07'
+start_calibration = '2020-03-01'
 end_calibration_epi = '2021-02-01'
-end_calibration_eco = '2021-01-01'
-processes = 1
+end_calibration_eco = '2020-11-01'
+processes = 18
 max_iter = 200
 multiplier_mcmc = 3
 n_mcmc = 50
@@ -54,9 +54,6 @@ data_epi_SWE = get_hospitalisation_incidence('SWE').loc[slice(start_calibration,
 data_eco_BE = get_economic_data('GDP', 'BE').loc[slice(start_calibration, end_calibration_eco)]
 data_eco_SWE = get_economic_data('GDP', 'SWE').loc[slice(start_calibration, end_calibration_eco)]
 
-# normalise Swedish GDP data to one
-data_eco_SWE *= 29880/data_eco_SWE.iloc[0]
-
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
     35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
@@ -74,11 +71,11 @@ aggregation_functions = [
     aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation]
 alpha = 0.027
 log_likelihood_fnc_args = [len(data_epi_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
-                           len(data_epi_SWE.index.get_level_values('spatial_unit').unique())*[alpha,], 0.01, 0.01]
+                           len(data_epi_SWE.index.get_level_values('spatial_unit').unique())*[alpha,], 0.025, 0.025]
 
-pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'amplitude']
-bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100), (0,0.40))
-labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$', r'$A$']
+pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
+bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
+labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$']
 weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_eco_BE), 1/len(data_eco_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
@@ -90,10 +87,10 @@ if __name__ == '__main__':
     ####################
     
     # starting point
-    theta = [20, 4.82539554e-01, 5.63209689e-02, 0.03, 0.10, 0.20]
+    theta = [24, 0.45, 0.05, 0.03, 0.10]
     #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
-    # visualisation epi data
+    # # visualisation epi data
     # for i, country in enumerate(['BE', 'SWE']):
 
     #     # set right model and data
