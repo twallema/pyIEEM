@@ -138,7 +138,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
 
-+ `tidsseriefil_juni_20230728.xlsx`: Monthly GDP data for Sweden. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/national-accounts/ovrigt/national-accounts-other/ 
++ `000000X3_20230817-103925.csv`: Seasonally adjusted monthly GDP data at constant prices (2011=100) for Sweden. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__NR__NR9999__NR9999A/NR9999ENS2010BNPIndN/table/tableViewLayout1/
 
 ## Interim
 
