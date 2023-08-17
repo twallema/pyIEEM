@@ -3,13 +3,19 @@ import os
 import json
 import argparse
 import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import timedelta, datetime
+from matplotlib.ticker import MaxNLocator
 
 from pySODM.optimization.utils import add_negative_binomial_noise
 from pyIEEM.data.data import get_economic_data, get_hospitalisation_incidence
-from pyIEEM.models.utils import initialize_epidemic_model, aggregate_Brussels_Brabant_Dataset, dummy_aggregation
-from datetime import timedelta, datetime
-from matplotlib.ticker import MaxNLocator
-import matplotlib.pyplot as plt
+from pyIEEM.models.utils import initialize_epinomic_model, aggregate_Brussels_Brabant_Dataset, dummy_aggregation
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
 abs_dir = os.path.dirname(__file__)
 
@@ -24,8 +30,8 @@ args = parser.parse_args()
 ##########################
 
 # simulation
-N = 6
-processes = 6
+N = 2
+processes = 2
 # visualisation (epi only + spatial)
 confint = 0.05
 nrows = 3
@@ -60,22 +66,23 @@ end_calibration_eco = datetime.strptime(
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
     35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-model_BE = initialize_epidemic_model(
+model_BE = initialize_epinomic_model(
     'BE', age_classes, True, start_calibration)
-model_SWE = initialize_epidemic_model(
+model_SWE = initialize_epinomic_model(
     'SWE', age_classes, True, start_calibration)
+
+end_calibration_eco = end_calibration_epi = end_simulation = datetime(2020, 6, 1)
 
 ##########################
 ## define draw function ##
 ##########################
 
-
 def draw_function(param_dict, samples_dict):
-    i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['tau'])))
-    param_dict['xi_eff'] = samples_dict['ypsilon_eff'][i]
-    param_dict['pi_eff'] = samples_dict['phi_eff'][i]
-    param_dict['pi_work'] = samples_dict['phi_work'][i]
-    param_dict['pi_leisure'] = samples_dict['phi_leisure'][i]
+    i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['nu'])))
+    param_dict['xi_eff'] = samples_dict['xi_eff'][i]
+    param_dict['pi_eff'] = samples_dict['pi_eff'][i]
+    param_dict['pi_work'] = samples_dict['pi_work'][i]
+    param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
     return param_dict
 
 #####################
@@ -91,9 +98,8 @@ for model in [model_BE, model_SWE]:
 ## visualise calibration (epi + eco national) ##
 ################################################
 
-for out, data_epi, data_eco in zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco, data_SWE_eco]):
-    fig, ax = plt.subplots(
-        nrows=2, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
+for out, data_epi, data_eco, country in zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco, data_SWE_eco], ['BE', 'SWE']):
+    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(11.7, 8.3), sharex=True)
 
     ## epidemiological
     data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()
@@ -103,10 +109,12 @@ for out, data_epi, data_eco in zip(outputs, [data_BE_epi, data_SWE_epi], [data_B
                     edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.6)
     ax[0].scatter(data_post_calibration.index, data_post_calibration,
                     edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
-    # model
-    ax[0].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1)
-    ax[0].fill_between(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=confint/2),
-                                    out.Hin.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
+    # model: add observational noise
+    out_obs = add_negative_binomial_noise(out.Hin.to_dataset(), alpha=0.027)
+    # model: visualise
+    ax[0].plot(out.date, out_obs.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1)
+    ax[0].fill_between(out_obs.date, out_obs.Hin.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=confint/2),
+                                    out_obs.Hin.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
     # axes properties
     ax[0].set_xlim([start_calibration, end_visualisation_eco])
     ax[0].set_ylim([0, 850])
@@ -115,23 +123,23 @@ for out, data_epi, data_eco in zip(outputs, [data_BE_epi, data_SWE_epi], [data_B
     ## economic
     data_calibration = data_eco.loc[slice(start_calibration, end_calibration_eco)].groupby(by='date').sum()
     data_post_calibration = data_eco.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()
-    # data
-    ax[1].scatter(data_calibration.index, data_calibration,
+    # data countries
+    x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
+    ax[1].scatter(data_calibration.index, 100*data_calibration/x_0,
                     edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.6)
-    ax[1].scatter(data_post_calibration.index, data_post_calibration,
+    ax[1].scatter(data_post_calibration.index, 100*data_post_calibration/x_0,
                     edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
     # model
-    x_0 = out.x.sum(dim=['age_class','spatial_unit']).mean(dim='draws').isel(date=0)
-    ax[1].plot(out.date, 100*(1 - out.x.sum(dim=['age_class','spatial_unit']).mean(dim='draws')/x_0) ,  color='blue', linewidth=1)
-    ax[1].fill_between(out.date, 100*(1 - out.x.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=confint/2)/x_0),
-                                    100*(1 - out.x.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=1-confint/2)/x_0), color='blue', alpha=0.2)
+    ax[1].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1)
+    ax[1].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
+                                    100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
     # axes properties
     ax[1].set_xlim([start_calibration, end_visualisation_eco])
-    ax[1].set_ylim([60, 105])
+    #ax[1].set_ylim([60, 105])
     ax[1].set_ylabel('Productivity loss (%)')
 
     plt.savefig(
-        f'calibration_epinomic_national.png', dpi=400)
+        f'calibration_epinomic_national_{country}.png', dpi=400)
     # plt.show()
     plt.close()
 
@@ -140,31 +148,30 @@ for out, data_epi, data_eco in zip(outputs, [data_BE_epi, data_SWE_epi], [data_B
 ###########################################
 
 aggregation_functions = [aggregate_Brussels_Brabant_Dataset, dummy_aggregation]
-datasets = [data_BE_epi, data_SWE_epi]
 countries = ['BE', 'SWE']
 
 # visualisation
-for output, data, country, aggfunc in zip(outputs, datasets, countries, aggregation_functions):
-
-    # aggregate model
-    output = aggfunc(output)
+for output, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], countries, aggregation_functions):
 
     # add observational noise
-    out_obs = add_negative_binomial_noise(output, alpha=0.027)
+    out_obs = add_negative_binomial_noise(output.Hin.to_dataset(), alpha=0.027)
     out_nat_obs = add_negative_binomial_noise(
-        output.sum(dim='spatial_unit'), alpha=0.027)
+        output.sum(dim='spatial_unit').Hin.to_dataset(), alpha=0.027)
+
+    # aggregate model
+    out_obs = aggfunc(out_obs)
 
     # slice hospitalisation states
-    out = out.Hin
     out_obs = out_obs.Hin
     out_nat_obs = out_nat_obs.Hin
 
-    # visualise
     dates_calibration = data.loc[slice(start_calibration, end_calibration_epi), slice(
         None)].index.get_level_values('date').unique()
     dates_post_calibration = data.loc[slice(end_calibration_epi+timedelta(
         days=1), end_visualisation_epi), slice(None)].index.get_level_values('date').unique()
     spatial_units = data.index.get_level_values('spatial_unit').unique()
+    
+    # visualise
     n_figs = 0
     counter = 0
     while counter <= len(spatial_units):
@@ -180,9 +187,9 @@ for output, data, country, aggfunc in zip(outputs, datasets, countries, aggregat
                     ax.scatter(dates_post_calibration, data.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi), spatial_units[j+counter]],
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
-                    ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
+                    ax.plot(out_obs.date, out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(
                         dim='age_class').mean(dim='draws'), color='blue', linewidth=1)
-                    ax.fill_between(out.date, out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(dim='age_class').quantile(dim='draws', q=confint/2),
+                    ax.fill_between(out_obs.date, out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(dim='age_class').quantile(dim='draws', q=confint/2),
                                     out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(dim='age_class').quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
                     # shade VOCs and vaccines
                     ax.axvspan('2021-02-01', end_visualisation_epi,
@@ -196,7 +203,7 @@ for output, data, country, aggfunc in zip(outputs, datasets, countries, aggregat
                     ax.scatter(dates_post_calibration, data.groupby(by='date').sum().loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi)],
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
-                    ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).mean(
+                    ax.plot(out_nat_obs.date, out_nat_obs.sum(dim=['age_class']).mean(
                         dim='draws'), color='blue', linewidth=1)
                     ax.fill_between(out_nat_obs.date, out_nat_obs.sum(dim=['age_class']).quantile(dim='draws', q=confint/2),
                                     out_nat_obs.sum(dim=['age_class']).quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
