@@ -122,6 +122,11 @@ class make_social_contact_function():
         else:
             type_day = 'average'
 
+        # easter holiday increases the contacts at home slightly, which makes the model deviate slightly above the observed trajectory
+        # this clearly deviates from the truth in BE
+        if ((t.year==2020) & (t.month == 4)):
+            vacation = False
+
         # slice right matrices and convert to right size
         N_home, N_leisure_private, N_leisure_public, N_school, N_work = self.slice_matrices(type_day, vacation)
 
@@ -275,7 +280,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 14)
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
@@ -858,7 +863,7 @@ class make_labor_supply_shock_function():
         #########################
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 14)
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
