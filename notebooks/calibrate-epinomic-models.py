@@ -2,12 +2,11 @@ from pySODM.optimization.mcmc import perturbate_theta, run_EnsembleSampler, emce
 from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial, ll_gaussian
 from pySODM.optimization import pso, nelder_mead
 from pyIEEM.data.data import get_hospitalisation_incidence, get_economic_data
-from pyIEEM.models.utils import initialize_epidemic_model, initialize_epinomic_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
+from pyIEEM.models.utils import initialize_epinomic_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
 from datetime import date
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
 import pandas as pd
-import numpy as np
 import sys
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
