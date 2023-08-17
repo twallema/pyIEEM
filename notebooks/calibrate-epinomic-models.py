@@ -27,7 +27,7 @@ end_calibration_epi = '2021-02-01'
 end_calibration_eco = '2020-11-01'
 processes = 18
 max_iter = 200
-multiplier_mcmc = 3
+multiplier_mcmc = 4
 n_mcmc = 50
 print_n = 5
 
@@ -70,11 +70,11 @@ aggregation_functions = [
     aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation]
 alpha = 0.027
 log_likelihood_fnc_args = [len(data_epi_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
-                           len(data_epi_SWE.index.get_level_values('spatial_unit').unique())*[alpha,], 0.025, 0.025]
+                           len(data_epi_SWE.index.get_level_values('spatial_unit').unique())*[alpha,], 0.02, 0.02]
 
-pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'amplitude']
-bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100), (0,0.40))
-labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$', r'$A$']
+pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
+bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
+labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$']
 weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_eco_BE), 1/len(data_eco_SWE)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
@@ -86,10 +86,10 @@ if __name__ == '__main__':
     ####################
     
     # starting point
-    theta = [24, 0.45, 0.075, 0.03, 0.10, 0.20]
+    theta = [26, 0.45, 0.075, 0.03, 0.10]
     #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
-    # visualisation epi data
+    # # visualisation epi data
     # for i, country in enumerate(['BE', 'SWE']):
 
     #     # set right model and data
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     #     ax.plot(out.date, out.x.sum(dim='NACE64'), color='red')
     #     plt.savefig(
     #             f'epinomic_eco_{country}.png', dpi=600)
-    #     plt.show()
+    #     #plt.show()
     #     plt.close()
 
     #     # aggregate model
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     #         counter += nrows*ncols
     #         plt.savefig(
     #             f'epinomic_epi_{country}_part_{n_figs}.png', dpi=600)
-    #         plt.show()
+    #         #plt.show()
     #         plt.close()
 
     ##########
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     ##########
 
     ndim, nwalkers, pos = perturbate_theta(theta, len(
-        pars)*[0.10,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
+        pars)*[0.02,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
 
     # Write settings to a .txt
     settings = {'start_calibration': start_calibration, 'end_calibration_epi': end_calibration_epi, 'end_calibration_eco': end_calibration_eco, 'n_chains': nwalkers,
