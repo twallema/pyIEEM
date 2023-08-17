@@ -127,6 +127,10 @@ class make_social_contact_function():
         if ((t.year==2020) & (t.month == 4)):
             vacation = False
 
+        # winter holiday was elongated with one week
+        if datetime(2020, 11, 8) <= t <=datetime(2020, 11, 15):
+            vacation = True
+
         # slice right matrices and convert to right size
         N_home, N_leisure_private, N_leisure_public, N_school, N_work = self.slice_matrices(type_day, vacation)
 
@@ -134,14 +138,15 @@ class make_social_contact_function():
         ## forced response (government) ##
         ##################################
 
-        economic_shocks = np.squeeze(economic_closures*(1 - (self.f_remote.values[:, np.newaxis] + self.f_workplace.values[:, np.newaxis])))
-
         # invert
         economic_closures = 1-economic_closures
 
         # convert the leisure_public contacts depending on the economic policy
         f_leisure_public = sum(self.lav_contacts.values[:, np.newaxis] * economic_closures)
 
+        # assert degree of school opennness (before imposing telework obligation)
+        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
+        
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
         economic_closures = self.f_workplace.values[:, np.newaxis] + economic_closures*(1-self.f_workplace.values[:, np.newaxis])
 
@@ -158,9 +163,6 @@ class make_social_contact_function():
 
         # compare to involuntary changes and take minimum as limiting
         economic_closures = np.minimum(economic_closures, M_work)
-
-        # assert degree of school opennness
-        f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
 
         #####################################
         ## forced response (fired workers) ##
@@ -324,15 +326,16 @@ class make_social_contact_function():
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_relax_measures:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
-            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            M_eff = 1-gompertz(np.zeros(self.G, dtype=float), xi_eff, pi_eff)
+            return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
-            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 1, economy_BE_lockdown_2_1)
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_1)
             return {'home': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['home'], policy_new['home']),
                     'other': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['work'], policy_new['work'])}
         elif t_BE_lockdown_2_2 <= t < t_BE_plateau:
-            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 1, economy_BE_lockdown_2_1)
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_1)
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_2)
             return {'home': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['home'], policy_new['home']),
                     'other': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['other'], policy_new['other']),
