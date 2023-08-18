@@ -87,7 +87,7 @@ if __name__ == '__main__':
     ####################
     
     # starting point
-    theta = [26, 0.45, 0.075, 0.03, 0.10]
+    theta = [21, 0.45, 0.075, 0.03, 0.10]
     #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # # visualisation epi data

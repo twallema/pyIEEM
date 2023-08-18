@@ -553,7 +553,7 @@ class make_other_demand_shock_function():
         # key dates
         t_start_max_shock = datetime(2020, 3, 1)
         t_end_max_shock = datetime(2020, 5, 1)
-        t_end_investment_shock = t_end_goods_shocks = datetime(2020, 7, 1) # End of Q2
+        t_end_investment_shock = t_end_goods_shocks = datetime(2020, 9, 1) # End of Q2: see `COMEXT_17082023124307665.csv`
         t_end_services_shock = datetime(2021, 7, 1)
         
         # maximum shocks
@@ -891,13 +891,21 @@ class make_labor_supply_shock_function():
         if t < t_BE_lockdown_1:
             return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_1)
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_1)
+            return ramp_fun(t, t_BE_lockdown_1, l, policy_old, policy_new)
         elif t_BE_phase_I <= t < t_BE_phase_II:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseI)
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_1)
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseI)
+            return ramp_fun(t, t_BE_phase_I, l, policy_old, policy_new)
         elif t_BE_phase_II <= t < t_BE_phase_III:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseII)   
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseI)
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseII)
+            return ramp_fun(t, t_BE_phase_II, l, policy_old, policy_new)  
         elif t_BE_phase_III <= t < t_BE_phase_IV:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseIII)     
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseII)
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseIII)
+            return ramp_fun(t, t_BE_phase_III, l, policy_old, policy_new)    
         elif t_BE_phase_IV <= t < t_BE_lockdown_Antwerp:
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_phaseIV)   
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:

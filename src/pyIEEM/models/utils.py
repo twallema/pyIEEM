@@ -136,7 +136,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     else:
         curr = '(M€/y)'
         mu_investment = 0.1617 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
-        mu_exports_goods = 0.27 # obtained from ``
+        mu_exports_goods = 0.25 # obtained from `COMEXT_17082023124307665.csv`
     # get total demand and all its core components except inventories
     total = d['Total other demand '+curr]
     IZW_government =  d['Other consumption - IZW '+curr] + d['Other consumption - government '+curr]
@@ -303,7 +303,7 @@ def get_eco_params(country, prodfunc):
     ## Hardcoded model parameters
     parameters.update({'delta_S': 0.75,                                                                                                                                                   
                        'eta': 14,                                                                                                 
-                       'iota_H': 14,
+                       'iota_H': 7,
                        'iota_F': 7,
                        'prodfunc': prodfunc,
                       })  
