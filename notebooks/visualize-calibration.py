@@ -31,7 +31,7 @@ args = parser.parse_args()
 
 # simulation
 N = 2
-processes = 2
+processes = 1
 # visualisation (epi only + spatial)
 n_draws_per_sample = 200
 overdispersion_spatial = 0.047
@@ -205,9 +205,10 @@ data_BE_epi = get_hospitalisation_incidence('BE', aggregate_bxl_brabant=True)
 data_SWE_epi = get_hospitalisation_incidence('SWE')
 
 # load economic data BE and SWE
-data_BE_eco_GDP = get_economic_data('GDP', 'BE')
-data_BE_eco_employment = get_economic_data('employment', 'BE')
-data_SWE_eco_GDP = get_economic_data('GDP', 'SWE')
+data_BE_eco_GDP = get_economic_data('GDP', 'BE', relative=True)
+data_BE_eco_employment = get_economic_data('employment', 'BE', relative=True)
+data_SWE_eco_GDP = get_economic_data('GDP', 'SWE', relative=True)
+data_SWE_eco_employment = get_economic_data('employment', 'SWE', relative=True)
 
 # load samples dictionary
 # samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
@@ -243,7 +244,6 @@ def draw_function(param_dict, samples_dict):
     # param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
     return param_dict
 
-
 #####################
 ## simulate models ##
 #####################
@@ -252,7 +252,7 @@ outputs = []
 for model in [model_BE, model_SWE]:
     # use calibrated parameters
     pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
-    thetas = [24, 0.45, 0.075, 0.03, 0.10]
+    thetas = [21, 0.45, 0.075, 0.03, 0.10]
     for par,theta in zip(pars,thetas):
         model.parameters.update({par: theta})
     # simulate
@@ -267,7 +267,7 @@ titles = ['Belgium', 'Sweden']
 
 fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(11.7, 8.3), sharex=True)
 
-for i, (out, data_epi, data_eco_GDP, country) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], ['BE', 'SWE'])):
+for i, (out, data_epi, data_eco_GDP, data_eco_employment, country) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], [data_BE_eco_employment, data_SWE_eco_employment], ['BE', 'SWE'])):
     
     ## epidemiological
     data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()
@@ -296,13 +296,13 @@ for i, (out, data_epi, data_eco_GDP, country) in enumerate(zip(outputs, [data_BE
     ## GDP
     data_calibration = data_eco_GDP.loc[slice(start_calibration, end_calibration_eco)]
     data_post_calibration = data_eco_GDP.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)]
-    # data countries
-    x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
-    ax[1, i].scatter(data_calibration.index, 100*data_calibration/x_0,
+    # data
+    ax[1, i].scatter(data_calibration.index, 100*data_calibration,
                     edgecolors='black', facecolors='black', marker='o', s=10, alpha=0.8)
-    ax[1, i].scatter(data_post_calibration.index, 100*data_post_calibration/x_0,
+    ax[1, i].scatter(data_post_calibration.index, 100*data_post_calibration,
                     edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
+    x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
     ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1.5)
     ax[1, i].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
                                     100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
@@ -311,27 +311,25 @@ for i, (out, data_epi, data_eco_GDP, country) in enumerate(zip(outputs, [data_BE
     ax[1, i].set_ylim([60, 102])
 
     ## employment
+    data_calibration = data_eco_employment.loc[slice(start_calibration, end_calibration_eco)]
+    data_post_calibration = data_eco_employment.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)]
+    # data
+    ax[2, i].scatter(data_calibration.index, 100*data_calibration,
+                    edgecolors='black', facecolors='black', marker='o', s=10, alpha=0.8)
+    ax[2, i].scatter(data_post_calibration.index, 100*data_post_calibration,
+                    edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
     l_0 = out.l.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
     ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').mean(dim='draws')/l_0,  color='blue', linewidth=1.5)
     ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
                                     100*out.l.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/l_0, color='blue', alpha=0.2)
-    # data
-    if country=='BE':
-        data_calibration = data_BE_eco_employment.loc[slice(start_calibration, end_calibration_eco)]
-        data_post_calibration = data_BE_eco_employment.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)]
-        ax[2, i].scatter(data_calibration.index, 100*data_calibration/l_0,
-                        edgecolors='black', facecolors='black', marker='o', s=10, alpha=0.8)
-        ax[2, i].scatter(data_post_calibration.index, 100*data_post_calibration/l_0,
-                        edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # axes properties
     ax[2, i].set_xlim([start_calibration, end_visualisation_eco])
     ax[2, i].set_ylim([60, 102])
-    ax[2, i].set_ylabel('Employment (%)')
     # rotate labels
     for tick in ax[2,i].get_xticklabels():
         tick.set_rotation(30)
-
+    # ylabels left hand side only
     if i == 0:
         ax[0, i].set_ylabel('Hospital incidence (-)')
         ax[1, i].set_ylabel('Productivity (%)')
