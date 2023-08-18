@@ -196,7 +196,6 @@ def add_negative_binomial(output_array, alpha, n_draws_per_sample=100, UL=0.05*0
 
     return mean, median, lower, upper
 
-
 #########################
 ## load model and data ##
 #########################
@@ -206,8 +205,9 @@ data_BE_epi = get_hospitalisation_incidence('BE', aggregate_bxl_brabant=True)
 data_SWE_epi = get_hospitalisation_incidence('SWE')
 
 # load economic data BE and SWE
-data_BE_eco = get_economic_data('GDP', 'BE')
-data_SWE_eco = get_economic_data('GDP', 'SWE')
+data_BE_eco_GDP = get_economic_data('GDP', 'BE')
+data_BE_eco_employment = get_economic_data('employment', 'BE')
+data_SWE_eco_GDP = get_economic_data('GDP', 'SWE')
 
 # load samples dictionary
 # samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
@@ -265,9 +265,9 @@ for model in [model_BE, model_SWE]:
 
 titles = ['Belgium', 'Sweden']
 
-fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11.7, 8.3), sharex=True)
+fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(11.7, 8.3), sharex=True)
 
-for i, (out, data_epi, data_eco, country) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco, data_SWE_eco], ['BE', 'SWE'])):
+for i, (out, data_epi, data_eco_GDP, country) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], ['BE', 'SWE'])):
     
     ## epidemiological
     data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()
@@ -290,12 +290,12 @@ for i, (out, data_epi, data_eco, country) in enumerate(zip(outputs, [data_BE_epi
     ax[0, i].set_xlim([start_calibration, end_visualisation_eco])
     ax[0, i].set_ylim([0, 850])
     ax[0, i].yaxis.set_major_locator(MaxNLocator(6))
-    ax[0, i].set_ylabel('Hospital incidence (-)')
     ax[0, i].set_title(titles[i])
 
-    ## economic
-    data_calibration = data_eco.loc[slice(start_calibration, end_calibration_eco)].groupby(by='date').sum()
-    data_post_calibration = data_eco.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()
+    ### economic
+    ## GDP
+    data_calibration = data_eco_GDP.loc[slice(start_calibration, end_calibration_eco)]
+    data_post_calibration = data_eco_GDP.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)]
     # data countries
     x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
     ax[1, i].scatter(data_calibration.index, 100*data_calibration/x_0,
@@ -309,14 +309,33 @@ for i, (out, data_epi, data_eco, country) in enumerate(zip(outputs, [data_BE_epi
     # axes properties
     ax[1, i].set_xlim([start_calibration, end_visualisation_eco])
     ax[1, i].set_ylim([60, 102])
-    #ax[1, i].yaxis.set_major_locator(MaxNLocator(6))
-    ax[1, i].set_ylabel('Productivity loss (%)')
 
-    # set maximum number of labels  
-    #ax[1,i].xaxis.set_major_locator(MaxNLocator(6))
+    ## employment
+    # model
+    l_0 = out.l.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
+    ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').mean(dim='draws')/l_0,  color='blue', linewidth=1.5)
+    ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
+                                    100*out.l.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/l_0, color='blue', alpha=0.2)
+    # data
+    if country=='BE':
+        data_calibration = data_BE_eco_employment.loc[slice(start_calibration, end_calibration_eco)]
+        data_post_calibration = data_BE_eco_employment.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)]
+        ax[2, i].scatter(data_calibration.index, 100*data_calibration/l_0,
+                        edgecolors='black', facecolors='black', marker='o', s=10, alpha=0.8)
+        ax[2, i].scatter(data_post_calibration.index, 100*data_post_calibration/l_0,
+                        edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
+    # axes properties
+    ax[2, i].set_xlim([start_calibration, end_visualisation_eco])
+    ax[2, i].set_ylim([60, 102])
+    ax[2, i].set_ylabel('Employment (%)')
     # rotate labels
-    for tick in ax[1,i].get_xticklabels():
+    for tick in ax[2,i].get_xticklabels():
         tick.set_rotation(30)
+
+    if i == 0:
+        ax[0, i].set_ylabel('Hospital incidence (-)')
+        ax[1, i].set_ylabel('Productivity (%)')
+        ax[2, i].set_ylabel('Employment (%)')
 
 plt.savefig(
     f'calibration_epinomic_national.png', dpi=400)
