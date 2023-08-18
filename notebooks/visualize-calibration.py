@@ -2,14 +2,14 @@ import random
 import os
 import json
 import argparse
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import timedelta, datetime
 from matplotlib.ticker import MaxNLocator
 
-from pySODM.optimization.utils import add_negative_binomial_noise
 from pyIEEM.data.data import get_economic_data, get_hospitalisation_incidence
-from pyIEEM.models.utils import initialize_epinomic_model, aggregate_Brussels_Brabant_Dataset, dummy_aggregation
+from pyIEEM.models.utils import initialize_epinomic_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -33,6 +33,9 @@ args = parser.parse_args()
 N = 2
 processes = 2
 # visualisation (epi only + spatial)
+n_draws_per_sample = 200
+overdispersion_spatial = 0.047
+overdispersion_national = 0.036
 confint = 0.05
 nrows = 3
 ncols = 4
@@ -41,6 +44,158 @@ end_visualisation_epi = datetime(2021, 7, 1)
 end_visualisation_eco = datetime(2021, 3, 1)
 # compute simulation time
 end_simulation = max(end_visualisation_epi, end_visualisation_eco)
+
+#############################################
+## Helper function for observational noise ##
+#############################################
+
+def output_to_visuals(output, states, alpha=1e-6, n_draws_per_sample=1, UL=1-0.05*0.5, LL=0.05*0.5):
+    """
+    A function to add the a-posteriori poisson uncertainty on the relationship between the model output and data
+    and format the model output in a pandas dataframe for easy acces
+
+
+    Parameters
+    ----------
+
+    output : xarray
+        Simulation output xarray
+
+    states : xarray
+        Model states on which to add the a-posteriori poisson uncertainty
+
+    alpha: float
+        Overdispersion factor of the negative binomial distribution. For alpha --> 0, the negative binomial converges to the poisson distribution.
+
+    n_draws_per_sample : int
+        Number of poisson experiments to be added to each simulated trajectory (default: 1)
+
+    UL : float
+        Upper quantile of simulation result (default: 97.5%)
+
+    LL : float
+        Lower quantile of simulation result (default: 2.5%)
+
+    Returns
+    -------
+
+    df : pd.DataFrame
+        contains for every model state the mean, median, lower- and upper quantiles
+        index is equal to simtime
+
+    Example use
+    -----------
+
+    simtime, df_2plot = output_to_visuals(output, 100, 1, LL = 0.05/2, UL = 1 - 0.05/2)
+    # x-values do not need to be supplied when using `plt.plot`
+    plt.plot(df_2plot['H_in', 'mean'])
+    # x-values must be supplied when using `plt.fill_between`
+    plt.fill_between(simtime, df_2plot['H_in', 'LL'], df_2plot['H_in', 'UL'])
+
+    """
+    # Check if dimension draws is present
+    if not 'draws' in list(output.dims):
+        raise ValueError(
+            "dimension 'draws' is not present in model output xarray"
+        )
+    # Check if the states are present
+    for state_name in states:
+        if not state_name in list(output.data_vars):
+            raise ValueError(
+                "variable state_name '{0}' is not a model state".format(state_name)
+            )
+    # Initialize a pandas dataframe for results
+    columns = [[],[]]
+    tuples = list(zip(*columns))
+    columns = pd.MultiIndex.from_tuples(tuples, names=["model state", "quantity"])
+    df = pd.DataFrame(index=pd.to_datetime(output['date'].values), columns=columns)
+    df.index.name = 'simtime'
+    # Deepcopy xarray output (it is mutable like a dictionary!)
+    copy = output.copy(deep=True)
+    # Loop over output states
+    for state_name in states:
+        # Automatically sum all dimensions except time and draws
+        for dimension in output[state_name].dims:
+            if ((dimension != 'date') & (dimension != 'draws')):
+                copy[state_name] = copy[state_name].sum(dim=dimension)
+        mean, median, lower, upper = add_negative_binomial(copy[state_name].values, alpha, n_draws_per_sample, UL, LL, add_to_mean=False)
+        # Add to dataframe
+        df[state_name,'mean'] = mean
+        df[state_name,'median'] = median
+        df[state_name,'lower'] = lower
+        df[state_name,'upper'] = upper
+    return df
+
+def add_negative_binomial(output_array, alpha, n_draws_per_sample=100, UL=0.05*0.5, LL=1-0.05*0.5, add_to_mean=True):
+    """ A function to add a-posteriori negative binomial uncertainty on the relationship between the model output and data
+    
+    Parameters
+    ----------
+
+    output_array: np.array
+        2D numpy array containing the simulation result. First axis: draws, second axis: time.
+
+    alpha: float
+        Negative binomial overdispersion coefficient
+
+    n_draws_per_sample: int
+        Number of draws to take from the negative binomial distribution at each timestep and then average out.
+    
+    LL: float
+        Lower quantile limit.
+
+    UL: float
+        Upper quantile limit.
+
+    add_to_mean: boolean
+        If True, `n_draws_per_sample` negative binomial draws are added to the mean model prediction. If False, `n_draws_per_sample` negative binomial draws are added to each of the `n_samples` model predictions.
+        Both options converge for large `n_draws_per_sample`.
+
+    Returns
+    -------
+
+    mean: np.array
+        1D numpy array containing the mean model prediction at every timestep
+    
+    median: np.array
+        1D numpy array containing the mean model prediction at every timestep
+    
+    lower: np.array
+        1D numpy array containing the lower quantile of the model prediction at every timestep
+
+    upper: np.array
+        1D numpy array containing the upper quantile of the model prediction at every timestep
+    """
+
+    # Determine number of samples and number of timesteps
+    simtime = output_array.shape[1]
+    if add_to_mean:
+        output_array= np.mean(output_array, axis=0)
+        output_array=output_array[np.newaxis, :]
+        n_samples=1
+    else:
+        n_samples = output_array.shape[0]
+    # Initialize a column vector to append to
+    vector = np.zeros((simtime,1))
+    # Loop over dimension draws
+    for n in range(n_samples):
+        try:
+            for draw in range(n_draws_per_sample):
+                vector = np.append(vector, np.expand_dims(np.random.negative_binomial(1/alpha, (1/alpha)/(output_array[n,:] + (1/alpha)), size = output_array.shape[1]), axis=1), axis=1)
+        except:
+            warnings.warn("I had to remove a simulation result from the output because there was a negative value in it..")
+
+    # Remove first column
+    vector = np.delete(vector, 0, axis=1)
+    #  Compute mean and median
+    mean = np.mean(vector,axis=1)
+    median = np.median(vector,axis=1)    
+    # Compute quantiles
+    lower = np.quantile(vector, q = LL, axis = 1)
+    upper = np.quantile(vector, q = UL, axis = 1)
+
+    return mean, median, lower, upper
+
 
 #########################
 ## load model and data ##
@@ -55,13 +210,18 @@ data_BE_eco = get_economic_data('GDP', 'BE')
 data_SWE_eco = get_economic_data('GDP', 'SWE')
 
 # load samples dictionary
-samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
-start_calibration = datetime.strptime(
-    samples_dict['start_calibration'], '%Y-%m-%d')
-end_calibration_epi = datetime.strptime(
-    samples_dict['end_calibration_epi'], '%Y-%m-%d')
-end_calibration_eco = datetime.strptime(
-    samples_dict['end_calibration_eco'], '%Y-%m-%d')    
+# samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
+# start_calibration = datetime.strptime(
+#     samples_dict['start_calibration'], '%Y-%m-%d')
+# end_calibration_epi = datetime.strptime(
+#     samples_dict['end_calibration_epi'], '%Y-%m-%d')
+# end_calibration_eco = datetime.strptime(
+#     samples_dict['end_calibration_eco'], '%Y-%m-%d')    
+
+samples_dict={}
+start_calibration = datetime(2020, 2, 14)
+end_calibration_epi = datetime(2021, 2, 1)
+end_calibration_eco = datetime(2020, 11, 1)
 
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
@@ -71,19 +231,18 @@ model_BE = initialize_epinomic_model(
 model_SWE = initialize_epinomic_model(
     'SWE', age_classes, True, start_calibration)
 
-end_calibration_eco = end_calibration_epi = end_simulation = datetime(2020, 6, 1)
-
 ##########################
 ## define draw function ##
 ##########################
 
 def draw_function(param_dict, samples_dict):
-    i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['nu'])))
-    param_dict['xi_eff'] = samples_dict['xi_eff'][i]
-    param_dict['pi_eff'] = samples_dict['pi_eff'][i]
-    param_dict['pi_work'] = samples_dict['pi_work'][i]
-    param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
+    # i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['nu'])))
+    # param_dict['xi_eff'] = samples_dict['xi_eff'][i]
+    # param_dict['pi_eff'] = samples_dict['pi_eff'][i]
+    # param_dict['pi_work'] = samples_dict['pi_work'][i]
+    # param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
     return param_dict
+
 
 #####################
 ## simulate models ##
@@ -91,6 +250,12 @@ def draw_function(param_dict, samples_dict):
 
 outputs = []
 for model in [model_BE, model_SWE]:
+    # use calibrated parameters
+    pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
+    thetas = [24, 0.45, 0.075, 0.03, 0.10]
+    for par,theta in zip(pars,thetas):
+        model.parameters.update({par: theta})
+    # simulate
     outputs.append(model.sim([start_calibration, end_simulation], N=N,
                    processes=processes, draw_function=draw_function, samples=samples_dict))
 
@@ -98,73 +263,80 @@ for model in [model_BE, model_SWE]:
 ## visualise calibration (epi + eco national) ##
 ################################################
 
-for out, data_epi, data_eco, country in zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco, data_SWE_eco], ['BE', 'SWE']):
-    fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(11.7, 8.3), sharex=True)
+titles = ['Belgium', 'Sweden']
 
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11.7, 8.3), sharex=True)
+
+for i, (out, data_epi, data_eco, country) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco, data_SWE_eco], ['BE', 'SWE'])):
+    
     ## epidemiological
     data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()
     data_post_calibration = data_epi.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()
     # data
-    ax[0].scatter(data_calibration.index, data_calibration,
-                    edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.6)
-    ax[0].scatter(data_post_calibration.index, data_post_calibration,
-                    edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
+    if country == 'BE':
+        alpha = 0.6
+    else:
+        alpha = 0.8
+    ax[0, i].scatter(data_calibration.index, data_calibration,
+                    edgecolors='black', facecolors='black', marker='o', s=10, alpha=alpha)
+    ax[0, i].scatter(data_post_calibration.index, data_post_calibration,
+                    edgecolors='red', facecolors='red', marker='o', s=10, alpha=alpha)
     # model: add observational noise
-    out_obs = add_negative_binomial_noise(out.Hin.to_dataset(), alpha=0.027)
+    df_2plot = output_to_visuals(out, ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=overdispersion_national, LL = confint/2, UL = 1 - confint/2)
     # model: visualise
-    ax[0].plot(out.date, out_obs.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1)
-    ax[0].fill_between(out_obs.date, out_obs.Hin.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=confint/2),
-                                    out_obs.Hin.sum(dim=['age_class','spatial_unit']).quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
+    ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1.5, alpha=0.6)
+    ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
     # axes properties
-    ax[0].set_xlim([start_calibration, end_visualisation_eco])
-    ax[0].set_ylim([0, 850])
-    ax[0].set_ylabel('Hospital incidence (-)')
+    ax[0, i].set_xlim([start_calibration, end_visualisation_eco])
+    ax[0, i].set_ylim([0, 850])
+    ax[0, i].yaxis.set_major_locator(MaxNLocator(6))
+    ax[0, i].set_ylabel('Hospital incidence (-)')
+    ax[0, i].set_title(titles[i])
 
     ## economic
     data_calibration = data_eco.loc[slice(start_calibration, end_calibration_eco)].groupby(by='date').sum()
     data_post_calibration = data_eco.loc[slice(end_calibration_eco+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()
     # data countries
     x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
-    ax[1].scatter(data_calibration.index, 100*data_calibration/x_0,
-                    edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.6)
-    ax[1].scatter(data_post_calibration.index, 100*data_post_calibration/x_0,
-                    edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
+    ax[1, i].scatter(data_calibration.index, 100*data_calibration/x_0,
+                    edgecolors='black', facecolors='black', marker='o', s=10, alpha=0.8)
+    ax[1, i].scatter(data_post_calibration.index, 100*data_post_calibration/x_0,
+                    edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
-    ax[1].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1)
-    ax[1].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
+    ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1.5)
+    ax[1, i].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
                                     100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
     # axes properties
-    ax[1].set_xlim([start_calibration, end_visualisation_eco])
-    #ax[1].set_ylim([60, 105])
-    ax[1].set_ylabel('Productivity loss (%)')
+    ax[1, i].set_xlim([start_calibration, end_visualisation_eco])
+    ax[1, i].set_ylim([60, 102])
+    #ax[1, i].yaxis.set_major_locator(MaxNLocator(6))
+    ax[1, i].set_ylabel('Productivity loss (%)')
 
-    plt.savefig(
-        f'calibration_epinomic_national_{country}.png', dpi=400)
-    # plt.show()
-    plt.close()
+    # set maximum number of labels  
+    #ax[1,i].xaxis.set_major_locator(MaxNLocator(6))
+    # rotate labels
+    for tick in ax[1,i].get_xticklabels():
+        tick.set_rotation(30)
+
+plt.savefig(
+    f'calibration_epinomic_national.png', dpi=400)
+# plt.show()
+plt.close()
 
 ###########################################
 ## visualise calibration (epi + spatial) ##
 ###########################################
 
-aggregation_functions = [aggregate_Brussels_Brabant_Dataset, dummy_aggregation]
+aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation]
 countries = ['BE', 'SWE']
 
 # visualisation
-for output, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], countries, aggregation_functions):
-
-    # add observational noise
-    out_obs = add_negative_binomial_noise(output.Hin.to_dataset(), alpha=0.027)
-    out_nat_obs = add_negative_binomial_noise(
-        output.sum(dim='spatial_unit').Hin.to_dataset(), alpha=0.027)
+for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], countries, aggregation_functions):
 
     # aggregate model
-    out_obs = aggfunc(out_obs)
+    out = aggfunc(out.Hin)
 
-    # slice hospitalisation states
-    out_obs = out_obs.Hin
-    out_nat_obs = out_nat_obs.Hin
-
+    # get dates calibration
     dates_calibration = data.loc[slice(start_calibration, end_calibration_epi), slice(
         None)].index.get_level_values('date').unique()
     dates_post_calibration = data.loc[slice(end_calibration_epi+timedelta(
@@ -187,10 +359,10 @@ for output, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], 
                     ax.scatter(dates_post_calibration, data.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi), spatial_units[j+counter]],
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
-                    ax.plot(out_obs.date, out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(
+                    ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
                         dim='age_class').mean(dim='draws'), color='blue', linewidth=1)
-                    ax.fill_between(out_obs.date, out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(dim='age_class').quantile(dim='draws', q=confint/2),
-                                    out_obs.sel(spatial_unit=spatial_units[j+counter]).sum(dim='age_class').quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
+                    df_2plot = output_to_visuals(out.sel(spatial_unit=spatial_units[j+counter]).to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=overdispersion_spatial, LL = confint/2, UL = 1 - confint/2)
+                    ax.fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
                     # shade VOCs and vaccines
                     ax.axvspan('2021-02-01', end_visualisation_epi,
                                color='black', alpha=0.1)
@@ -203,10 +375,10 @@ for output, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], 
                     ax.scatter(dates_post_calibration, data.groupby(by='date').sum().loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi)],
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
-                    ax.plot(out_nat_obs.date, out_nat_obs.sum(dim=['age_class']).mean(
+                    ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).mean(
                         dim='draws'), color='blue', linewidth=1)
-                    ax.fill_between(out_nat_obs.date, out_nat_obs.sum(dim=['age_class']).quantile(dim='draws', q=confint/2),
-                                    out_nat_obs.sum(dim=['age_class']).quantile(dim='draws', q=1-confint/2), color='blue', alpha=0.2)
+                    df_2plot = output_to_visuals(out.to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=overdispersion_national, LL = confint/2, UL = 1 - confint/2)
+                    ax.fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
                     # shade VOCs and vaccines + text
                     ax.axvspan('2021-02-01', end_visualisation_epi,
                                color='black', alpha=0.1)
