@@ -138,9 +138,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### SWE
 
-+ `AM04011G_20230706-132742.csv`: Unemployed persons aged 15-74 (LFS) in Sweden by month. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401L/
-
-+ `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
++ `am0401_2023m06_di_01_en_aku.xls`: Seasonally adjusted and smoothed monthly number of hours worked for Sweden. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/labour-market/labour-force-surveys/labour-force-surveys-lfs/pong/tables-and-graphs/seasonally-adjusted-data/time-series-on-the-number-of-hours-worked-persons-15-74-years/
 
 + `000000X3_20230817-103925.csv`: Seasonally adjusted monthly GDP data at constant prices (2011=100) for Sweden. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__NR__NR9999__NR9999A/NR9999ENS2010BNPIndN/table/tableViewLayout1/
 
@@ -222,7 +220,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 #### calibration_data
 
-+ `SWE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Sweden. National-level GDP obtained from `AM0401UL_20230706-133646.csv`, unemployment data obtained from `AM0401UL_20230706-133417.csv`. In the unemployment data, there is a clear "jump" in employment between 2019 and 2020 which cannot be attributed to the pandemic, likely something in the data collection process changed. Therefore, the months Jan, Feb and March 2020 were used to normalise the data until July 2021.
++ `SWE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Sweden. National-level GDP obtained from `am0401_2023m06_di_01_en_aku.xls`, unemployment data obtained from `am0401_2023m06_di_01_en_aku.xls`. 
 
 + `BE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Belgium. Copied from our COVID-19 project. Synthetic GDP is obtained from the statistics website of the Belgian National Bank (be.stat) while unemployment is proxied by the number of temporarily unemployed workers(survey by the ERMG).
 

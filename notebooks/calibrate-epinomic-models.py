@@ -69,7 +69,7 @@ states = ["Hin", "Hin", "x", "x"]
 log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian]
 aggregation_functions = [
     aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation]
-alpha = 0.027
+alpha = 0.036
 log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07],
                            [], 0.025, 0.025]
 
