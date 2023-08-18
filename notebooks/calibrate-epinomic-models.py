@@ -1,11 +1,12 @@
 from pySODM.optimization.mcmc import perturbate_theta, run_EnsembleSampler, emcee_sampler_to_dictionary
-from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial, ll_gaussian
+from pySODM.optimization.objective_functions import log_posterior_probability, ll_negative_binomial, ll_gaussian, ll_poisson
 from pySODM.optimization import pso, nelder_mead
 from pyIEEM.data.data import get_hospitalisation_incidence, get_economic_data
 from pyIEEM.models.utils import initialize_epinomic_model, aggregate_Brussels_Brabant_DataArray, dummy_aggregation
 from datetime import date
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import sys
 import os
@@ -26,7 +27,7 @@ start_calibration = '2020-03-01'
 end_calibration_epi = '2021-02-01'
 end_calibration_eco = '2020-11-01'
 processes = 18
-max_iter = 200
+max_iter = 100
 multiplier_mcmc = 4
 n_mcmc = 50
 print_n = 5
@@ -65,12 +66,12 @@ datasets = [data_epi_BE, data_epi_SWE, data_eco_BE, data_eco_SWE]
 dt_epi = [data_epi_BE, data_epi_SWE]
 dt_eco = [data_eco_BE, data_eco_SWE]
 states = ["Hin", "Hin", "x", "x"]
-log_likelihood_fnc = [ll_negative_binomial, ll_negative_binomial, ll_gaussian, ll_gaussian]
+log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian]
 aggregation_functions = [
     aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation]
 alpha = 0.027
-log_likelihood_fnc_args = [len(data_epi_BE.index.get_level_values('spatial_unit').unique())*[alpha,],
-                           len(data_epi_SWE.index.get_level_values('spatial_unit').unique())*[alpha,], 0.02, 0.02]
+log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07],
+                           [], 0.025, 0.025]
 
 pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
 bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
