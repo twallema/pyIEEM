@@ -303,7 +303,7 @@ def get_eco_params(country, prodfunc):
     ## Hardcoded model parameters
     parameters.update({'delta_S': 0.75,                                                                                                                                                   
                        'eta': 14,                                                                                                 
-                       'iota_H': 7,
+                       'iota_H': 14,
                        'iota_F': 7,
                        'prodfunc': prodfunc,
                       })  
