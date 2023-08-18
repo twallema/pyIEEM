@@ -551,7 +551,7 @@ class make_other_demand_shock_function():
         #########################
 
         # key dates
-        t_start_max_shock = datetime(2020, 3, 14)
+        t_start_max_shock = datetime(2020, 3, 1)
         t_end_max_shock = datetime(2020, 5, 1)
         t_end_investment_shock = t_end_goods_shocks = datetime(2020, 7, 1) # End of Q2
         t_end_services_shock = datetime(2021, 7, 1)
