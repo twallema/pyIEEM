@@ -51,8 +51,10 @@ data_epi_BE = get_hospitalisation_incidence('BE', aggregate_bxl_brabant=True).lo
 data_epi_SWE = get_hospitalisation_incidence('SWE').loc[slice(start_calibration, end_calibration_epi)]
 
 # load economic data BE and SWE
-data_eco_BE = get_economic_data('GDP', 'BE').loc[slice(start_calibration, end_calibration_eco)]
-data_eco_SWE = get_economic_data('GDP', 'SWE').loc[slice(start_calibration, end_calibration_eco)]
+data_BE_eco_GDP = get_economic_data('GDP', 'BE', relative=False).loc[slice(start_calibration, end_calibration_eco)]
+data_SWE_eco_GDP = get_economic_data('GDP', 'SWE', relative=False).loc[slice(start_calibration, end_calibration_eco)]
+data_BE_eco_employment = get_economic_data('employment', 'BE', relative=False)
+data_SWE_eco_employment = get_economic_data('employment', 'SWE', relative=False)
 
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
@@ -61,22 +63,22 @@ model_BE = initialize_epinomic_model('BE', age_classes, True, start_calibration,
 model_SWE = initialize_epinomic_model('SWE', age_classes, True, start_calibration, prodfunc='half_critical')
 
 # set up log likelihood function
-models = [model_BE, model_SWE, model_BE, model_SWE]
-datasets = [data_epi_BE, data_epi_SWE, data_eco_BE, data_eco_SWE]
+models = [model_BE, model_SWE, model_BE, model_SWE, model_BE, model_SWE]
+datasets = [data_epi_BE, data_epi_SWE, data_BE_eco_GDP, data_SWE_eco_GDP, data_BE_eco_employment, data_SWE_eco_employment]
 dt_epi = [data_epi_BE, data_epi_SWE]
-dt_eco = [data_eco_BE, data_eco_SWE]
-states = ["Hin", "Hin", "x", "x"]
-log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian]
-aggregation_functions = [
-    aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation]
+dt_eco = [data_BE_eco_GDP, data_SWE_eco_GDP]
+states = ["Hin", "Hin", "x", "x", "l", "l"]
+log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian, ll_gaussian, ll_gaussian]
+aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation]
 alpha = 0.036
 log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07],
-                           [], 0.025, 0.025]
+                           [],
+                           0.02, 0.02, 0.02, 0.02]
 
 pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
 bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
 labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$']
-weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_eco_BE), 1/len(data_eco_SWE)]
+weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_BE_eco_GDP), 1/len(data_SWE_eco_GDP), 1/len(data_BE_eco_employment), 1/len(data_SWE_eco_employment)]
 objective_function = log_posterior_probability(models, pars, bounds, datasets, states, log_likelihood_fnc, log_likelihood_fnc_args,
                                                start_sim=start_calibration, aggregation_function=aggregation_functions, labels=labels)
 
