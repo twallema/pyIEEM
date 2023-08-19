@@ -60,7 +60,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     seasonality_function = make_seasonality_function()
     
     if country == 'SWE':
-        parameters.update({'amplitude': 0.20, 'peak_shift': 7})
+        parameters.update({'amplitude': 0.20, 'peak_shift': 14})
     else: 
         parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
 
