@@ -63,16 +63,16 @@ model_BE = initialize_epinomic_model('BE', age_classes, True, start_calibration,
 model_SWE = initialize_epinomic_model('SWE', age_classes, True, start_calibration, prodfunc='half_critical')
 
 # set up log likelihood function
-models = [model_BE, model_SWE, model_BE, model_SWE] #, model_BE, model_SWE]
-datasets = [data_epi_BE, data_epi_SWE, data_BE_eco_GDP, data_SWE_eco_GDP] #, data_BE_eco_employment, data_SWE_eco_employment]
+models = [model_BE, model_SWE, model_BE, model_SWE, model_BE, model_SWE]
+datasets = [data_epi_BE, data_epi_SWE, data_BE_eco_GDP, data_SWE_eco_GDP, data_BE_eco_employment, data_SWE_eco_employment]
 dt_epi = [data_epi_BE, data_epi_SWE]
 dt_eco = [data_BE_eco_GDP, data_SWE_eco_GDP]
-states = ["Hin", "Hin", "x", "x"] #, "l", "l"]
-log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian] #, ll_gaussian, ll_gaussian]
-aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation,]#  dummy_aggregation, dummy_aggregation]
+states = ["Hin", "Hin", "x", "x", "l", "l"]
+log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian, ll_gaussian, ll_gaussian]
+aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation]
 alpha = 0.036 # national overdispersion BE
-log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07], [], 0.02, 0.02] #, 0.02, 0.02]
-weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_BE_eco_GDP), 1/len(data_SWE_eco_GDP)] #, 1/len(data_BE_eco_employment), 1/len(data_SWE_eco_employment)]
+log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07], [], 0.02, 0.02, 0.02, 0.02]
+weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_BE_eco_GDP), 1/len(data_SWE_eco_GDP), 1/len(data_BE_eco_employment), 1/len(data_SWE_eco_employment)]
 
 # parameter properties
 pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
@@ -80,6 +80,7 @@ bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
 labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$']
 # reguralised prior probabilities (this does require some feeling)
 # all prior probabilities parameters were set so that a score of roughly -250 (on a total of -16000) is added to the posterior probability when the parameter leaves the range I would expect them to fall in
+# this will have to be balanced by trial-and-error
 log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2]
 mu_list = theta = [22, 0.45, 0.07, 0.025, 0.06] # where do I expect the parameters to be?
 sigma_list = [1, 0.03, 0.005, 0.0025, 0.005] # How much noise do I expect there to be on the parameter value?
@@ -104,83 +105,81 @@ if __name__ == '__main__':
     #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # visualisation epi data
-    for i, country in enumerate(['BE', 'SWE']):
+    # for i, country in enumerate(['BE', 'SWE']):
 
-        # set right model and data
-        model = models[i]
-        data = dt_epi[i]
+    #     # set right model and data
+    #     model = models[i]
+    #     data = dt_epi[i]
 
-        # set optimal parameters
-        for k, par in enumerate(pars):
-            model.parameters.update({par: theta[k]})
+    #     # set optimal parameters
+    #     for k, par in enumerate(pars):
+    #         model.parameters.update({par: theta[k]})
 
-        # simulate model
-        out = model.sim([start_calibration, end_calibration_epi])
+    #     # simulate model
+    #     out = model.sim([start_calibration, end_calibration_epi])
 
-        # visualise eco
-        fig,ax=plt.subplots()
-        ax.scatter(dt_eco[i].index.get_level_values('date').unique(), dt_eco[i],
-                    edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-        ax.plot(out.date, out.x.sum(dim='NACE64'), color='red')
-        plt.savefig(
-                f'epinomic_eco_{country}.png', dpi=600)
-        #plt.show()
-        plt.close()
+    #     # visualise eco
+    #     fig,ax=plt.subplots()
+    #     ax.scatter(dt_eco[i].index.get_level_values('date').unique(), dt_eco[i],
+    #                 edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+    #     ax.plot(out.date, out.x.sum(dim='NACE64'), color='red')
+    #     plt.savefig(
+    #             f'epinomic_eco_{country}.png', dpi=600)
+    #     #plt.show()
+    #     plt.close()
 
-        # aggregate model
-        out = aggregation_functions[i](out.Hin)
+    #     # aggregate model
+    #     out = aggregation_functions[i](out.Hin)
 
-        # visualise epi
-        dates = data.index.get_level_values('date').unique()
-        spatial_units = data.index.get_level_values('spatial_unit').unique()
-        n_figs = 0
-        counter = 0
-        while counter <= len(spatial_units):
-            fig, axes = plt.subplots(
-                nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
-            axes = axes.flatten()
-            for j, ax in enumerate(axes):
-                if j+counter <= len(spatial_units):
-                    if j + counter < len(spatial_units):
-                        # plot data
-                        ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
-                                   edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-                        # plot model prediction
-                        ax.plot(out.date, out.sum(dim='age_class').sel(
-                            spatial_unit=spatial_units[j+counter]), color='red')
-                        # set title
-                        ax.set_title(spatial_units[j+counter])
-                    else:
-                        # plot data
-                        ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
-                            None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-                        # plot model prediction
-                        ax.plot(out.date, out.sum(
-                            dim=['age_class', 'spatial_unit']), color='red')
-                        # set title
-                        ax.set_title(country)
-                    # set maximum number of labels
-                    ax.xaxis.set_major_locator(MaxNLocator(5))
-                    # rotate labels
-                    for tick in ax.get_xticklabels():
-                        tick.set_rotation(60)
-                else:
-                    fig.delaxes(ax)
-            n_figs += 1
-            counter += nrows*ncols
-            plt.savefig(
-                f'epinomic_epi_{country}_part_{n_figs}.png', dpi=600)
-            #plt.show()
-            plt.close()
-
-    sys.exit()
+    #     # visualise epi
+    #     dates = data.index.get_level_values('date').unique()
+    #     spatial_units = data.index.get_level_values('spatial_unit').unique()
+    #     n_figs = 0
+    #     counter = 0
+    #     while counter <= len(spatial_units):
+    #         fig, axes = plt.subplots(
+    #             nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
+    #         axes = axes.flatten()
+    #         for j, ax in enumerate(axes):
+    #             if j+counter <= len(spatial_units):
+    #                 if j + counter < len(spatial_units):
+    #                     # plot data
+    #                     ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
+    #                                edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+    #                     # plot model prediction
+    #                     ax.plot(out.date, out.sum(dim='age_class').sel(
+    #                         spatial_unit=spatial_units[j+counter]), color='red')
+    #                     # set title
+    #                     ax.set_title(spatial_units[j+counter])
+    #                 else:
+    #                     # plot data
+    #                     ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
+    #                         None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+    #                     # plot model prediction
+    #                     ax.plot(out.date, out.sum(
+    #                         dim=['age_class', 'spatial_unit']), color='red')
+    #                     # set title
+    #                     ax.set_title(country)
+    #                 # set maximum number of labels
+    #                 ax.xaxis.set_major_locator(MaxNLocator(5))
+    #                 # rotate labels
+    #                 for tick in ax.get_xticklabels():
+    #                     tick.set_rotation(60)
+    #             else:
+    #                 fig.delaxes(ax)
+    #         n_figs += 1
+    #         counter += nrows*ncols
+    #         plt.savefig(
+    #             f'epinomic_epi_{country}_part_{n_figs}.png', dpi=600)
+    #         #plt.show()
+    #         plt.close()
 
     ##########
     ## MCMC ##
     ##########
 
     ndim, nwalkers, pos = perturbate_theta(theta, len(
-        pars)*[0.02,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
+        pars)*[0.10,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
 
     # Write settings to a .txt
     settings = {'start_calibration': start_calibration, 'end_calibration_epi': end_calibration_epi, 'end_calibration_eco': end_calibration_eco, 'n_chains': nwalkers,
