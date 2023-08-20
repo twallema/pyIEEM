@@ -30,8 +30,8 @@ args = parser.parse_args()
 ##########################
 
 # simulation
-N = 2
-processes = 1
+N = 12
+processes = 6
 # visualisation (epi only + spatial)
 n_draws_per_sample = 200
 overdispersion_spatial = 0.047
@@ -211,18 +211,21 @@ data_SWE_eco_GDP = get_economic_data('GDP', 'SWE', relative=True)
 data_SWE_eco_employment = get_economic_data('employment', 'SWE', relative=True)
 
 # load samples dictionary
-# samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
-# start_calibration = datetime.strptime(
-#     samples_dict['start_calibration'], '%Y-%m-%d')
-# end_calibration_epi = datetime.strptime(
-#     samples_dict['end_calibration_epi'], '%Y-%m-%d')
-# end_calibration_eco = datetime.strptime(
-#     samples_dict['end_calibration_eco'], '%Y-%m-%d')    
+samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
+start_calibration = datetime.strptime(
+    samples_dict['start_calibration'], '%Y-%m-%d')
+end_calibration_epi = datetime.strptime(
+    samples_dict['end_calibration_epi'], '%Y-%m-%d')
+end_calibration_eco = datetime.strptime(
+    samples_dict['end_calibration_eco'], '%Y-%m-%d')    
 
-samples_dict={}
+# manually set the calibration startdate
 start_calibration = datetime(2020, 2, 14)
-end_calibration_epi = datetime(2021, 2, 1)
-end_calibration_eco = datetime(2020, 11, 1)
+
+# samples_dict={}
+# start_calibration = datetime(2020, 2, 14)
+# end_calibration_epi = datetime(2021, 2, 1)
+# end_calibration_eco = datetime(2020, 11, 1)
 
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
@@ -237,11 +240,11 @@ model_SWE = initialize_epinomic_model(
 ##########################
 
 def draw_function(param_dict, samples_dict):
-    # i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['nu'])))
-    # param_dict['xi_eff'] = samples_dict['xi_eff'][i]
-    # param_dict['pi_eff'] = samples_dict['pi_eff'][i]
-    # param_dict['pi_work'] = samples_dict['pi_work'][i]
-    # param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
+    i, param_dict['nu'] = random.choice(list(enumerate(samples_dict['nu'])))
+    param_dict['xi_eff'] = samples_dict['xi_eff'][i]
+    param_dict['pi_eff'] = samples_dict['pi_eff'][i]
+    param_dict['pi_work'] = samples_dict['pi_work'][i]
+    param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
     return param_dict
 
 #####################
@@ -250,11 +253,11 @@ def draw_function(param_dict, samples_dict):
 
 outputs = []
 for model in [model_BE, model_SWE]:
-    # use calibrated parameters
-    pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
-    thetas = [21, 0.45, 0.075, 0.03, 0.10]
-    for par,theta in zip(pars,thetas):
-        model.parameters.update({par: theta})
+    # # use calibrated parameters
+    # pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
+    # thetas = [21, 0.45, 0.075, 0.03, 0.10]
+    # for par,theta in zip(pars,thetas):
+    #     model.parameters.update({par: theta})
     # simulate
     outputs.append(model.sim([start_calibration, end_simulation], N=N,
                    processes=processes, draw_function=draw_function, samples=samples_dict))
@@ -275,16 +278,20 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country) in enumerate(
     # data
     if country == 'BE':
         alpha = 0.6
+        over = overdispersion_national
     else:
         alpha = 0.8
+        over = 1e-3
     ax[0, i].scatter(data_calibration.index, data_calibration,
                     edgecolors='black', facecolors='black', marker='o', s=10, alpha=alpha)
     ax[0, i].scatter(data_post_calibration.index, data_post_calibration,
                     edgecolors='red', facecolors='red', marker='o', s=10, alpha=alpha)
     # model: add observational noise
-    df_2plot = output_to_visuals(out, ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=overdispersion_national, LL = confint/2, UL = 1 - confint/2)
+    df_2plot = output_to_visuals(out, ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=over, LL = confint/2, UL = 1 - confint/2)
     # model: visualise
-    ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1.5, alpha=0.6)
+    for k in range(N):
+        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k), color='blue', linewidth=1.5, alpha=0.1)
+    # ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1.5, alpha=0.6)
     ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
     # axes properties
     ax[0, i].set_xlim([start_calibration, end_visualisation_eco])
@@ -303,7 +310,10 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country) in enumerate(
                     edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
     x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
-    ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1.5)
+    #ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1.5)
+    for k in range(N):
+        ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').isel(draws=k)/x_0,  color='blue', linewidth=1.5, alpha=0.1)
+
     ax[1, i].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
                                     100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
     # axes properties
@@ -320,7 +330,9 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country) in enumerate(
                     edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
     l_0 = out.l.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
-    ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').mean(dim='draws')/l_0,  color='blue', linewidth=1.5)
+    #ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').mean(dim='draws')/l_0,  color='blue', linewidth=1.5)
+    for k in range(N):
+        ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').isel(draws=k)/l_0,  color='blue', linewidth=1.5, alpha=0.1)
     ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
                                     100*out.l.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/l_0, color='blue', alpha=0.2)
     # axes properties
@@ -376,9 +388,16 @@ for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], cou
                     ax.scatter(dates_post_calibration, data.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi), spatial_units[j+counter]],
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
-                    ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
-                        dim='age_class').mean(dim='draws'), color='blue', linewidth=1)
-                    df_2plot = output_to_visuals(out.sel(spatial_unit=spatial_units[j+counter]).to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=overdispersion_spatial, LL = confint/2, UL = 1 - confint/2)
+                    for k in range(N):
+                        ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
+                        dim='age_class').isel(draws=k), color='blue', linewidth=1.5, alpha=0.1)
+                    #ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
+                    #    dim='age_class').mean(dim='draws'), color='blue', linewidth=1)
+                    if country == 'BE':
+                        ov = overdispersion_spatial
+                    else:
+                        ov = 1e-3
+                    df_2plot = output_to_visuals(out.sel(spatial_unit=spatial_units[j+counter]).to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=ov, LL = confint/2, UL = 1 - confint/2)
                     ax.fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
                     # shade VOCs and vaccines
                     ax.axvspan('2021-02-01', end_visualisation_epi,
@@ -392,9 +411,16 @@ for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], cou
                     ax.scatter(dates_post_calibration, data.groupby(by='date').sum().loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi)],
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
-                    ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).mean(
-                        dim='draws'), color='blue', linewidth=1)
-                    df_2plot = output_to_visuals(out.to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=overdispersion_national, LL = confint/2, UL = 1 - confint/2)
+                    for k in range(N):
+                        ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).sel(
+                        draws=k), color='blue', linewidth=1.5, alpha=0.1)
+                    #ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).mean(
+                    #    dim='draws'), color='blue', linewidth=1)
+                    if country == 'BE':
+                        ov = overdispersion_national
+                    else:
+                        ov = 1e-3
+                    df_2plot = output_to_visuals(out.to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=ov, LL = confint/2, UL = 1 - confint/2)
                     ax.fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
                     # shade VOCs and vaccines + text
                     ax.axvspan('2021-02-01', end_visualisation_epi,
