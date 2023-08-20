@@ -33,7 +33,7 @@ n_mcmc = 100
 print_n = 5
 
 # paths
-identifier = 'use_national_epi_data'
+identifier = 'calibration_expanded'
 run_date = str(date.today())
 fig_path = f''
 samples_path = f''
@@ -75,16 +75,19 @@ log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03,
 weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_BE_eco_GDP), 1/len(data_SWE_eco_GDP), 1/len(data_BE_eco_employment), 1/len(data_SWE_eco_employment)]
 
 # parameter properties
-pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
-bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
-labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$']
+pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'mu', 'amplitude_BE', 'peak_shift_BE', 'amplitude_SWE', 'peak_shift_SWE']
+bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100), (0,2), (0,0.40), (-31,31), (0,0.40), (-31,31))
+labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$', r'$\mu$', r'$A_{BE}$',  r'$\Delta A_{BE}$', r'$A_{SWE}$',  r'$\Delta A_{SWE}$']
 # reguralised prior probabilities (this does require some feeling)
 # all prior probabilities parameters were set so that a score of roughly -250 (on a total of -16000) is added to the posterior probability when the parameter leaves the range I would expect them to fall in
 # this will have to be balanced by trial-and-error
-log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2]
-mu_list = theta = [22, 0.45, 0.07, 0.025, 0.06] # where do I expect the parameters to be?
-sigma_list = [1, 0.03, 0.005, 0.0025, 0.005] # How much noise do I expect there to be on the parameter value?
-l_list = [10, 15, 30, 30, 20] # How strong are my beliefs?
+log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2,
+                        log_prior_normal_L2, log_prior_normal_L2]
+
+theta = [22, 0.45, 0.07, 0.025, 0.06, 1, 0.20, -14, 0.20, 14] # where are my parameters?  
+mu_list = [22, 0.45, 0.07, 0.025, 0.06, 1, 0.20, 0, 0.20, 0] # where do I expect the parameters to be?
+sigma_list = [1, 0.03, 0.005, 0.0025, 0.005, 0.1, 0.02, 7, 0.03, 7] # How much noise do I expect there to be on the parameter value?
+l_list = [8, 10, 20, 20, 15, 10, 20, 12, 20, 12] # How strong are my beliefs?
 log_prior_prob_fnc_args=[]
 for mu,sigma,l in zip(mu_list,sigma_list, l_list):
     log_prior_prob_fnc_args += [(mu, sigma, l),]
@@ -179,7 +182,7 @@ if __name__ == '__main__':
     ##########
 
     ndim, nwalkers, pos = perturbate_theta(theta, len(
-        pars)*[0.10,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
+        pars)*[0.05,], multiplier=multiplier_mcmc, bounds=bounds, verbose=False)
 
     # Write settings to a .txt
     settings = {'start_calibration': start_calibration, 'end_calibration_epi': end_calibration_epi, 'end_calibration_eco': end_calibration_eco, 'n_chains': nwalkers,

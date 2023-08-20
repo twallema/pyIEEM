@@ -482,7 +482,12 @@ class make_seasonality_function():
     """
     Simple class to create functions that controls the season-dependent value of the transmission coefficients.
     """
-    def __call__(self, t, states, param, amplitude, peak_shift):
+
+    def __init__(self, country):
+        self.country = country
+        pass
+
+    def __call__(self, t, states, param, amplitude_BE, peak_shift_BE, amplitude_SWE, peak_shift_SWE):
         """
         Default output function. Returns the transmission coefficient beta multiplied with a sinusoid with average value 1.
         
@@ -493,6 +498,15 @@ class make_seasonality_function():
         peak_shift: float
             shift of maximum infectivity relative to Jan. 14th
         """
+
+        # select right amplitude and peak_shift
+        if self.country == 'BE':
+            amplitude = amplitude_BE
+            peak_shift = peak_shift_BE
+        else:
+            amplitude = amplitude_SWE
+            peak_shift = peak_shift_SWE
+
         maxdate = datetime(2021, 1, 14) + timedelta(days=peak_shift)
         # One period is one year long (seasonality)
         t = (t - maxdate)/timedelta(days=1)/365
