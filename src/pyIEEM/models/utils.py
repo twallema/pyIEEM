@@ -57,12 +57,14 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # =====================================
 
     from pyIEEM.models.TDPF import make_seasonality_function
-    seasonality_function = make_seasonality_function()
-    
-    if country == 'SWE':
-        parameters.update({'amplitude': 0.20, 'peak_shift': 14})
-    else: 
-        parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
+    seasonality_function = make_seasonality_function(country)
+
+    parameters.update({'amplitude_BE': 0.20, 'peak_shift_BE': -14, 'amplitude_SWE': 0.20, 'peak_shift_SWE': 14}) 
+
+    # if country == 'SWE':
+    #     parameters.update({'amplitude': 0.20, 'peak_shift': 14})
+    # else: 
+    #     parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
 
     # construct labor supply shock TDPF (economic)
     # ============================================
