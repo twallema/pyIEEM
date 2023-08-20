@@ -29,11 +29,11 @@ end_calibration_eco = '2020-11-01'
 processes = 18
 max_iter = 100
 multiplier_mcmc = 4
-n_mcmc = 50
+n_mcmc = 100
 print_n = 5
 
 # paths
-identifier = 'enddate_20210201'
+identifier = 'use_national_epi_data'
 run_date = str(date.today())
 fig_path = f''
 samples_path = f''
@@ -64,16 +64,15 @@ model_SWE = initialize_epinomic_model('SWE', age_classes, True, start_calibratio
 
 # set up log likelihood function
 models = [model_BE, model_SWE, model_BE, model_SWE, model_BE, model_SWE]
-datasets = [data_epi_BE, data_epi_SWE, data_BE_eco_GDP, data_SWE_eco_GDP, data_BE_eco_employment, data_SWE_eco_employment]
+datasets = [data_epi_BE.groupby(by='date').sum(), data_epi_SWE.groupby(by='date').sum(), data_BE_eco_GDP, data_SWE_eco_GDP, data_BE_eco_employment, data_SWE_eco_employment]
 dt_epi = [data_epi_BE, data_epi_SWE]
 dt_eco = [data_BE_eco_GDP, data_SWE_eco_GDP]
 states = ["Hin", "Hin", "x", "x", "l", "l"]
 log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian, ll_gaussian, ll_gaussian]
 aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation]
-alpha = 0.036
-log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07],
-                           [],
-                           0.02, 0.02, 0.02, 0.02]
+alpha = 0.036 # national overdispersion BE
+log_likelihood_fnc_args = [0.036, [], 0.02, 0.02, 0.02, 0.02]
+#[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03, 0.07],
 
 pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
 bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100))
