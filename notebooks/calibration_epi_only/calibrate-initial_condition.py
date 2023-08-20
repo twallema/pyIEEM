@@ -16,7 +16,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # settings calibration
 start_calibration = '2020-02-01'
 processes = 18
-max_iter = 80
+max_iter = 200
 
 # settings visualisation
 nrows = 3
@@ -69,7 +69,7 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 ## Calibration ##
 #################
 
-for country in ['SWE', 'BE']:
+for country in ['BE', 'SWE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
@@ -78,7 +78,7 @@ for country in ['SWE', 'BE']:
     if country == 'SWE':
         end_calibration = '2020-05-16'
     else:
-        end_calibration = '2020-03-31'
+        end_calibration = '2020-04-02'
     data = data.loc[slice(start_calibration, end_calibration)]
 
     # setup model
@@ -97,7 +97,7 @@ for country in ['SWE', 'BE']:
     
     # set a good parameter estimate
     pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
-    theta = [24, 0.45, 0.075, 0.03, 0.10]
+    theta = [22, 0.45, 0.07, 0.025, 0.06]
     for par,t in zip(pars,theta):
         model.parameters.update({par: t})
 
@@ -109,12 +109,14 @@ for country in ['SWE', 'BE']:
         # data is quite consistent with one infected in Stockholm --> start NM from here
         theta = 0.22*np.array([0, 0, 0.02, 0, 0, 0, 0, 0, 0, 0, 0.03, 0.12, 0.01, 0.15, 1, 0.05, 0, 0, 0, 0, 0.02]) + 1e-9
     else:
-        theta = 0.16*np.array([0.75, 0, 0, 3.25, 1.75, 2.00, 0.25, 0, 1.50, 0.25, 0.50]) + 1e-9 # "best" fit
-        #theta = 0.13*np.array([0, 0, 0, 5, 0.75, 1.5, 0, 0, 0, 0, 0]) # Tongeren, Hasselt and Mons first outbreak arrondissements
+        theta = 0.16*np.array([0.85, 0, 0, 3.25, 1.75, 2.50, 0.25, 0, 1.50, 0.25, 0.50]) + 1e-9 # "best" fit
+        theta = [1.60090552e-01, 7.52869047e-10, 1.50237870e-09, 4.69319925e-01,
+                    3.00200083e-01, 3.00129689e-01, 6.00489179e-02, 2.00130982e-09,
+                    2.55561357e-01, 4.91375446e-05, 9.30272369e-02]
 
     # nelder-mead minimization
-    theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
-                                 args=(data, model, start_calibration, end_calibration), processes=processes, max_iter=max_iter)[0]
+    #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
+    #                             args=(data, model, start_calibration, end_calibration), processes=processes, max_iter=max_iter)[0]
 
     # set found initial condition
     model.initial_states['E'] = update_initial_condition(
