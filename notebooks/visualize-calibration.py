@@ -245,6 +245,11 @@ def draw_function(param_dict, samples_dict):
     param_dict['pi_eff'] = samples_dict['pi_eff'][i]
     param_dict['pi_work'] = samples_dict['pi_work'][i]
     param_dict['pi_leisure'] = samples_dict['pi_leisure'][i]
+    param_dict['mu'] = samples_dict['mu'][i]
+    param_dict['amplitude_BE'] = samples_dict['amplitude_BE'][i]
+    param_dict['amplitude_SWE'] = samples_dict['amplitude_SWE'][i]
+    param_dict['peak_shift_BE'] = samples_dict['peak_shift_BE'][i]
+    param_dict['peak_shift_SWE'] = samples_dict['peak_shift_SWE'][i]
     return param_dict
 
 #####################
