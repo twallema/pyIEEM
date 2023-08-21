@@ -123,7 +123,7 @@ class make_social_contact_function():
             type_day = 'average'
 
         # easter holiday increases the contacts at home slightly, which makes the model deviate slightly above the observed trajectory
-        # this clearly deviates from the truth in BE
+        # this clearly deviates from the truth in BE (Easter fell during the lockdown)
         if ((t.year==2020) & (t.month == 4)):
             vacation = False
 
@@ -347,7 +347,7 @@ class make_social_contact_function():
                     'other': ramp_fun(t, t_BE_plateau, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_plateau, l, policy_old['work'], policy_new['work'])}
 
-    def get_contacts_SWE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_contacts_SWE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -374,8 +374,8 @@ class make_social_contact_function():
         pi: int/float
             steepness parameter of the Gompertz behavioral model
         
-        economy_SWE_ban_gatherings: pd.Series
-            ban on large gatherings (NACE 64 classification). 0: open. 1: closed.
+        economy_SWE: pd.Series
+            closure of schools for upper secundary and higher education
 
         output
         ======
@@ -419,25 +419,18 @@ class make_social_contact_function():
         ## policies ##
         ##############
 
-        # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
-        t_ban_gatherings_1 = datetime(2020, 3, 10)
-        t_ban_gatherings_2 = datetime(2020, 11, 24)
-
-        if t < t_ban_gatherings_1:
-            return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-        elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
+        t_start = datetime(2020, 3, 10)
+        t_end = datetime(2021, 9, 1)
+ 
+        if t_start <= t < t_end:
             policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_1)
-            return {'home': ramp_fun(t, t_ban_gatherings_1, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_ban_gatherings_1, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_ban_gatherings_1, l, policy_old['work'], policy_new['work'])}
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE)
+            return {'home': ramp_fun(t, t_start, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_start, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_start, l, policy_old['work'], policy_new['work'])}
         else:
-            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_SWE_ban_gatherings_2)
-            return {'home': ramp_fun(t, t_ban_gatherings_2, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_ban_gatherings_2, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_ban_gatherings_2, l, policy_old['work'], policy_new['work'])}
-
+            return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
@@ -933,7 +926,7 @@ class make_labor_supply_shock_function():
         else:
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_plateau)
 
-    def get_economic_policy_SWE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_SWE_ban_gatherings_1, economy_SWE_ban_gatherings_2):
+    def get_economic_policy_SWE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_SWE):
         """
         Function returning the labor supply shock during the 2020 COVID-19 pandemic in Sweden
 
@@ -960,8 +953,8 @@ class make_labor_supply_shock_function():
         pi_work: int/float
             steepness parameter of the Gompertz behavioral model for work contacts
         
-        economy_SWE_ban_gatherings_1: pd.Series
-            closure of economic sectors (NACE 64 classification). 0: open. 1: closed.
+        economy_SWE: pd.Series
+            school closure in SWE
 
         output
         ======
@@ -1014,16 +1007,13 @@ class make_labor_supply_shock_function():
         ## government policies ##
         #########################
 
-        # key dates (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/)
-        t_ban_gatherings_1 = datetime(2020, 3, 10)
-        t_ban_gatherings_2 = datetime(2020, 11, 24)
+        t_start = datetime(2020, 3, 10)
+        t_end = datetime(2021, 9, 1)
 
-        if t < t_ban_gatherings_1:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
-        elif t_ban_gatherings_1 <= t < t_ban_gatherings_2:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_1)
+        if t_start <= t < t_end:
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE)
         else:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE_ban_gatherings_2)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
