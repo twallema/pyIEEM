@@ -219,14 +219,6 @@ end_calibration_epi = datetime.strptime(
 end_calibration_eco = datetime.strptime(
     samples_dict['end_calibration_eco'], '%Y-%m-%d')    
 
-# manually set the calibration startdate
-start_calibration = datetime(2020, 2, 14)
-
-# samples_dict={}
-# start_calibration = datetime(2020, 2, 14)
-# end_calibration_epi = datetime(2021, 2, 1)
-# end_calibration_eco = datetime(2020, 11, 1)
-
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
     35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
@@ -258,12 +250,6 @@ def draw_function(param_dict, samples_dict):
 
 outputs = []
 for model in [model_BE, model_SWE]:
-    # # use calibrated parameters
-    # pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
-    # thetas = [21, 0.45, 0.075, 0.03, 0.10]
-    # for par,theta in zip(pars,thetas):
-    #     model.parameters.update({par: theta})
-    # simulate
     outputs.append(model.sim([start_calibration, end_simulation], N=N,
                    processes=processes, draw_function=draw_function, samples=samples_dict))
 
