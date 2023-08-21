@@ -430,7 +430,101 @@ class make_social_contact_function():
                     'work': ramp_fun(t, t_start, l, policy_old['work'], policy_new['work'])}
         else:
             return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            
+
+    def get_contacts_BE_scenarios(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure,
+                                    scenario, t_start_lockdown, t_end_lockdown, l_release, L1, L2_schools, L2, L3_schools, L3, L4):
+        """
+        Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium, for scenario analysis
+        """
+
+        ############
+        ## memory ##
+        ############
+
+        # get total number of hospitalisations per spatial patch per 100 K inhabitants
+        I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
+
+        #######################
+        ## behavioral models ##
+        #######################
+        
+        # compute average perceived hospital load per spatial patch 
+        self.I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # leisure and general effectivity of contacts
+        M_eff = 1-gompertz(self.I_star_average, xi_eff, pi_eff)
+        # voluntary switch to telework or absenteism
+        M_work = 1-gompertz(self.I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        # reduction of leisure contacts
+        M_leisure = 1-gompertz(self.I_star_average, xi_leisure, pi_leisure)
+
+        ###############################
+        ## fraction employed workers ##
+        ###############################
+
+        f_employed = states['l']/np.squeeze(l_0)
+
+        ##############
+        ## policies ##
+        ##############
+
+        # choose right policy
+        if scenario == 'L1':
+            policy_1 = L1
+            policy_2 = L1
+            telework = True
+            social_restrictions = True
+        elif scenario == 'L2a':
+            policy_1 = L2
+            policy_2 = L2_schools
+            telework = True
+            social_restrictions = False
+        elif scenario == 'L2b':
+            policy_1 = L2
+            policy_2 = L2_schools
+            telework = True
+            social_restrictions = True
+        elif scenario == 'L3a':
+            policy_1 = L3
+            policy_2 = L3_schools
+            telework = True
+            social_restrictions = False
+        elif scenario == 'L3b':
+            policy_1 = L3
+            policy_2 = L3_schools
+            telework = True
+            social_restrictions = True
+        elif scenario == 'L4a':
+            policy_1 = L4
+            policy_2 = L4
+            telework = True
+            social_restrictions = False
+        elif scenario == 'L4b':
+            policy_1 = L4
+            policy_2 = L4
+            telework = False
+            social_restrictions = True
+
+        if t < t_start_lockdown:
+            return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+        elif t_start_lockdown <= t < t_start_lockdown + timedelta(days=14):
+            policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, policy_1)
+            return {'home': ramp_fun(t, t_start_lockdown, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_start_lockdown, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_start_lockdown, l, policy_old['work'], policy_new['work'])}
+        elif t_start_lockdown + timedelta(days=14) <= t < t_end_lockdown:
+            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, policy_2)
+        elif t > t_end_lockdown:
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, policy_2)
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            return {'home': ramp_fun(t, t_end_lockdown, l_release, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_end_lockdown, l_release, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_end_lockdown, l_release, policy_old['work'], policy_new['work'])}            
+
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
@@ -1014,6 +1108,91 @@ class make_labor_supply_shock_function():
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_SWE)
         else:
             return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+
+    def get_economic_policy_BE_scenarios(self, t, states, param, l, G, mu, nu, xi_work, pi_work,
+                                            scenario, t_start_lockdown, t_end_lockdown, l_release, L1, L2_schools, L2, L3_schools, L3, L4):
+        """
+        Function returning the labor supply shock during the 2020 COVID-19 pandemic in Belgium, for use in scenario analysis
+        """
+
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # voluntary switch to either telework or absenteism
+        M_work = gompertz(Ih_star_average, xi_work, (pi_work*self.hesitancy).values) # 63 x 11
+        # only accounts for absenteism above telework threshold
+        shock_absenteism = np.where(M_work < self.f_remote[:, np.newaxis], 0, M_work - self.f_remote[:, np.newaxis])
+
+        # volgens mij kan de berekening van M_work simpeler
+        # --> ipv rho_work te vermingvuldigen met self.hesitancy en te veronderstellen dat er pas een shock plaatsvind wanneer M_work onder 1-f_telework duikt kan je
+        # M_work reduceren tot een (11,) vector en veronderstellen dat de shock verdeeld wordt conform f_telework
+        # bvb. M_work = 0.5: f_telework = 0 --> shock = 0.5; f_telework = 0.5 --> shock = 0.25
+
+        ##############
+        ## sickness ##
+        ##############
+
+        # get fraction of symptomatic individuals in the active population (20-60 years old) per spatial patch
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state][4:12], axis=0)
+        # TODO: do a proper demographic conversion
+        Im = np.sum(states['Im'][4:12] + states['Ih'][4:12], axis=0)/T
+        # expand to 63 x 11 for convenience --> assumes sickness affects all sectors equally --> sickness will not play any noticable role in COVID-19 but this should be addressed at a later point
+        # Idea: normalized (around 1) amount of prepandemic social contact multiplied with M_work? --> ignores government policies
+        shock_sickness = np.tile(Im, (63, 1))
+
+        #########################
+        ## government policies ##
+        #########################
+
+        # choose right policy
+        if scenario == 'L1':
+            policy_1 = L1
+            policy_2 = L1
+        elif scenario == 'L2a':
+            policy_1 = L2
+            policy_2 = L2_schools
+        elif scenario == 'L2b':
+            policy_1 = L2
+            policy_2 = L2_schools
+        elif scenario == 'L3a':
+            policy_1 = L3
+            policy_2 = L3_schools
+        elif scenario == 'L3b':
+            policy_1 = L3
+            policy_2 = L3_schools
+        elif scenario == 'L4a':
+            policy_1 = L4
+            policy_2 = L4
+        elif scenario == 'L4b':
+            policy_1 = L4
+            policy_2 = L4
+
+        if t < t_start_lockdown:
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+        elif t_start_lockdown <= t < t_start_lockdown + timedelta(days=14):
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, policy_1)
+            return ramp_fun(t, t_start_lockdown, l, policy_old, policy_new)
+        elif t_start_lockdown + timedelta(days=14) <= t < t_end_lockdown:
+            return self.__call__(t, G, shock_absenteism, shock_sickness, policy_2)
+        elif t > t_end_lockdown:
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, policy_2)
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            return ramp_fun(t, t_end_lockdown, l_release, policy_old, policy_new)            
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
