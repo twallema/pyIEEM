@@ -218,6 +218,14 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ### eco
 
+#### policies
+
+`policies_SWE.csv`: Contains the closure of schools for upper secundary and higher education during the 2020 COVID-19 lockdown, approximated as schools remaining 80% open. An overview of policies can be found in: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/ 
+
+`policies_BE.csv`: Contains the many Belgian economic policies during the 2020 COVID-19 pandemic. Retrieved from: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8280466/ and https://www.sciencedirect.com/science/article/pii/S1755436521000542#appSB 
+
+`policies_BE_scenarios.csv`: Four scenarios for economic shutdown: L1: Complete economic lockdown. L2: Closure of all B2C activities (a: schools closed, b: schools open). L3: Closure of sectors I, R, S94 only (a: schools closed, b: schools open), L4: No economic lockdown.
+
 #### calibration_data
 
 + `SWE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Sweden. National-level GDP obtained from `am0401_2023m06_di_01_en_aku.xls`, unemployment data obtained from `am0401_2023m06_di_01_en_aku.xls`. 
