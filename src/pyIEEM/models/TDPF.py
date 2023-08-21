@@ -144,7 +144,7 @@ class make_social_contact_function():
         f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
     
         # winter holiday was elongated with one week
-        if ((datetime(2020, 11, 8) <= t <=datetime(2020, 11, 15)) & (self.country=='BE')):
+        if ((datetime(2020, 11, 8) <= t <= datetime(2020, 11, 15)) & (self.country=='BE')):
             f_school = 0
 
         # zero in forced `economic_closures` corresponds to full lockdown in Belgium
