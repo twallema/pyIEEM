@@ -550,6 +550,49 @@ class make_social_contact_function():
                     'other': ramp_fun(t, t_end_lockdown, l_release, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_end_lockdown, l_release, policy_old['work'], policy_new['work'])}            
 
+    def get_contacts_nopolicy(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure):
+        """
+        A social contact function without policies
+        """
+        ############
+        ## memory ##
+        ############
+
+        # get total number of hospitalisations per spatial patch per 100 K inhabitants
+        I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
+
+        #######################
+        ## behavioral models ##
+        #######################
+        
+        # compute average perceived hospital load per spatial patch 
+        I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        I_star_average *= self.IC_multiplier
+        # leisure and general effectivity of contacts
+        M_eff = 1-gompertz(I_star_average, xi_eff, pi_eff)
+        # voluntary switch to telework or absenteism
+        M_work = 1-gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        # reduction of leisure contacts
+        M_leisure = 1-gompertz(I_star_average, xi_leisure, pi_leisure)
+
+        ###############################
+        ## fraction employed workers ##
+        ###############################
+
+        f_employed = states['l']/np.squeeze(l_0)
+
+        #################
+        ## no policies ##
+        #################
+
+        return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+
+
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time
