@@ -506,7 +506,7 @@ class make_social_contact_function():
             policy_1 = L4
             policy_2 = L4
             telework = False
-            social_restrictions = True
+            social_restrictions = False
 
         if t < t_start_lockdown:
             return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
