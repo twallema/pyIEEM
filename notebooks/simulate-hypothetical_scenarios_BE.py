@@ -27,14 +27,16 @@ args = parser.parse_args()
 ## change settings here ##
 ##########################
 
-scenarios = ['L1', 'L4']
-t_start_lockdowns = [datetime(2020, 3, 15), datetime(2020, 3, 12)]
+scenarios = ['L1', 'L2a', 'L2b', 'L3a', 'L3b', 'L4a', 'L4b']
+t_start_lockdowns = [datetime(2020, 3, 15), datetime(2020, 3, 13)]
 l_economics = [7,]
 # simulation
-N = 2
-processes = 2
+N = 6
+processes = 6
 start_simulation = datetime(2020, 3, 1)
-end_simulation = datetime(2020, 5, 1)
+end_simulation = datetime(2020, 9, 1)
+states_epi = ['Hin', 'Ih']
+states_eco = ['x', 'l']
 # visualisation (epi only + spatial)
 n_draws_per_sample = 200
 overdispersion = 0.036
@@ -197,18 +199,11 @@ def add_negative_binomial(output_array, alpha, n_draws_per_sample=100, UL=0.05*0
 
 # load samples dictionary
 samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
-start_calibration = datetime.strptime(
-    samples_dict['start_calibration'], '%Y-%m-%d')
-end_calibration_epi = datetime.strptime(
-    samples_dict['end_calibration_epi'], '%Y-%m-%d')
-end_calibration_eco = datetime.strptime(
-    samples_dict['end_calibration_eco'], '%Y-%m-%d')    
 
 # load model BE and SWE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
     35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-model_BE = initialize_epinomic_model(
-    'BE', age_classes, True, start_calibration)
+model = initialize_epinomic_model('BE', age_classes, True, start_simulation, scenarios=True)
 
 ##########################
 ## define draw function ##
@@ -225,31 +220,52 @@ def draw_function(param_dict, samples_dict):
     param_dict['amplitude_SWE'] = samples_dict['amplitude_SWE'][i]
     param_dict['peak_shift_BE'] = samples_dict['peak_shift_BE'][i]
     param_dict['peak_shift_SWE'] = samples_dict['peak_shift_SWE'][i]
-    param_dict['iota_F'] = samples_dict['iota_F'][i]
-    param_dict['iota_H'] = samples_dict['iota_H'][i]
+    #param_dict['iota_F'] = samples_dict['iota_F'][i]
+    #param_dict['iota_H'] = samples_dict['iota_H'][i]
     return param_dict
 
 ########################
 ## simulate scenarios ##
 ########################
 
-# pre-allocate a pd.Dataframe for the simulation output
-
-scenarios = ['L1', 'L4']
-t_start_lockdowns = [datetime(2020, 3, 15), datetime(2020, 3, 12)]
-l_economics = [7,]
-
 # pre-made dataframe with desired formatting
-names = ['sector', 'type_day', 'vacation']
-sectors = d.reset_index()['sector'].unique()
-type_days = d.reset_index()['type_day'].unique()
-vacations = d.reset_index()['vacation'].unique()                  
-iterables = [sectors, type_days, vacations]
-ratios = pd.Series(index=pd.MultiIndex.from_product(iterables, names=names), name='ratio_contacts', dtype=float)                           
+index_names = ['scenario', 't_start_lockdown', 'date']    
+column_names = ['state', 'statistic']        
+index=pd.MultiIndex.from_product([scenarios, t_start_lockdowns, pd.date_range(start=start_simulation, end=end_simulation, freq='D')], names=index_names)
+columns=pd.MultiIndex.from_product([states_epi+states_eco, ['mean', 'median', 'lower', 'upper']], names=column_names)
+outputs = pd.DataFrame(0, index=index, columns=columns, dtype=float)                           
 
-
-# simulate
-out = model_BE.sim([start_simulation, end_simulation], N=N,
-                processes=processes, draw_function=draw_function, samples=samples_dict)
+# simulate model
+for scenario in scenarios:
+    model.parameters.update({'scenario': scenario})
+    print(f'working on scenario {scenario}')
+    for t_start_lockdown in t_start_lockdowns:
+        # set right scenario parameters
+        model.parameters.update({'t_start_lockdown': t_start_lockdown})
+        print(f'\tlockdown starts: {t_start_lockdown}')
+        # simulate model
+        simout = model.sim([start_simulation, end_simulation], N=N, processes=processes, draw_function=draw_function, samples=samples_dict)
+        # interpolate to required daterange
+        simout = simout.interp({'date': pd.date_range(start=start_simulation, end=end_simulation, freq='D')}, method="linear")
+        ## epidemiological states
+        # aggregate to national nevel
+        simout_epi = simout[states_epi].sum(dim=['age_class', 'spatial_unit'])
+        # add observational noise and compute statistics
+        simout_epi  = output_to_visuals(simout_epi, states_epi, n_draws_per_sample=n_draws_per_sample, alpha=overdispersion, LL = confint/2, UL = 1 - confint/2)
+        # add to dataset
+        outputs.loc[(scenario, t_start_lockdown, slice(None)), (states_epi, slice(None))] = simout_epi.values
+        ## economic states
+        # pre-allocate dataframe
+        columns=pd.MultiIndex.from_product([states_eco, ['mean', 'median', 'lower', 'upper']], names=column_names)
+        simout_eco = pd.DataFrame(0, index=pd.date_range(start=start_simulation, end=end_simulation, freq='D'), columns=columns, dtype=float)                           
+        # compute mean, median, lower and upper
+        for state_eco in states_eco:
+            simout_eco.loc[slice(None), (state_eco, 'mean')] = (simout[state_eco].sum(dim=['NACE64']).mean(dim='draws')/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+            simout_eco.loc[slice(None), (state_eco, 'median')] = (simout[state_eco].sum(dim=['NACE64']).median(dim='draws')/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+            simout_eco.loc[slice(None), (state_eco, 'lower')] = (simout[state_eco].sum(dim=['NACE64']).quantile(dim='draws', q=confint/2)/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+            simout_eco.loc[slice(None), (state_eco, 'upper')] = (simout[state_eco].sum(dim=['NACE64']).quantile(dim='draws', q=1-confint/2)/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+        # concatenate dataframes
+        outputs.loc[(scenario, t_start_lockdown, slice(None)), (states_eco, slice(None))] = simout_eco.values
 
 # save output
+outputs.to_csv('simulations_scenarios.csv')

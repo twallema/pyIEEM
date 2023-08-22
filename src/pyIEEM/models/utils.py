@@ -650,11 +650,13 @@ def get_social_contact_function_parameters(parameters, country, spatial, scenari
             parameters.update({'economy_SWE': np.expand_dims(policies_df['policy'].values, axis=1)})
     else:
         if country == 'BE':
+            # load economic policies
+            policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}_scenarios.csv'), index_col=[0], header=[0])
             parameters.update({'L1': np.expand_dims(policies_df['L1'].values, axis=1),
-                               'L2a': np.expand_dims(policies_df['L2a'].values, axis=1),
-                               'L2b': np.expand_dims(policies_df['L2b'].values, axis=1),
-                               'L3a': np.expand_dims(policies_df['L3a'].values, axis=1),
-                               'L3b': np.expand_dims(policies_df['L3b'].values, axis=1),
+                               'L2_schools': np.expand_dims(policies_df['L2_schools'].values, axis=1),
+                               'L2': np.expand_dims(policies_df['L2'].values, axis=1),
+                               'L3_schools': np.expand_dims(policies_df['L3_schools'].values, axis=1),
+                               'L3': np.expand_dims(policies_df['L3'].values, axis=1),
                                'L4': np.expand_dims(policies_df['L4'].values, axis=1),
                                't_start_lockdown': datetime(2020, 3, 15),
                                't_end_lockdown': datetime(2020, 5, 4),
