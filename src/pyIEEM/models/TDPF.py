@@ -12,12 +12,15 @@ abs_dir = os.path.dirname(__file__)
 
 class make_social_contact_function():
 
-    def __init__(self, age_classes, demography, contact_type, contact_df, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav_contacts, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
+    def __init__(self, IC_multiplier, age_classes, demography, contact_type, contact_df, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav_contacts, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
         """
         Time-dependent parameter function of social contacts
 
         input
         =====
+        
+        IC_multiplier: float
+            ratio IC beds BE / SWE
 
         age_classes: pd.IntervalIndex
             age classes of the epidemiological model
@@ -85,6 +88,12 @@ class make_social_contact_function():
 
         # Extract contact matrices and demographically convert to right age bins
         self.N_home, self.N_leisure_private, self.N_leisure_public, self.N_school, self.N_work = aggregate_simplify_contacts(contact_df, age_classes, demography, contact_type)
+        
+        # set IC multiplier
+        if country == 'BE':
+            self.IC_multiplier = IC_multiplier
+        else:
+            self.IC_multiplier = 1
 
         # Assign to variables
         self.age_classes = age_classes
@@ -263,13 +272,15 @@ class make_social_contact_function():
         #######################
         
         # compute average perceived hospital load per spatial patch 
-        self.I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        I_star_average *= self.IC_multiplier
         # leisure and general effectivity of contacts
-        M_eff = 1-gompertz(self.I_star_average, xi_eff, pi_eff)
+        M_eff = 1-gompertz(I_star_average, xi_eff, pi_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-gompertz(self.I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        M_work = 1-gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-gompertz(self.I_star_average, xi_leisure, pi_leisure)
+        M_leisure = 1-gompertz(I_star_average, xi_leisure, pi_leisure)
 
         ###############################
         ## fraction employed workers ##
@@ -282,7 +293,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_lockdown_1 = datetime(2020, 3, 14)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
@@ -326,7 +337,7 @@ class make_social_contact_function():
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_relax_measures:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
-            M_eff = 1-gompertz(np.zeros(self.G, dtype=float), xi_eff, pi_eff)
+            M_eff[3:5] = 1-gompertz(np.zeros(2, dtype=float), xi_eff, pi_eff)
             return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
@@ -402,6 +413,8 @@ class make_social_contact_function():
 
         # compute average perceived hospital load per spatial patch
         I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        I_star_average *= self.IC_multiplier
         # leisure and general effectivity of contacts
         M_eff = 1-gompertz(I_star_average, xi_eff, pi_eff)
         # voluntary switch to telework or absenteism
@@ -453,13 +466,15 @@ class make_social_contact_function():
         #######################
         
         # compute average perceived hospital load per spatial patch 
-        self.I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        I_star_average *= self.IC_multiplier
         # leisure and general effectivity of contacts
-        M_eff = 1-gompertz(self.I_star_average, xi_eff, pi_eff)
+        M_eff = 1-gompertz(I_star_average, xi_eff, pi_eff)
         # voluntary switch to telework or absenteism
-        M_work = 1-gompertz(self.I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        M_work = 1-gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
         # reduction of leisure contacts
-        M_leisure = 1-gompertz(self.I_star_average, xi_leisure, pi_leisure)
+        M_leisure = 1-gompertz(I_star_average, xi_leisure, pi_leisure)
 
         ###############################
         ## fraction employed workers ##
@@ -696,12 +711,18 @@ class make_other_demand_shock_function():
 
 class make_household_demand_shock_function():
 
-    def __init__(self, lav_consumption, demography, simulation_start):
+    def __init__(self, IC_multiplier, country, lav_consumption, demography, simulation_start):
         """
         A class to update the household demand shock based on 1) sickness, 2) fear of infection
 
         input
         =====
+
+        IC_multiplier: float
+            ratio IC beds BE/SWE
+
+        country: str
+            'BE' or 'SWE
 
         lav_consumption: pd.Series
             association vector between leisurely economic activities and household demand shock
@@ -731,6 +752,12 @@ class make_household_demand_shock_function():
         # other variables
         self.lav_consumption = lav_consumption.values
         self.demography = demography
+
+        # set IC multiplier
+        if country == 'BE':
+            self.IC_multiplier = IC_multiplier
+        else:
+            self.IC_multiplier = 1
 
     def get_household_demand_reduction(self, t, states, param, G, mu, nu, xi_leisure, pi_leisure):
         """
@@ -779,7 +806,9 @@ class make_household_demand_shock_function():
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
         Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
-        
+        # correct for number of available IC beds
+        Ih_star_average *= self.IC_multiplier
+
         #########################
         ## voluntary reduction ##
         #########################
@@ -818,12 +847,18 @@ class make_household_demand_shock_function():
 
 class make_labor_supply_shock_function():
 
-    def __init__(self, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start):
+    def __init__(self, IC_multiplier, country, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start):
         """
         A class to update the labor supply shock based on 1) government policy, 2) sickness, 3) absenteism
 
         input
         =====
+
+        IC_multiplier: float
+            ratio IC beds BE/SWE
+
+        country: str
+            'BE' or 'SWE
 
         age_classes: pd.IntervalIndex
             age classes of the model
@@ -868,6 +903,12 @@ class make_labor_supply_shock_function():
                 raise ValueError("conversion of `simulation_start` failed. make sure its formatted as '%Y-%m-%d'")
         self.t_prev = simulation_start
         self.simulation_start = simulation_start
+
+        # set IC multiplier
+        if country == 'BE':
+            self.IC_multiplier = IC_multiplier
+        else:
+            self.IC_multiplier = 1
 
         # other variables
         self.hesitancy = hesitancy
@@ -938,6 +979,8 @@ class make_labor_supply_shock_function():
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
         Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        Ih_star_average *= self.IC_multiplier
         # voluntary switch to either telework or absenteism
         M_work = gompertz(Ih_star_average, xi_work, (pi_work*self.hesitancy).values) # 63 x 11
         # only accounts for absenteism above telework threshold
@@ -967,7 +1010,7 @@ class make_labor_supply_shock_function():
         #########################
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_lockdown_1 = datetime(2020, 3, 14)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
@@ -1073,6 +1116,8 @@ class make_labor_supply_shock_function():
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
         Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        Ih_star_average *= self.IC_multiplier
         # voluntary switch to either telework or absenteism
         M_work = gompertz(Ih_star_average, xi_work, (pi_work*self.hesitancy).values) # 63 x 11
         # only accounts for absenteism above telework threshold
@@ -1130,6 +1175,8 @@ class make_labor_supply_shock_function():
         self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
         # compute average perceived hospital load per spatial patch 
         Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        Ih_star_average *= self.IC_multiplier
         # voluntary switch to either telework or absenteism
         M_work = gompertz(Ih_star_average, xi_work, (pi_work*self.hesitancy).values) # 63 x 11
         # only accounts for absenteism above telework threshold
