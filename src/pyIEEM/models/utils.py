@@ -55,7 +55,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
-                                                            False, f_employees, convmat, simulation_start, country)
+                                                            False, True, f_employees, convmat, simulation_start, country)
     
     # select right function
     if scenarios == False:

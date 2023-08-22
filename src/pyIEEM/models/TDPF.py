@@ -12,7 +12,9 @@ abs_dir = os.path.dirname(__file__)
 
 class make_social_contact_function():
 
-    def __init__(self, IC_multiplier, age_classes, demography, contact_type, contact_df, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav_contacts, distinguish_day_type, f_employees, conversion_matrix, simulation_start, country):
+    def __init__(self, IC_multiplier, age_classes, demography, contact_type, contact_df, lmc_stratspace, lmc_strateco, f_workplace,
+                    f_remote, hesitancy, lav_contacts, distinguish_day_type, distinguish_vacation, f_employees, conversion_matrix, simulation_start,
+                        country):
         """
         Time-dependent parameter function of social contacts
 
@@ -61,6 +63,9 @@ class make_social_contact_function():
         distinguish_day_type: bool
             Return weekendday/weekday average number of contacts or return weekday/weekendday contacts depending on simulation day of week.
         
+        distinguish_vacation: bool
+            True: switch between vacation and non-vacation contacts. False: use non-vacation always.
+
         f_employees: pd.Series
             Fraction of employees in a given NACE 21 sector, working in a NACE 64 sector
 
@@ -98,6 +103,7 @@ class make_social_contact_function():
         # Assign to variables
         self.age_classes = age_classes
         self.distinguish_day_type = distinguish_day_type
+        self.distinguish_vacation = distinguish_vacation
         self.lmc_stratspace = lmc_stratspace
         self.lmc_strateco = lmc_strateco
         self.f_workplace = f_workplace
@@ -130,6 +136,10 @@ class make_social_contact_function():
                 type_day = 'weekday'
         else:
             type_day = 'average'
+
+        # check if different contacts during vacation are warranted
+        if not self.distinguish_vacation:
+            vacation = False
 
         # easter holiday increases the contacts at home slightly, which makes the model deviate slightly above the observed trajectory
         # this clearly deviates from the truth in BE (Easter fell during the lockdown)
