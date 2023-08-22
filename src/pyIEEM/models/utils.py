@@ -13,7 +13,7 @@ abs_dir = os.path.dirname(__file__)
 ###############################
 
 def initialize_epinomic_model(country, age_classes, spatial, simulation_start, contact_type='absolute_contacts',
-                                prodfunc='half_critical'):
+                                prodfunc='half_critical', scenarios=False):
 
     # get default model parameters
     # ============================
@@ -40,7 +40,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # ========================================
 
     # get all necessary parameters
-    parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial)
+    parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial, scenarios)
     # define all relevant parameters of the social contact function TDPF here
     parameters.update({'l': 5, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
                         'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
@@ -48,10 +48,16 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
                                                             False, f_employees, convmat, simulation_start, country)
-    if country == 'SWE':
-        social_contact_function = social_contact_function.get_contacts_SWE
+    
+    # select right function
+    if scenarios == False:
+        if country == 'BE':
+            social_contact_function = social_contact_function.get_contacts_BE
+        else:
+            social_contact_function = social_contact_function.get_contacts_SWE
     else:
-        social_contact_function = social_contact_function.get_contacts_BE
+        if country == 'BE':
+            social_contact_function = social_contact_function.get_contacts_BE_scenarios
 
     # construct seasonality TDPF (epidemic)
     # =====================================
@@ -60,11 +66,6 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     seasonality_function = make_seasonality_function(country)
 
     parameters.update({'amplitude_BE': 0.20, 'peak_shift_BE': -14, 'amplitude_SWE': 0.20, 'peak_shift_SWE': 14}) 
-
-    # if country == 'SWE':
-    #     parameters.update({'amplitude': 0.20, 'peak_shift': 14})
-    # else: 
-    #     parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
 
     # construct labor supply shock TDPF (economic)
     # ============================================
@@ -99,12 +100,15 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         abs_dir, f'../../../data/interim/epi/contacts/proximity/pichler_figure_S5_NACE64.csv'), index_col=[0])['physical_proximity_index']
     # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
     hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
- 
     # load TDPF
-    if country == 'SWE':
-        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
+    if scenarios == False:
+        if country == 'BE':
+            labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
+        else:
+            labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
     else:
-        labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
+        if country == 'BE':
+            labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE_scenarios
 
     # construct household demand shock TDPF (economic)
     # ================================================
@@ -112,7 +116,6 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # load and the association vector between leisure and reduction in household demand (lav_leisure)
     lav_consumption = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/contacts/proximity/leisure_association_vectors.csv'), index_col=[0])['consumption']
-
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().squeeze()
@@ -120,7 +123,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         demography = np.array([1,], dtype=float)
     else:
         demography = demography.values/sum(demography.values)
-
+    # load TDPF
     from pyIEEM.models.TDPF import make_household_demand_shock_function
     household_demand_shock_function = make_household_demand_shock_function(lav_consumption, demography, simulation_start).get_household_demand_reduction
     
@@ -167,6 +170,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters=time_dependent_parameters)
 
     return model
+
+
 
 ###############################
 ## Initialise epidemic model ##
@@ -546,7 +551,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     return initial_states, parameters, coordinates
 
 
-def get_social_contact_function_parameters(parameters, country, spatial):
+def get_social_contact_function_parameters(parameters, country, spatial, scenarios):
     """
     A function to load, format and return all parameters necessary to construct the epidemiological model's time-dependent social contact function
     """
@@ -617,24 +622,37 @@ def get_social_contact_function_parameters(parameters, country, spatial):
     convmat = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/misc/conversion_matrix_NACE64_NACE21.csv'), index_col=[0], header=[0])
     convmat = convmat.fillna(0).values
 
-    # memory parameters
-    policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
-
     # define economic policies
-    if country == 'BE':
-        parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
-                            'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
-                            'economy_BE_phaseII': np.expand_dims(policies_df['lockdown_release_phaseII'].values, axis=1),
-                            'economy_BE_phaseIII': np.expand_dims(policies_df['lockdown_release_phaseIII'].values, axis=1),
-                            'economy_BE_phaseIV': np.expand_dims(policies_df['lockdown_release_phaseIV'].values, axis=1),
-                            'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
-                            'economy_BE_lockdown_2_1': np.expand_dims(policies_df['lockdown_2_1'].values, axis=1),
-                            'economy_BE_lockdown_2_2': np.expand_dims(policies_df['lockdown_2_2'].values, axis=1),
-                            'economy_BE_plateau': np.expand_dims(policies_df['lockdown_plateau'].values, axis=1),
-                            })
+    if scenarios == False:
+        # load economic policies
+        policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
+        # extract and format
+        if country == 'BE':
+            parameters.update({'economy_BE_lockdown_1': np.expand_dims(policies_df['lockdown_1'].values, axis=1),
+                                'economy_BE_phaseI': np.expand_dims(policies_df['lockdown_release_phaseI'].values, axis=1),
+                                'economy_BE_phaseII': np.expand_dims(policies_df['lockdown_release_phaseII'].values, axis=1),
+                                'economy_BE_phaseIII': np.expand_dims(policies_df['lockdown_release_phaseIII'].values, axis=1),
+                                'economy_BE_phaseIV': np.expand_dims(policies_df['lockdown_release_phaseIV'].values, axis=1),
+                                'economy_BE_lockdown_Antwerp': np.expand_dims(policies_df['lockdown_Antwerp'].values, axis=1),
+                                'economy_BE_lockdown_2_1': np.expand_dims(policies_df['lockdown_2_1'].values, axis=1),
+                                'economy_BE_lockdown_2_2': np.expand_dims(policies_df['lockdown_2_2'].values, axis=1),
+                                'economy_BE_plateau': np.expand_dims(policies_df['lockdown_plateau'].values, axis=1),
+                                })
+        else:
+            parameters.update({'economy_SWE': np.expand_dims(policies_df['policy'].values, axis=1)})
     else:
-        parameters.update({'economy_SWE_ban_gatherings_1': np.expand_dims(policies_df['ban_gatherings_1'].values, axis=1),
-                            'economy_SWE_ban_gatherings_2': np.expand_dims(policies_df['ban_gatherings_2'].values, axis=1)})
+        if country == 'BE':
+            parameters.update({'L1': np.expand_dims(policies_df['L1'].values, axis=1),
+                               'L2a': np.expand_dims(policies_df['L2a'].values, axis=1),
+                               'L2b': np.expand_dims(policies_df['L2b'].values, axis=1),
+                               'L3a': np.expand_dims(policies_df['L3a'].values, axis=1),
+                               'L3b': np.expand_dims(policies_df['L3b'].values, axis=1),
+                               'L4': np.expand_dims(policies_df['L4'].values, axis=1),
+                               't_start_lockdown': datetime(2020, 3, 15),
+                               't_end_lockdown': datetime(2020, 5, 4),
+                               'scenario': 'L1',
+                               'l_release': 31,
+                               })
 
     return parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat
 
