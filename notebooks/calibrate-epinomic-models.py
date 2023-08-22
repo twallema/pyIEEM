@@ -23,7 +23,7 @@ abs_dir = os.path.dirname(__file__)
 ##########################
 
 # settings calibration
-start_calibration = '2020-03-07'
+start_calibration = '2020-03-01'
 end_calibration_epi = '2021-02-01'
 end_calibration_eco = '2020-12-01'
 processes = 36
@@ -86,7 +86,7 @@ log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L
 
 theta = [22, 0.45, 0.07, 0.025, 0.06, 1, 0.20, -7, 0.20, 14, 7, 7] # where are my parameters?  
 mu_list = [22, 0.45, 0.07, 0.025, 0.06, 1, 0.20, 0, 0.20, 0, 7, 7] # where do I expect the parameters to be?
-sigma_list = [1, 0.03, 0.005, 0.0025, 0.005, 0.1, 0.02, 7, 0.03, 7, 1, 1] # How much noise do I expect there to be on the parameter value?
+sigma_list = [1, 0.03, 0.005, 0.0025, 0.005, 0.1, 0.02, 7, 0.03, 7, 2, 2] # How much noise do I expect there to be on the parameter value?
 l_list = [8, 10, 20, 20, 15, 10, 20, 16, 20, 14, 10, 10] # How strong are my beliefs?
 log_prior_prob_fnc_args=[]
 for mu,sigma,l in zip(mu_list,sigma_list, l_list):
