@@ -51,10 +51,12 @@ confint = 0.05
 # load samples dictionary
 samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
 
-# load model BE and SWE
+# load model BE
 age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
     35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-model = initialize_epinomic_model('BE', age_classes, True, start_simulation, scenarios=True)
+model = initialize_epinomic_model('BE', age_classes, True, start_simulation, scenarios='hypothetical_policy')
+# load number of inhabitants
+inhabitants = pd.read_csv(os.path.join(abs_dir, f'../data/interim/epi/demographic/age_structure_BE_2019.csv'), index_col=[0, 1]).sum().values[0]
 
 ##########################
 ## define draw function ##
@@ -71,8 +73,8 @@ def draw_function(param_dict, samples_dict):
     param_dict['amplitude_SWE'] = samples_dict['amplitude_SWE'][i]
     param_dict['peak_shift_BE'] = samples_dict['peak_shift_BE'][i]
     param_dict['peak_shift_SWE'] = samples_dict['peak_shift_SWE'][i]
-    #param_dict['iota_F'] = samples_dict['iota_F'][i]
-    #param_dict['iota_H'] = samples_dict['iota_H'][i]
+    param_dict['iota_F'] = samples_dict['iota_F'][i]
+    param_dict['iota_H'] = samples_dict['iota_H'][i]
     return param_dict
 
 ########################
@@ -101,10 +103,10 @@ for scenario in scenarios:
         ## epidemiological states
         # compute mean, median, lower and upper
         for state_epi in states_epi:
-            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'mean')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws')/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
-            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'median')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).median(dim='draws')/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
-            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'lower')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).quantile(dim='draws', q=confint/2)/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
-            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'upper')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).quantile(dim='draws', q=1-confint/2)/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'mean')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws')/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values/inhabitants*100000
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'median')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).median(dim='draws')/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values/inhabitants*100000
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'lower')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).quantile(dim='draws', q=confint/2)/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values/inhabitants*100000
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'upper')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).quantile(dim='draws', q=1-confint/2)/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values/inhabitants*100000
         ## economic states                         
         # compute mean, median, lower and upper
         for state_eco in states_eco:
