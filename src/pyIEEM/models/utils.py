@@ -36,6 +36,14 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         else:
             initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
 
+    # add the IC multiplier
+    # =====================
+
+    # reference:
+    n_SWE = 1000
+    n_BE = 2000
+    IC_multiplier = n_SWE/n_BE
+
     # construct social contact TDPF (epidemic)
     # ========================================
 
@@ -46,7 +54,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
                         'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
+    social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
                                                             False, f_employees, convmat, simulation_start, country)
     
     # select right function
@@ -103,12 +111,12 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # load TDPF
     if scenarios == False:
         if country == 'BE':
-            labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
+            labor_supply_shock_function = make_labor_supply_shock_function(IC_multiplier, country, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
         else:
-            labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
+            labor_supply_shock_function = make_labor_supply_shock_function(IC_multiplier, country, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_SWE
     else:
         if country == 'BE':
-            labor_supply_shock_function = make_labor_supply_shock_function(age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE_scenarios
+            labor_supply_shock_function = make_labor_supply_shock_function(IC_multiplier, country, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE_scenarios
 
     # construct household demand shock TDPF (economic)
     # ================================================
@@ -125,7 +133,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         demography = demography.values/sum(demography.values)
     # load TDPF
     from pyIEEM.models.TDPF import make_household_demand_shock_function
-    household_demand_shock_function = make_household_demand_shock_function(lav_consumption, demography, simulation_start).get_household_demand_reduction
+    household_demand_shock_function = make_household_demand_shock_function(IC_multiplier, country, lav_consumption, demography, simulation_start).get_household_demand_reduction
     
     # construct other demand shock TDPF (economic)
     # ============================================
