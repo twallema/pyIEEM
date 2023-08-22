@@ -27,14 +27,14 @@ args = parser.parse_args()
 ## change settings here ##
 ##########################
 
-scenarios = ['L1', 'L2a', 'L2b', 'L3a', 'L3b', 'L4a', 'L4b']
-t_start_lockdowns = [datetime(2020, 3, 15), datetime(2020, 3, 13)]
+scenarios = ['L1', ] #'L2a', 'L2b', 'L3a', 'L3b', 'L4a', 'L4b']
+t_start_lockdowns = [datetime(2020, 3, 15), ] #datetime(2020, 3, 13)]
 l_economics = [7,]
 # simulation
-N = 6
-processes = 6
+N = 2
+processes = 2
 start_simulation = datetime(2020, 3, 1)
-end_simulation = datetime(2020, 9, 1)
+end_simulation = datetime(2020, 4, 1)
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 # visualisation (epi only + spatial)
@@ -248,24 +248,19 @@ for scenario in scenarios:
         # interpolate to required daterange
         simout = simout.interp({'date': pd.date_range(start=start_simulation, end=end_simulation, freq='D')}, method="linear")
         ## epidemiological states
-        # aggregate to national nevel
-        simout_epi = simout[states_epi].sum(dim=['age_class', 'spatial_unit'])
-        # add observational noise and compute statistics
-        simout_epi  = output_to_visuals(simout_epi, states_epi, n_draws_per_sample=n_draws_per_sample, alpha=overdispersion, LL = confint/2, UL = 1 - confint/2)
-        # add to dataset
-        outputs.loc[(scenario, t_start_lockdown, slice(None)), (states_epi, slice(None))] = simout_epi.values
-        ## economic states
-        # pre-allocate dataframe
-        columns=pd.MultiIndex.from_product([states_eco, ['mean', 'median', 'lower', 'upper']], names=column_names)
-        simout_eco = pd.DataFrame(0, index=pd.date_range(start=start_simulation, end=end_simulation, freq='D'), columns=columns, dtype=float)                           
+        # compute mean, median, lower and upper
+        for state_epi in states_epi:
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'mean')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws')/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'median')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).median(dim='draws')/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'lower')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).quantile(dim='draws', q=confint/2)/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_epi, 'upper')] = (simout[state_epi].sum(dim=['age_class', 'spatial_unit']).quantile(dim='draws', q=1-confint/2)/simout[state_epi].sum(dim=['age_class', 'spatial_unit']).mean(dim='draws').isel(date=0)).values
+        ## economic states                         
         # compute mean, median, lower and upper
         for state_eco in states_eco:
-            simout_eco.loc[slice(None), (state_eco, 'mean')] = (simout[state_eco].sum(dim=['NACE64']).mean(dim='draws')/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
-            simout_eco.loc[slice(None), (state_eco, 'median')] = (simout[state_eco].sum(dim=['NACE64']).median(dim='draws')/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
-            simout_eco.loc[slice(None), (state_eco, 'lower')] = (simout[state_eco].sum(dim=['NACE64']).quantile(dim='draws', q=confint/2)/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
-            simout_eco.loc[slice(None), (state_eco, 'upper')] = (simout[state_eco].sum(dim=['NACE64']).quantile(dim='draws', q=1-confint/2)/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
-        # concatenate dataframes
-        outputs.loc[(scenario, t_start_lockdown, slice(None)), (states_eco, slice(None))] = simout_eco.values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_eco, 'mean')] = (simout[state_eco].sum(dim=['NACE64']).mean(dim='draws')/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_eco, 'median')] = (simout[state_eco].sum(dim=['NACE64']).median(dim='draws')/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_eco, 'lower')] = (simout[state_eco].sum(dim=['NACE64']).quantile(dim='draws', q=confint/2)/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
+            outputs.loc[(scenario, t_start_lockdown, slice(None)), (state_eco, 'upper')] = (simout[state_eco].sum(dim=['NACE64']).quantile(dim='draws', q=1-confint/2)/simout[state_eco].sum(dim=['NACE64']).mean(dim='draws').isel(date=0)).values
 
 # save output
-outputs.to_csv('simulations_scenarios.csv')
+outputs.to_csv('simulations_hypothetical_scenarios_BE.csv')
