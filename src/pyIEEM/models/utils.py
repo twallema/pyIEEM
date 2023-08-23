@@ -70,7 +70,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
             social_contact_function = social_contact_function.get_contacts_BE_scenarios
     elif scenarios == 'hypothetical_pure':
         social_contact_function = social_contact_function.get_contacts_nopolicy
-    elif scenarios == ''hypothetical_spatial_spread:
+    elif scenarios == 'hypothetical_spatial_spread':
         social_contact_function = social_contact_function.get_contacts_trigger
 
     # construct seasonality TDPF (epidemic)

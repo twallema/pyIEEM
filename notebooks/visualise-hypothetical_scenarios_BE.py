@@ -21,7 +21,7 @@ scenarios = ['L1', 'L2b', 'L3b', 'L4a', 'L4b']
 colors = [cmap['blue'], cmap['red'], cmap['green'], cmap['black'], cmap['black']]
 linestyles = ['-', '-', '-', '-', '--']
 ylabels = ['Hospital incidence (-)', 'ICU load (-)', 'Productivity (%)', 'Employment (%)']
-ylims = [[0, 13.5], [0, 25], [60, 102], [60, 102]]
+ylims = [[0, 18], [60, 102], [60, 102]]
 
 ###############
 ## internals ##

@@ -27,12 +27,13 @@ args = parser.parse_args()
 ## change settings here ##
 ##########################
 
-countries = ['BE', 'SWE']
+weigh_demographic = True
+countries = ['SWE', 'BE']
 # where to drop initial condition
-spatial_units_always = [['Brussels',], ['Stockholm']]
+spatial_units_always = [['Stockholm'], ['Brussels',],]
 # simulation
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2020, 6, 1)
+end_simulation = datetime(2020, 7, 1)
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 # visualisation (epi only + spatial)
@@ -44,7 +45,7 @@ confint = 0.05
 
 import random
 # helper function to adjust initial condition
-def update_initial_condition(spatial_units_additional, spatial_units_always, spatial_units, initial_condition, N):
+def update_initial_condition(spatial_units_additional, spatial_units_always, demography, spatial_units, initial_condition, N, weigh_demographic=True):
     """
     A function to divide initial infected over several spatial patches of the model
     """
@@ -52,17 +53,44 @@ def update_initial_condition(spatial_units_additional, spatial_units_always, spa
     N_work = N['work']
     N_home = N['home']
     N_other = N['home']
-    # sum of all infected is always one, only spatial distribution is altered
-    infected = 1/(len(spatial_units_additional) + len(spatial_units_always))
-    # compute number of contacts per age group per spatial patch (N x G)
-    N = np.sum(N_other, axis=0) + np.sum(N_work, axis=0) + np.sum(N_home, axis=0)
     # pre-allocate output
     output = np.zeros(initial_condition.shape, dtype=float)
-    # loop over spatial patches you always want to put an infected in
-    for j, patchname in enumerate(spatial_units):
-        if patchname in spatial_units_always+spatial_units_additional:
-            inf = infected * (N[:, j]/sum(N[:, j]))
-            output[:, j] += inf
+    # compute number of contacts per age group per spatial patch (N x G)
+    N = np.sum(N_other, axis=0) + np.sum(N_work, axis=0) + np.sum(N_home, axis=0)
+    # use demography to distribute contacts or not
+    if weigh_demographic==False:
+        # sum of all infected is always one, only spatial distribution is altered
+        infected = 1/(len(spatial_units_additional) + len(spatial_units_always))
+        # loop over spatial patches you always want to put an infected in
+        for j, patchname in enumerate(spatial_units):
+            # check if always present
+            if patchname in spatial_units_always:
+                inf = infected * (N[:, j]/sum(N[:, j]))
+                output[:, j] += inf
+            # check if additional spatial patch
+            if patchname in spatial_units_additional:
+                inf = infected * (N[:, j]/sum(N[:, j]))
+                output[:, j] += inf    
+    else:
+        # compute total number of inhabitants
+        total_inhab=0
+        for su in spatial_units_always+spatial_units_additional:
+            total_inhab += demography.loc[su]
+        # divide one infected over the spatial units
+        infected = demography.loc[spatial_units_always+spatial_units_additional]/total_inhab
+        for j, patchname in enumerate(spatial_units):
+            if patchname in spatial_units_always:
+                if isinstance(infected.loc[patchname], np.float64):
+                    inf = infected.loc[patchname] * (N[:, j]/sum(N[:, j]))
+                else:
+                    inf = infected.loc[patchname].unique() * (N[:, j]/sum(N[:, j]))
+                output[:, j] += inf 
+            if patchname in spatial_units_additional:
+                if isinstance(infected.loc[patchname], np.float64):
+                    inf = infected.loc[patchname] * (N[:, j]/sum(N[:, j]))
+                else:
+                    inf = infected.loc[patchname].unique() * (N[:, j]/sum(N[:, j]))
+                output[:, j] += inf    
     return output
 
 #########################
@@ -70,7 +98,7 @@ def update_initial_condition(spatial_units_additional, spatial_units_always, spa
 #########################
 
 ## start loop here
-for country in countries:
+for i,country in enumerate(countries):
     print(f"\nworking on country: {country}")
     # load samples dictionary
     samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
@@ -78,16 +106,24 @@ for country in countries:
     age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
     model = initialize_epinomic_model(country, age_classes, True, simulation_start=start_simulation, scenarios=f'hypothetical_spatial_spread')
-    # load number of inhabitants for normalisation
+    # load number of inhabitants for normalisation of data
     inhabitants = pd.read_csv(os.path.join(abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).sum().values[0]
+    # load full demography to distribute initial infected
+    demography = pd.read_csv(os.path.join(
+        abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().squeeze()
     # set parameters to calibrated values
     pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'mu', 'amplitude_BE', 'peak_shift_BE', 'amplitude_SWE', 'peak_shift_SWE', 'iota_H', 'iota_F']
     for par in pars:
         model.parameters.update({par: np.mean(samples_dict[par])})
-    # lower ramp from 5 to 2 days to end up with 320 hospital incidence (to be able to compare this to real-life)
+    # eliminate seasonality
     model.parameters.update({
-        'l': 2,
+        'amplitude_SWE': 0,
+        'amplitude_BE': 0,
     })
+    # lower ramp from 5 to 2 days to end up with 320 hospital incidence (to be able to compare this to real-life)
+    #model.parameters.update({
+    #    'l': 2,
+    #})
     # eliminate other demand shock
     model.parameters.update({
         'shock_exports_goods': 0,
@@ -102,7 +138,6 @@ for country in countries:
                                 'economy_BE_phaseI': np.zeros([63,1], dtype=float),
                                 'economy_BE_phaseII': np.zeros([63,1], dtype=float),
                                 'economy_BE_phaseIII': np.zeros([63,1], dtype=float),
-                                'economy_BE_phaseIV': np.zeros([63,1], dtype=float),
                                 'economy_BE_phaseIV': np.zeros([63,1], dtype=float),
                                 'economy_BE_lockdown_Antwerp': np.zeros([63,1], dtype=float)
         })
@@ -121,7 +156,8 @@ for country in countries:
     for spatial_unit in spatial_units:
         print(f"\tworking on spatial unit: '{spatial_unit}'")
         # adjust initial condition
-        init_E = update_initial_condition([spatial_unit,], spatial_units_always, model.coordinates['spatial_unit'], model.initial_states['E'], model.parameters['N'])
+        init_E = update_initial_condition([spatial_unit,], spatial_units_always[i], demography, model.coordinates['spatial_unit'],
+                                            model.initial_states['E'], model.parameters['N'], weigh_demographic)
         model.initial_states.update({'E': init_E})
         # simulate model
         simout = model.sim([start_simulation, end_simulation])
@@ -135,8 +171,8 @@ for country in countries:
                     simout_copy = simout_copy.sum(dim=dim)
             # normalise
             if state in states_epi:        
-                outputs.loc[(spatial_unit, slice(None)), state] = simout_copy#/inhabitants*100000
+                outputs.loc[(spatial_unit, slice(None)), state] = simout_copy/inhabitants*100000
             if state in states_eco:
                 outputs.loc[(spatial_unit, slice(None)), state] = simout_copy/simout_copy.isel(date=0)*100
         # save output
-        outputs.to_csv(f'simulations_hypothetical_spatial_spread_{country}.csv')
+        outputs.to_csv(f'simulations-hypothetical_spatial_spread_{country}-demographic_weighing_{weigh_demographic}.csv')

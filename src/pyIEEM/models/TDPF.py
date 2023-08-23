@@ -671,9 +671,9 @@ class make_social_contact_function():
 
         # define awareness trigger (linear interpolation between first two datapoints for SWE)
         if self.country == 'SWE':
-            trigger = 18
+            trigger = 22
         else:
-            trigger = (11.6/10.4)*18
+            trigger = (11.6/10.4)*22
 
         # reset self.t_start
         time_threshold=1
@@ -878,11 +878,11 @@ class make_other_demand_shock_function():
             return (1 - (self.total - total_shock)/self.total).fillna(0).values
         elif t_end_max_shock <= t < t_end_services_shock:
             # investment and goods
-            policy_old = max_investment_shock +shock_exports_goods*self.exports_goods
+            policy_old = max_investment_shock + shock_exports_goods*self.exports_goods
             policy_new = np.zeros(len(max_export_shock))
             shock_invgood = ramp_fun(t, t_end_max_shock, (t_end_investment_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
             # services
-            policy_old = 0.21*self.exports_services
+            policy_old = shock_exports_services*self.exports_services
             policy_new = np.zeros(len(max_export_shock))
             shock_serv = ramp_fun(t, t_end_max_shock, (t_end_services_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
             total_shock = shock_govIZW + shock_invgood + shock_serv
