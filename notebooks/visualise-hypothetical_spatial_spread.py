@@ -15,6 +15,7 @@ cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
 ## settings ##
 ##############
 
+weigh_demographic = True
 countries = ['BE', 'SWE']
 IC_ratio = 0.162
 population = [11.6e6, 10.4e6]
@@ -37,7 +38,7 @@ simouts=[]
 dates=[]
 spatial_units=[]
 for country in countries:
-    simout = pd.read_csv(os.path.join(abs_dir, f'simulations_hypothetical_spatial_spread_{country}.csv'), header=0, index_col=[0, 1], parse_dates=True)
+    simout = pd.read_csv(os.path.join(abs_dir, f'simulations-hypothetical_spatial_spread_{country}-demographic_weighing_{weigh_demographic}.csv'), header=0, index_col=[0, 1], parse_dates=True)
     simouts.append(simout)
     dates.append(simout.index.get_level_values('date').unique().values)
     spatial_units.append(simout.index.get_level_values('spatial_unit').unique().values)
