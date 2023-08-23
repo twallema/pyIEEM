@@ -162,7 +162,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     exports_services.loc[slice('G45',None)] = exports.loc[slice('G45',None)].values
     # initialize TDPF
     from pyIEEM.models.TDPF import make_other_demand_shock_function
-    other_demand_shock_function = make_other_demand_shock_function(total, IZW_government, investments, exports_goods, exports_services, mu_investment, mu_exports_goods, lav_consumption, demography, simulation_start).get_other_demand_reduction
+    other_demand_shock_function = make_other_demand_shock_function(total, IC_multiplier, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, mu_exports_goods, demography, simulation_start).get_other_demand_reduction
 
     # initialize model
     # ================

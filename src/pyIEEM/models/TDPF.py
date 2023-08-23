@@ -621,7 +621,7 @@ class make_seasonality_function():
 
 class make_other_demand_shock_function():
 
-    def __init__(self, total, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, mu_exports_goods, demography, simulation_start):
+    def __init__(self, total, IC_multiplier, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, mu_exports_goods, demography, simulation_start):
 
         # derive number of spatial patches
         self.G = len(demography)
@@ -643,11 +643,13 @@ class make_other_demand_shock_function():
         self.investments = investments
         self.exports_goods = exports_goods
         self.exports_services = exports_services
-        self.lav_consumption = lav_consumption
         self.mu_investment = mu_investment
         self.mu_exports_goods = mu_exports_goods
+        self.lav_consumption = lav_consumption
+        self.IC_multiplier = IC_multiplier
+        self.demography = demography
 
-    def get_other_demand_reduction(self, t, states, param):
+    def get_other_demand_reduction(self, t, states, param, G, mu, nu, xi_leisure, pi_leisure):
         """
         Function returning the other demand shock during the 2020 COVID-19 pandemic
 
@@ -662,36 +664,80 @@ class make_other_demand_shock_function():
             Labor supply shock at time 't' (0: no shock, 1: full shock)
         """
 
-        #########################
-        ## government policies ##
-        #########################
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        Ih_star_average *= self.IC_multiplier
+
+        ####################################
+        ## voluntary reduction & sickness ##
+        ####################################
+
+        # determine shock by governments and IZW
+
+        # reduction of household demand per spatial patch
+        M_leisure = gompertz(Ih_star_average, xi_leisure, pi_leisure)
+        # convert to national reduction of household demand using demography
+        M_leisure = sum(M_leisure*self.demography)
+
+        # get fraction of symptomatic individuals in the population
+        T = 0
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state])
+        Im = np.sum(states['Im'] + states['Ih'])/T
+
+        # compute shock
+        shock_govIZW = Im*self.lav_consumption*self.IZW_government + (1-Im)*M_leisure*self.lav_consumption*self.IZW_government
+
+        ##################################
+        ## export and investment shocks ##
+        ##################################
 
         # key dates
         t_start_max_shock = datetime(2020, 3, 1)
-        t_end_max_shock = datetime(2020, 5, 1)
+        t_end_max_shock = datetime(2020, 4, 15)
         t_end_investment_shock = t_end_goods_shocks = datetime(2020, 9, 1) # End of Q2: see `COMEXT_17082023124307665.csv`
         t_end_services_shock = datetime(2021, 7, 1)
         
         # maximum shocks
-        export_shock = self.mu_exports_goods*self.exports_goods + 0.21*self.exports_services
-        investment_shock = self.mu_investment*self.investments
+        max_export_shock = self.mu_exports_goods*self.exports_goods + 0.21*self.exports_services
+        max_investment_shock = self.mu_investment*self.investments
 
         if t < t_start_max_shock:
-            return np.zeros(len(export_shock))
+            # shock to government and investment only
+            return (1 - (self.total - shock_govIZW)/self.total).fillna(0).values
         elif t_start_max_shock <= t < t_end_max_shock:
-            policy_old = np.zeros(len(export_shock))
-            policy_new = (1 - (self.total - export_shock - investment_shock)/self.total).fillna(0).values
-            return ramp_fun(t, t_start_max_shock, 31, policy_old, policy_new)
-        else:
+            policy_old = np.zeros(len(max_export_shock))
+            policy_new = max_export_shock + max_investment_shock
+            total_shock = shock_govIZW + ramp_fun(t, t_start_max_shock, 28, policy_old, policy_new)
+            return (1 - (self.total - total_shock)/self.total).fillna(0).values
+        elif t_end_max_shock <= t < t_end_services_shock:
             # investment and goods
-            policy_old = (1 - (self.total - investment_shock - self.mu_exports_goods*self.exports_goods)/self.total).fillna(0).values
-            policy_new = np.zeros(len(export_shock))
-            invgood = ramp_fun(t, t_end_max_shock, (t_end_investment_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
+            policy_old = max_investment_shock + self.mu_exports_goods*self.exports_goods
+            policy_new = np.zeros(len(max_export_shock))
+            shock_invgood = ramp_fun(t, t_end_max_shock, (t_end_investment_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
             # services
-            policy_old = (1 - (self.total - 0.21*self.exports_services)/self.total).fillna(0).values
-            policy_new = np.zeros(len(export_shock))
-            serv = ramp_fun(t, t_end_max_shock, (t_end_services_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
-            return invgood + serv
+            policy_old = 0.21*self.exports_services
+            policy_new = np.zeros(len(max_export_shock))
+            shock_serv = ramp_fun(t, t_end_max_shock, (t_end_services_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
+            total_shock = shock_govIZW + shock_invgood + shock_serv
+            return (1 - (self.total - total_shock)/self.total).fillna(0).values
+        else:
+            # shock to government and investment only
+            return (1 - (self.total - shock_govIZW)/self.total).fillna(0).values
 
     # TODO: make a parent class for the TDPFs with initialize memory as a method (or couldn't we have the whole memory in there basically?)
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):

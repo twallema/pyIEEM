@@ -66,7 +66,9 @@ model_SWE = initialize_epinomic_model('SWE', age_classes, True, start_calibratio
 models = [model_BE, model_SWE, model_BE, model_SWE, model_BE, model_SWE]
 datasets = [data_epi_BE, data_epi_SWE, data_BE_eco_GDP, data_SWE_eco_GDP, data_BE_eco_employment, data_SWE_eco_employment]
 dt_epi = [data_epi_BE, data_epi_SWE]
-dt_eco = [data_BE_eco_GDP, data_SWE_eco_GDP]
+dt_eco_GDP = [data_BE_eco_GDP, data_SWE_eco_GDP]
+dt_eco_employment = [data_BE_eco_GDP, data_SWE_eco_GDP]
+
 states = ["Hin", "Hin", "x", "x", "l", "l"]
 log_likelihood_fnc = [ll_negative_binomial, ll_poisson, ll_gaussian, ll_gaussian, ll_gaussian, ll_gaussian]
 aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation, dummy_aggregation]
@@ -84,9 +86,9 @@ labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{lei
 log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2,
                         log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2]
 
-theta = [24, 0.45, 0.07, 0.04, 0.06, 1, 0.20, -7, 0.20, 14, 7, 7] # where are my parameters?  
-mu_list = [22, 0.45, 0.07, 0.04, 0.06, 1, 0.20, 0, 0.20, 0, 7, 7] # where do I expect the parameters to be?
-sigma_list = [1, 0.03, 0.005, 0.005, 0.005, 0.1, 0.02, 7, 0.03, 7, 2, 2] # How much noise do I expect there to be on the parameter value?
+theta = [21, 0.45, 0.07, 0.035, 0.07, 1, 0.20, -7, 0.20, 14, 14, 7] # where are my parameters? 
+mu_list = [21, 0.45, 0.07, 0.035, 0.06, 1, 0.20, 0, 0.20, 0, 14, 7] # where do I expect the parameters to be?
+sigma_list = [2, 0.03, 0.005, 0.0035, 0.006, 0.1, 0.02, 7, 0.03, 7, 2, 1] # How much noise do I expect there to be on the parameter value?
 l_list = [8, 10, 25, 25, 15, 10, 20, 16, 20, 14, 10, 10] # How strong are my beliefs?
 log_prior_prob_fnc_args=[]
 for mu,sigma,l in zip(mu_list,sigma_list, l_list):
@@ -122,10 +124,15 @@ if __name__ == '__main__':
     #     out = model.sim([start_calibration, end_calibration_epi])
 
     #     # visualise eco
-    #     fig,ax=plt.subplots()
-    #     ax.scatter(dt_eco[i].index.get_level_values('date').unique(), dt_eco[i],
+    #     fig,ax=plt.subplots(ncols=2)
+    #     # gdp
+    #     ax[0].scatter([data_BE_eco_GDP, data_SWE_eco_GDP][i].index.get_level_values('date').unique(), [data_BE_eco_GDP, data_SWE_eco_GDP][i],
     #                 edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-    #     ax.plot(out.date, out.x.sum(dim='NACE64'), color='red')
+    #     ax[0].plot(out.date, out.x.sum(dim='NACE64'), color='red')
+    #     # employment
+    #     ax[1].scatter([data_BE_eco_employment, data_SWE_eco_employment][i].index.get_level_values('date').unique(), [data_BE_eco_employment, data_SWE_eco_employment][i],
+    #                 edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+    #     ax[1].plot(out.date, out.l.sum(dim='NACE64'), color='red')
     #     plt.savefig(
     #             f'epinomic_eco_{country}.png', dpi=600)
     #     #plt.show()
