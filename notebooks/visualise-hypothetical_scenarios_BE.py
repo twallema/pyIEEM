@@ -15,8 +15,8 @@ cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
 ## settings ##
 ##############
 
-end_visualisation = datetime(2021, 2, 1)
-location_IC_annotation = datetime(2020, 7, 1)
+end_visualisation = datetime(2020, 10, 1)
+location_IC_annotation = datetime(2020, 6, 14)
 scenarios = ['L1', 'L2b', 'L3b', 'L4a', 'L4b']
 colors = [cmap['blue'], cmap['red'], cmap['green'], cmap['black'], cmap['black']]
 linestyles = ['-', '-', '-', '-', '--']
@@ -48,7 +48,7 @@ for t_start_lockdown in t_start_lockdowns:
 for i, t_start_lockdown in enumerate(t_start_lockdowns):
     for j, scenario in enumerate(scenarios):
         for state in ['x', 'l']:
-            print(f"\nmeasures imposed on {dt}")
+            print(f"\nmeasures imposed on {np.datetime_as_string(t_start_lockdown, unit='D')}")
             print(f"quarterly reduction of '{state}' in scenario '{scenario}'")
             print(100-simout.loc[(scenario, t_start_lockdown, slice(None)), (state, 'mean')].groupby(by='date').last().resample('Q').mean())
 
@@ -107,5 +107,6 @@ for i, state in enumerate(states):
             ax[i,j].set_xlim([dates[0], end_visualisation])
 
 plt.tight_layout()
+plt.savefig('hypothetical_scenarios_BE.png', dpi=600)
 plt.show()
 plt.close()
