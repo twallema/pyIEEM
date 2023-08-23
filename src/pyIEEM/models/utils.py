@@ -55,7 +55,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
-                                                            False, f_employees, convmat, simulation_start, country)
+                                                            False, True, f_employees, convmat, simulation_start, country)
     
     # select right function
     if scenarios == False:
@@ -63,9 +63,11 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
             social_contact_function = social_contact_function.get_contacts_BE
         else:
             social_contact_function = social_contact_function.get_contacts_SWE
-    else:
+    elif scenarios == 'hypothetical_policy':
         if country == 'BE':
             social_contact_function = social_contact_function.get_contacts_BE_scenarios
+    elif scenarios == 'hypothetical_pure':
+        social_contact_function = social_contact_function.get_contacts_nopolicy
 
     # construct seasonality TDPF (epidemic)
     # =====================================
@@ -109,7 +111,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
     hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
     # load TDPF
-    if scenarios == False:
+    if ((scenarios == False) | (scenarios == 'hypothetical_pure')):
         if country == 'BE':
             labor_supply_shock_function = make_labor_supply_shock_function(IC_multiplier, country, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
         else:
@@ -631,7 +633,7 @@ def get_social_contact_function_parameters(parameters, country, spatial, scenari
     convmat = convmat.fillna(0).values
 
     # define economic policies
-    if scenarios == False:
+    if ((scenarios == False) | (scenarios == 'hypothetical_pure')):
         # load economic policies
         policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
         # extract and format

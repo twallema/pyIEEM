@@ -227,6 +227,12 @@ model_BE = initialize_epinomic_model(
 model_SWE = initialize_epinomic_model(
     'SWE', age_classes, True, start_calibration)
 
+# load number of inhabitants
+inhabitants=[]
+for country in ['BE', 'SWE']:
+    inhabitants.append(pd.read_csv(os.path.join(
+                        abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).sum().values[0])
+
 ##########################
 ## define draw function ##
 ##########################
@@ -260,14 +266,15 @@ for model in [model_BE, model_SWE]:
 ################################################
 
 titles = ['Belgium', 'Sweden']
+countries = ['BE', 'SWE']
 
 fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(11.7, 8.3), sharex=True)
 
-for i, (out, data_epi, data_eco_GDP, data_eco_employment, country) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], [data_BE_eco_employment, data_SWE_eco_employment], ['BE', 'SWE'])):
+for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, inhabitant) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], [data_BE_eco_employment, data_SWE_eco_employment], ['BE', 'SWE'], inhabitants)):
     
     ## epidemiological
-    data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()
-    data_post_calibration = data_epi.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()
+    data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()/inhabitant*100000
+    data_post_calibration = data_epi.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()/inhabitant*100000
     # data
     if country == 'BE':
         alpha = 0.6
@@ -283,9 +290,9 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country) in enumerate(
     df_2plot = output_to_visuals(out, ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=over, LL = confint/2, UL = 1 - confint/2)
     # model: visualise
     for k in range(N):
-        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k), color='blue', linewidth=1.5, alpha=0.1)
+        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k)/inhabitant*100000, color='blue', linewidth=1.5, alpha=0.1)
     # ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1.5, alpha=0.6)
-    ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
+    ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower']/inhabitant*100000, df_2plot['Hin', 'upper']/inhabitant*100000, color='blue', alpha=0.2)
     # axes properties
     ax[0, i].set_xlim([start_calibration, end_visualisation_eco])
     ax[0, i].set_ylim([0, 850])
@@ -350,7 +357,6 @@ plt.close()
 ###########################################
 
 aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation]
-countries = ['BE', 'SWE']
 
 # visualisation
 for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], countries, aggregation_functions):
