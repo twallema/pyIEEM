@@ -29,12 +29,14 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # get calibrated epidemiological model states
     # ===========================================
 
-    sim = xr.open_dataset(os.path.join(abs_dir, f'../../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
-    for data_var in sim.keys():
-        if spatial == True:
-            initial_states.update({data_var: sim.sel(date=simulation_start)[data_var].values})   
-        else:
-            initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
+    # no simulation start --> default: one exposed divided over all spatial patches and age groups
+    if scenarios == 'hypothetical_spatial_spread':
+        sim = xr.open_dataset(os.path.join(abs_dir, f'../../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
+        for data_var in sim.keys():
+            if spatial == True:
+                initial_states.update({data_var: sim.sel(date=simulation_start)[data_var].values})   
+            else:
+                initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
 
     # add the IC multiplier
     # =====================
@@ -68,6 +70,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
             social_contact_function = social_contact_function.get_contacts_BE_scenarios
     elif scenarios == 'hypothetical_pure':
         social_contact_function = social_contact_function.get_contacts_nopolicy
+    elif scenarios == ''hypothetical_spatial_spread:
+        social_contact_function = social_contact_function.get_contacts_trigger
 
     # construct seasonality TDPF (epidemic)
     # =====================================
@@ -111,7 +115,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # multiply physical proximity and telework fraction and normalize --> hesitancy towards absenteism
     hesitancy = (FPI*f_remote) / sum(FPI*f_remote*(f_employees/sum(f_employees)))
     # load TDPF
-    if ((scenarios == False) | (scenarios == 'hypothetical_pure')):
+    if ((scenarios == False) | (scenarios == 'hypothetical_pure') | (scenarios == 'hypothetical_spatial_spread')):
         if country == 'BE':
             labor_supply_shock_function = make_labor_supply_shock_function(IC_multiplier, country, age_classes, lmc_strateco, f_remote, f_workplace, hesitancy, simulation_start).get_economic_policy_BE
         else:
@@ -146,12 +150,20 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # get right currency
     if country == 'SWE':
         curr = '(Mkr/y)'
-        mu_investment = 0.0689 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
-        mu_exports_goods = 0.14 # obtained from ``
+        shock_investment = 0.0689 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
+        shock_exports_goods = 0.14 # obtained from ``
+        shock_exports_services = 0.21
     else:
         curr = '(M€/y)'
-        mu_investment = 0.1617 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
-        mu_exports_goods = 0.25 # obtained from `COMEXT_17082023124307665.csv`
+        shock_investment = 0.1617 # Q2 2020, obtained from `DP_LIVE_16082023121712365.csv`
+        shock_exports_goods = 0.25 # obtained from `COMEXT_17082023124307665.csv`
+        shock_exports_services = 0.21
+    # add to dictionary
+    parameters.update({
+       'shock_investment': shock_investment,
+       'shock_exports_goods': shock_exports_goods,
+       'shock_exports_services': shock_exports_services,
+    })
     # get total demand and all its core components except inventories
     total = d['Total other demand '+curr]
     IZW_government =  d['Other consumption - IZW '+curr] + d['Other consumption - government '+curr]
@@ -164,7 +176,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     exports_services.loc[slice('G45',None)] = exports.loc[slice('G45',None)].values
     # initialize TDPF
     from pyIEEM.models.TDPF import make_other_demand_shock_function
-    other_demand_shock_function = make_other_demand_shock_function(total, IC_multiplier, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, mu_exports_goods, demography, simulation_start).get_other_demand_reduction
+    other_demand_shock_function = make_other_demand_shock_function(total, IC_multiplier, IZW_government, investments, exports_goods, exports_services, lav_consumption, demography, simulation_start).get_other_demand_reduction
 
     # initialize model
     # ================
@@ -180,8 +192,6 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     model = epinomic_model(initial_states, parameters, coordinates=coordinates, time_dependent_parameters=time_dependent_parameters)
 
     return model
-
-
 
 ###############################
 ## Initialise epidemic model ##
@@ -633,7 +643,7 @@ def get_social_contact_function_parameters(parameters, country, spatial, scenari
     convmat = convmat.fillna(0).values
 
     # define economic policies
-    if ((scenarios == False) | (scenarios == 'hypothetical_pure')):
+    if ((scenarios == False) | (scenarios == 'hypothetical_pure') | (scenarios == 'hypothetical_spatial_spread')):
         # load economic policies
         policies_df = pd.read_csv(os.path.join(abs_dir, f'../../../data/interim/eco/policies/policies_{country}.csv'), index_col=[0], header=[0])
         # extract and format
