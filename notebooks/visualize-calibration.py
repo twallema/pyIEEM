@@ -39,13 +39,12 @@ overdispersion_national = 0.036
 confint = 0.05
 nrows = 3
 ncols = 4
+alpha_model_prediction = (0.05*18)/N
 end_visualisation_epi = datetime(2021, 7, 1)
 # visualiation (epi + eco national)
 end_visualisation_eco = datetime(2021, 3, 1)
 # compute simulation time
 end_simulation = max(end_visualisation_epi, end_visualisation_eco)
-
-end_simulation = datetime(2020, 6, 1)
 
 #############################################
 ## Helper function for observational noise ##
@@ -270,7 +269,7 @@ for model in [model_BE, model_SWE]:
 titles = ['Belgium', 'Sweden']
 countries = ['BE', 'SWE']
 
-fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(11.7, 8.3), sharex=True)
+fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(8.3, 11.7*(2/3)), sharex=True)
 
 for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], [data_BE_eco_employment, data_SWE_eco_employment], ['BE', 'SWE'], demographies)):
     
@@ -292,7 +291,7 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
     df_2plot = output_to_visuals(out, ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=over, LL = confint/2, UL = 1 - confint/2)
     # model: visualise
     for k in range(N):
-        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k)/demography.sum()*100000, color='blue', linewidth=1.5, alpha=0.1)
+        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k)/demography.sum()*100000, color='blue', linewidth=1.5, alpha=alpha_model_prediction)
     ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower']/demography.sum()*100000, df_2plot['Hin', 'upper']/demography.sum()*100000, color='blue', alpha=0.2)
     # axes properties
     ax[0, i].set_xlim([start_calibration, end_visualisation_eco])
@@ -312,7 +311,7 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
     # model
     x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
     for k in range(N):
-        ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').isel(draws=k)/x_0,  color='blue', linewidth=1.5, alpha=0.1)
+        ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').isel(draws=k)/x_0,  color='blue', linewidth=1.5, alpha=alpha_model_prediction)
 
     ax[1, i].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
                                     100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
@@ -331,7 +330,7 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
     # model
     l_0 = out.l.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
     for k in range(N):
-        ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').isel(draws=k)/l_0,  color='blue', linewidth=1.5, alpha=0.1)
+        ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').isel(draws=k)/l_0,  color='blue', linewidth=1.5, alpha=alpha_model_prediction)
     ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
                                     100*out.l.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/l_0, color='blue', alpha=0.2)
     # axes properties
@@ -394,7 +393,7 @@ for out, data, country, aggfunc, demography, ylimit in zip(outputs, [data_BE_epi
                     # plot model prediction
                     for k in range(N):
                         ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
-                        dim='age_class').isel(draws=k)/demo*100000, color='blue', linewidth=1.5, alpha=0.1)
+                        dim='age_class').isel(draws=k)/demo*100000, color='blue', linewidth=1.5, alpha=alpha_model_prediction)
                     if country == 'BE':
                         ov = overdispersion_spatial
                     else:
@@ -415,7 +414,7 @@ for out, data, country, aggfunc, demography, ylimit in zip(outputs, [data_BE_epi
                     # plot model prediction
                     for k in range(N):
                         ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).sel(
-                        draws=k)/demography.sum()*100000, color='blue', linewidth=1.5, alpha=0.1)
+                        draws=k)/demography.sum()*100000, color='blue', linewidth=1.5, alpha=alpha_model_prediction)
                     if country == 'BE':
                         ov = overdispersion_national
                     else:
