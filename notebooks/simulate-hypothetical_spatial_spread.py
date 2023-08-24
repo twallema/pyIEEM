@@ -43,7 +43,6 @@ confint = 0.05
 ## Helper function to change initial condition ##
 #################################################
 
-import random
 # helper function to adjust initial condition
 def update_initial_condition(spatial_units_additional, spatial_units_always, demography, spatial_units, initial_condition, N, weigh_demographic=True):
     """
@@ -120,10 +119,6 @@ for i,country in enumerate(countries):
         'amplitude_SWE': 0,
         'amplitude_BE': 0,
     })
-    # lower ramp from 5 to 2 days to end up with 320 hospital incidence (to be able to compare this to real-life)
-    #model.parameters.update({
-    #    'l': 2,
-    #})
     # eliminate other demand shock
     model.parameters.update({
         'shock_exports_goods': 0,
