@@ -42,8 +42,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # =====================
 
     # reference:
-    n_SWE = 1000
-    n_BE = 2000
+    n_SWE = 600
+    n_BE = 1000
     IC_multiplier = n_SWE/n_BE
 
     # construct social contact TDPF (epidemic)
