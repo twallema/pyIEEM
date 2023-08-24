@@ -6,6 +6,8 @@
 # assess the impact on daily hospitalisations, GDP and employment
 
 import os
+import json
+import argparse
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -22,81 +24,108 @@ os.environ['NUMEXPR_NUM_THREADS'] = '1'
 # define all paths absolute
 abs_dir = os.path.dirname(__file__)
 
+# parse arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("-ID", "--identifier", help="Calibration identifier")
+parser.add_argument("-d", "--date", help="Calibration date")
+args = parser.parse_args()
+
 ##########################
 ## change settings here ##
 ##########################
 
+countries = ['SWE', 'BE']
+spatial_units_always = [['Stockholm'], ['Brussels',],]
 pars = ['nu',] # 'pi_work', 'pi_leisure', 'mu']
 values = [[7, 28, 62], ] # [0.02,], [0.06,], [0.86,]]
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 states = states_epi + states_eco
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2020, 2, 7)
+end_simulation = datetime(2020, 5, 1)
 
 ######################
 ## helper functions ##
 ######################
 
 # helper function to adjust initial condition
-def update_initial_condition(n, initial_condition, N_other, N_work):
+def update_initial_condition(spatial_units_always, spatial_units, initial_condition, N):
     """
-    distribute `n` number of infected over the model's age groups according to the amount of social contact
+    A function to divide initial infected over several spatial patches of the model
     """
-    assert len(n) == initial_condition.shape[1]
-    # compute number of contacts per age group per spatial patch (N x G)
-    N = np.sum(N_other, axis=0) + np.sum(N_work, axis=0)
+    # extract contacts
+    N_work = N['work']
+    N_home = N['home']
+    N_other = N['home']
     # pre-allocate output
     output = np.zeros(initial_condition.shape, dtype=float)
-    # loop over spatial patches
-    for j, inf in enumerate(n):
-        # distribute over age groups
-        inf = inf * (N[:, 0]/sum(N[:, 0]))
-        # determine index of age group to drop infected in
-        # i = np.random.choice(len(N[:, 0]), p=N[:, 0]/sum(N[:, 0]))
-        # assign to output
-        output[:, j] = inf
+    # compute number of contacts per age group per spatial patch (N x G)
+    N = np.sum(N_other, axis=0) + np.sum(N_work, axis=0) + np.sum(N_home, axis=0)
+    # sum of all infected is always one, only spatial distribution is altered
+    infected = 1/len(spatial_units_always)
+    # loop over spatial patches you always want to put an infected in
+    for j, patchname in enumerate(spatial_units):
+        # check if always present
+        if patchname in spatial_units_always:
+            inf = infected * (N[:, j]/sum(N[:, j]))
+            output[:, j] += inf
     return output
 
-#################
-## load models ##
-#################
+#########################
+## load model and data ##
+#########################
 
-# use default age classes
-age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
-    35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-# load model and update intial condition
-countries = ['BE', 'SWE']
-models = []
-inhabitants = []
-for country in countries:
-    # load total number of inhabitants
-    inhabitants.append(pd.read_csv(os.path.join(
-        abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).sum().values[0])
-    # load model
-    model = initialize_epinomic_model(country, age_classes, True, start_simulation, scenarios='hypothetical_pure')
-    # update initial condition: one infected per spatial patch, distributed over all age groups
-    model.initial_states['E'] = update_initial_condition(np.ones(model.parameters['G'].shape[0]), model.initial_states['E'],
-                                                            model.parameters['N']['other'], model.parameters['N']['work'])
-    # update parameters with calibrated values
+## start loop here
+models=[]
+inhabitants=[]
+print(f"\ninitialising models")
+for country,su in zip(countries,spatial_units_always):
+    # load samples dictionary
+    samples_dict = json.load(open(args.identifier+'_SAMPLES_'+args.date+'.json'))
+    # load model SWE with default initial condition
+    age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
+        35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
+    model = initialize_epinomic_model(country, age_classes, True, simulation_start=start_simulation, scenarios=f'hypothetical_spatial_spread')
+    # set initial infected in Stockholm and Brussels
+    init_E = update_initial_condition(su, model.coordinates['spatial_unit'], model.initial_states['E'], model.parameters['N'])
+    model.initial_states.update({'E': init_E})
+    # load number of inhabitants for normalisation of data
+    inhabitant = pd.read_csv(os.path.join(abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).sum().values[0]
+    # set parameters to calibrated values
+    pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'mu', 'amplitude_BE', 'peak_shift_BE', 'amplitude_SWE', 'peak_shift_SWE', 'iota_H', 'iota_F']
+    for par in pars:
+        model.parameters.update({par: np.mean(samples_dict[par])})
+    # eliminate seasonality
     model.parameters.update({
-        'nu': 20,
-        'xi_eff': 0.40,
-        'pi_eff': 0.06,
-        'pi_work': 0.02,
-        'pi_leisure': 0.06,
-        'mu': 0.86,
-        'iota_H': 7.1,
-        'iota_F': 6.6,
+        'amplitude_SWE': 0,
+        'amplitude_BE': 0,
     })
-    # disable seasonality
-    model.parameters.update({'amplitude_BE': 0, 'amplitude_SWE': 0})
-    # append to output
+    # eliminate other demand shock
+    model.parameters.update({
+        'shock_exports_goods': 0,
+        'shock_exports_services': 0,
+        'shock_investment': 0,
+    })
+    # eliminate labor supply shock
+    if country == 'SWE':
+        model.parameters.update({'economy_SWE': np.zeros([63,1], dtype=float)})
+    elif country == 'BE':
+        model.parameters.update({'economy_BE_lockdown_1': np.zeros([63,1], dtype=float),
+                                'economy_BE_phaseI': np.zeros([63,1], dtype=float),
+                                'economy_BE_phaseII': np.zeros([63,1], dtype=float),
+                                'economy_BE_phaseIII': np.zeros([63,1], dtype=float),
+                                'economy_BE_phaseIV': np.zeros([63,1], dtype=float),
+                                'economy_BE_lockdown_Antwerp': np.zeros([63,1], dtype=float)
+        })
+    # append to lists
+    inhabitants.append(inhabitant)
     models.append(model)
 
 ##############
 ## simulate ##
 ##############
+
+print(f"starting simulations")
 
 # simulation loop
 copypar = models[0].parameters.copy()
@@ -134,5 +163,5 @@ for i, (par,vals) in enumerate(zip(pars,values)):
             # reset parameters
             model.parameters.update({par: copypar[par]})
     # save output
-    outputs.to_csv(f'simulations_hypothetical_pure_{par}.csv')
+    outputs.to_csv(f'simulations-variate_parameters-{par}.csv')
 
