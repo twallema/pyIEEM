@@ -303,7 +303,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 14)
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
@@ -1109,7 +1109,7 @@ class make_labor_supply_shock_function():
         #########################
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 14)
+        t_BE_lockdown_1 = datetime(2020, 3, 15)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
