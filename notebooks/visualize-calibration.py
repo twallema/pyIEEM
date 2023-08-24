@@ -30,8 +30,8 @@ args = parser.parse_args()
 ##########################
 
 # simulation
-N = 6
-processes = 1
+N = 18
+processes = 18
 # visualisation (epi only + spatial)
 n_draws_per_sample = 200
 overdispersion_spatial = 0.047
@@ -44,6 +44,8 @@ end_visualisation_epi = datetime(2021, 7, 1)
 end_visualisation_eco = datetime(2021, 3, 1)
 # compute simulation time
 end_simulation = max(end_visualisation_epi, end_visualisation_eco)
+
+end_simulation = datetime(2020, 6, 1)
 
 #############################################
 ## Helper function for observational noise ##
@@ -227,11 +229,11 @@ model_BE = initialize_epinomic_model(
 model_SWE = initialize_epinomic_model(
     'SWE', age_classes, True, start_calibration)
 
-# load number of inhabitants
-inhabitants=[]
+# load number of demographies
+demographies=[]
 for country in ['BE', 'SWE']:
-    inhabitants.append(pd.read_csv(os.path.join(
-                        abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).sum().values[0])
+    demographies.append(pd.read_csv(os.path.join(
+                        abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().squeeze())
 
 ##########################
 ## define draw function ##
@@ -270,11 +272,11 @@ countries = ['BE', 'SWE']
 
 fig, ax = plt.subplots(nrows=3, ncols=2, figsize=(11.7, 8.3), sharex=True)
 
-for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, inhabitant) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], [data_BE_eco_employment, data_SWE_eco_employment], ['BE', 'SWE'], inhabitants)):
+for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) in enumerate(zip(outputs, [data_BE_epi, data_SWE_epi], [data_BE_eco_GDP, data_SWE_eco_GDP], [data_BE_eco_employment, data_SWE_eco_employment], ['BE', 'SWE'], demographies)):
     
     ## epidemiological
-    data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()/inhabitant*100000
-    data_post_calibration = data_epi.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()/inhabitant*100000
+    data_calibration = data_epi.loc[slice(start_calibration, end_calibration_epi)].groupby(by='date').sum()/demography.sum()*100000
+    data_post_calibration = data_epi.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_eco)].groupby(by='date').sum()/demography.sum()*100000
     # data
     if country == 'BE':
         alpha = 0.6
@@ -290,12 +292,11 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, inhabitant) i
     df_2plot = output_to_visuals(out, ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=over, LL = confint/2, UL = 1 - confint/2)
     # model: visualise
     for k in range(N):
-        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k)/inhabitant*100000, color='blue', linewidth=1.5, alpha=0.1)
-    # ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).mean(dim='draws'), color='blue', linewidth=1.5, alpha=0.6)
-    ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower']/inhabitant*100000, df_2plot['Hin', 'upper']/inhabitant*100000, color='blue', alpha=0.2)
+        ax[0, i].plot(out.date, out.Hin.sum(dim=['age_class','spatial_unit']).isel(draws=k)/demography.sum()*100000, color='blue', linewidth=1.5, alpha=0.1)
+    ax[0, i].fill_between(out.date, df_2plot['Hin', 'lower']/demography.sum()*100000, df_2plot['Hin', 'upper']/demography.sum()*100000, color='blue', alpha=0.2)
     # axes properties
     ax[0, i].set_xlim([start_calibration, end_visualisation_eco])
-    ax[0, i].set_ylim([0, 850])
+    ax[0, i].set_ylim([0, 8.2])
     ax[0, i].yaxis.set_major_locator(MaxNLocator(6))
     ax[0, i].set_title(titles[i])
 
@@ -310,7 +311,6 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, inhabitant) i
                     edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
     x_0 = out.x.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
-    #ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').mean(dim='draws')/x_0,  color='blue', linewidth=1.5)
     for k in range(N):
         ax[1, i].plot(out.date, 100*out.x.sum(dim='NACE64').isel(draws=k)/x_0,  color='blue', linewidth=1.5, alpha=0.1)
 
@@ -330,7 +330,6 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, inhabitant) i
                     edgecolors='red', facecolors='red', marker='o', s=10, alpha=0.8)
     # model
     l_0 = out.l.sum(dim='NACE64').mean(dim='draws').isel(date=0).values
-    #ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').mean(dim='draws')/l_0,  color='blue', linewidth=1.5)
     for k in range(N):
         ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').isel(draws=k)/l_0,  color='blue', linewidth=1.5, alpha=0.1)
     ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
@@ -343,23 +342,24 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, inhabitant) i
         tick.set_rotation(30)
     # ylabels left hand side only
     if i == 0:
-        ax[0, i].set_ylabel('Hospital incidence (-)')
-        ax[1, i].set_ylabel('Productivity (%)')
-        ax[2, i].set_ylabel('Employment (%)')
+        ax[0, i].set_ylabel('Hospital incidence\nper 100K inhab. (-)')
+        ax[1, i].set_ylabel('Gross aggregated output (%)')
+        ax[2, i].set_ylabel('Labor compensation (%)')
 
 plt.savefig(
-    f'calibration_epinomic_national.png', dpi=400)
-# plt.show()
+    f'calibration_epinomic_national.png', dpi=600)
+#plt.show()
 plt.close()
 
 ###########################################
 ## visualise calibration (epi + spatial) ##
 ###########################################
 
+ylimits = [[0,13],[0,8]]
 aggregation_functions = [aggregate_Brussels_Brabant_DataArray, dummy_aggregation]
 
 # visualisation
-for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], countries, aggregation_functions):
+for out, data, country, aggfunc, demography, ylimit in zip(outputs, [data_BE_epi, data_SWE_epi], countries, aggregation_functions, demographies, ylimits):
 
     # aggregate model
     out = aggfunc(out.Hin)
@@ -376,28 +376,31 @@ for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], cou
     counter = 0
     while counter <= len(spatial_units):
         fig, axes = plt.subplots(
-            nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
+            nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True, sharey=True)
         axes = axes.flatten()
         for j, ax in enumerate(axes):
             if j+counter <= len(spatial_units):
                 if j + counter < len(spatial_units):
+                    # extract demographics
+                    if spatial_units[j+counter] == 'Brussels and Brabant':
+                            demo = demography.loc['Brussels'] + demography.loc['Vlaams-Brabant'] + demography.loc['Brabant Wallon']
+                    else:
+                        demo = demography.loc[spatial_units[j+counter]]
                     # plot data
-                    ax.scatter(dates_calibration, data.loc[slice(start_calibration, end_calibration_epi), spatial_units[j+counter]],
+                    ax.scatter(dates_calibration, data.loc[slice(start_calibration, end_calibration_epi), spatial_units[j+counter]]/demo*100000,
                                edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.6)
-                    ax.scatter(dates_post_calibration, data.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi), spatial_units[j+counter]],
+                    ax.scatter(dates_post_calibration, data.loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi), spatial_units[j+counter]]/demo*100000,
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
                     for k in range(N):
                         ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
-                        dim='age_class').isel(draws=k), color='blue', linewidth=1.5, alpha=0.1)
-                    #ax.plot(out.date, out.sel(spatial_unit=spatial_units[j+counter]).sum(
-                    #    dim='age_class').mean(dim='draws'), color='blue', linewidth=1)
+                        dim='age_class').isel(draws=k)/demo*100000, color='blue', linewidth=1.5, alpha=0.1)
                     if country == 'BE':
                         ov = overdispersion_spatial
                     else:
                         ov = 1e-3
                     df_2plot = output_to_visuals(out.sel(spatial_unit=spatial_units[j+counter]).to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=ov, LL = confint/2, UL = 1 - confint/2)
-                    ax.fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
+                    ax.fill_between(out.date, df_2plot['Hin', 'lower']/demo*100000, df_2plot['Hin', 'upper']/demo*100000, color='blue', alpha=0.2)
                     # shade VOCs and vaccines
                     ax.axvspan('2021-02-01', end_visualisation_epi,
                                color='black', alpha=0.1)
@@ -405,22 +408,20 @@ for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], cou
                     ax.set_title(spatial_units[j+counter])
                 else:
                     # plot data
-                    ax.scatter(dates_calibration, data.groupby(by='date').sum().loc[slice(start_calibration, end_calibration_epi)],
+                    ax.scatter(dates_calibration, data.groupby(by='date').sum().loc[slice(start_calibration, end_calibration_epi)]/demography.sum()*100000,
                                edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.6)
-                    ax.scatter(dates_post_calibration, data.groupby(by='date').sum().loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi)],
+                    ax.scatter(dates_post_calibration, data.groupby(by='date').sum().loc[slice(end_calibration_epi+timedelta(days=1), end_visualisation_epi)]/demography.sum()*100000,
                                edgecolors='red', facecolors='white', marker='o', s=10, alpha=0.6)
                     # plot model prediction
                     for k in range(N):
                         ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).sel(
-                        draws=k), color='blue', linewidth=1.5, alpha=0.1)
-                    #ax.plot(out.date, out.sum(dim=['age_class', 'spatial_unit']).mean(
-                    #    dim='draws'), color='blue', linewidth=1)
+                        draws=k)/demography.sum()*100000, color='blue', linewidth=1.5, alpha=0.1)
                     if country == 'BE':
                         ov = overdispersion_national
                     else:
                         ov = 1e-3
                     df_2plot = output_to_visuals(out.to_dataset(name='Hin'), ['Hin',], n_draws_per_sample=n_draws_per_sample, alpha=ov, LL = confint/2, UL = 1 - confint/2)
-                    ax.fill_between(out.date, df_2plot['Hin', 'lower'], df_2plot['Hin', 'upper'], color='blue', alpha=0.2)
+                    ax.fill_between(out.date, df_2plot['Hin', 'lower']/demography.sum()*100000, df_2plot['Hin', 'upper']/demography.sum()*100000, color='blue', alpha=0.2)
                     # shade VOCs and vaccines + text
                     ax.axvspan('2021-02-01', end_visualisation_epi,
                                color='black', alpha=0.1)
@@ -428,18 +429,23 @@ for out, data, country, aggfunc in zip(outputs, [data_BE_epi, data_SWE_epi], cou
                             transform=ax.transAxes, fontsize=6)
                     # set title
                     ax.set_title(country)
-                # set maximum number of labels
-                ax.xaxis.set_major_locator(MaxNLocator(5))
+                # set maximum number of xlabels
+                ax.xaxis.set_major_locator(MaxNLocator(7))
                 # rotate labels
                 for tick in ax.get_xticklabels():
-                    tick.set_rotation(60)
+                    tick.set_rotation(90)
                 # limit xrange
                 ax.set_xlim([start_calibration, end_visualisation_epi])
+                # set ylabel
+                if j % ncols == 0:
+                    ax.set_ylabel('Hospital incidence\nper 100K inhab. (-)')
+                # set ylim
+                ax.set_ylim(ylimit)
             else:
                 fig.delaxes(ax)
         n_figs += 1
         counter += nrows*ncols
         plt.savefig(
-            f'calibration_epinomic_{country}_part_{n_figs}.png', dpi=400)
+            f'calibration_epinomic_{country}_part_{n_figs}.png', dpi=600)
         # plt.show()
         plt.close()
