@@ -29,12 +29,12 @@ args = parser.parse_args()
 ## change settings here ##
 ##########################
 
-scenarios = ['L1', 'L2a', 'L2b', 'L3a', 'L3b', 'L4a', 'L4b']
-t_start_lockdowns = [datetime(2020, 3, 15), datetime(2020, 3, 10)]
+scenarios = ['L1', 'L2b', 'L3b', 'L4a', 'L4b']
+t_start_lockdowns = [datetime(2020, 3, 18), datetime(2020, 3, 15), datetime(2020, 3, 12)]
 l_economics = [14,]
 # simulation
-N = 6
-processes = 6
+N = 3
+processes = 3
 start_simulation = datetime(2020, 3, 1)
 end_simulation = datetime(2021, 2, 1)
 states_epi = ['Hin', 'Ih']

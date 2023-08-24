@@ -114,6 +114,9 @@ class make_social_contact_function():
         self.hesitancy = hesitancy
         self.country = country
 
+        # for the swedish scenario
+        self.t_start = None
+
         # pre-allocate simulation start
         if not isinstance(simulation_start, (str, datetime)):
             raise TypeError("`simulation_start` should be of type 'datetime' or 'str'")
@@ -592,6 +595,103 @@ class make_social_contact_function():
 
         return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
+    def get_contacts_trigger(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure):
+        """
+        Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
+
+        input
+        =====
+
+        l: int/float
+            length of ramp function to smoothly ease in mentality change at beginning of pandemic (step functions cause stifness in the solution)
+
+        G: np.ndarray
+            recurrent mobility matrix
+
+        mu: int/float
+            governs the amount of attention paid to the hospital load on the own spatial patch vs. the spatial patch with the highest incidence
+            mu=0: only look at own patch, mu=inf: only look at patch with maximum infectivity
+
+        nu: int/float
+            half-life of the hospital load memory.
+            implemented as the half-life of the exponential decay function used as weights in the computation of the exponential moving average number of hospital load
+
+        xi: int/float
+            displacement parameter of the Gompertz behavioral model
+
+        pi: int/float
+            steepness parameter of the Gompertz behavioral model
+        
+        economy_SWE: pd.Series
+            closure of schools for upper secundary and higher education
+
+        output
+        ======
+
+        N: dict
+            Keys: "work" and "other"
+            Contact matrix per spatial patch at work and in all other locations.
+        """
+
+        ############
+        ## memory ##
+        ############
+
+        # get total number of hospitalisations per spatial patch per 100 K inhabitants
+        I = 1e5*np.sum(states['Ih'], axis=0)/(np.sum(states['S'], axis=0) + np.sum(states['E'], axis=0) + np.sum(states['Ip'], axis=0) + np.sum(states['Ia'], axis=0) + np.sum(states['Im'], axis=0) + np.sum(states['Ih'], axis=0) + np.sum(states['R'], axis=0))
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, I, self.simulation_start, self.G, time_threshold=31)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, I, I_star, self.G, nu)
+
+        #######################
+        ## behavioral models ##
+        #######################
+
+        # compute average perceived hospital load per spatial patch
+        I_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        I_star_average *= self.IC_multiplier
+        # leisure and general effectivity of contacts
+        M_eff = 1-gompertz(I_star_average, xi_eff, pi_eff)
+        # voluntary switch to telework or absenteism
+        M_work = 1-gompertz(I_star_average, xi_work, (pi_work*self.hesitancy).values)
+        # reduction of leisure contacts
+        M_leisure = 1-gompertz(I_star_average, xi_leisure, pi_leisure)
+
+        ###############################
+        ## fraction employed workers ##
+        ###############################
+
+        f_employed = states['l']/np.squeeze(l_0)
+
+        ##############
+        ## policies ##
+        ##############
+
+        # define awareness trigger (linear interpolation between first two datapoints for SWE)
+        if self.country == 'SWE':
+            trigger = 22
+        else:
+            trigger = (11.6/10.4)*22
+
+        # reset self.t_start
+        time_threshold=1
+        if ((abs((t - self.simulation_start)/timedelta(days=1)) < time_threshold)):
+            self.t_start = None
+
+        # determine awareness trigger
+        if ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (self.t_start==None)):
+            self.t_start = t
+
+        if np.sum(np.sum(states['Hin'], axis=0)) >= trigger: 
+            policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            return {'home': ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])}
+        else:
+            return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
@@ -674,7 +774,8 @@ class make_seasonality_function():
 
 class make_other_demand_shock_function():
 
-    def __init__(self, total, IC_multiplier, IZW_government, investments, exports_goods, exports_services, lav_consumption, mu_investment, mu_exports_goods, demography, simulation_start):
+    def __init__(self, total, IC_multiplier, IZW_government, investments, exports_goods, exports_services, lav_consumption,
+                    demography, simulation_start):
 
         # derive number of spatial patches
         self.G = len(demography)
@@ -696,13 +797,11 @@ class make_other_demand_shock_function():
         self.investments = investments
         self.exports_goods = exports_goods
         self.exports_services = exports_services
-        self.mu_investment = mu_investment
-        self.mu_exports_goods = mu_exports_goods
         self.lav_consumption = lav_consumption
         self.IC_multiplier = IC_multiplier
         self.demography = demography
 
-    def get_other_demand_reduction(self, t, states, param, G, mu, nu, xi_leisure, pi_leisure):
+    def get_other_demand_reduction(self, t, states, param, G, mu, nu, xi_leisure, pi_leisure, shock_investment, shock_exports_goods, shock_exports_services):
         """
         Function returning the other demand shock during the 2020 COVID-19 pandemic
 
@@ -766,8 +865,8 @@ class make_other_demand_shock_function():
         t_end_services_shock = datetime(2021, 7, 1)
         
         # maximum shocks
-        max_export_shock = self.mu_exports_goods*self.exports_goods + 0.21*self.exports_services
-        max_investment_shock = self.mu_investment*self.investments
+        max_export_shock = shock_exports_goods*self.exports_goods + shock_exports_services*self.exports_services
+        max_investment_shock = shock_investment*self.investments
 
         if t < t_start_max_shock:
             # shock to government and investment only
@@ -779,11 +878,11 @@ class make_other_demand_shock_function():
             return (1 - (self.total - total_shock)/self.total).fillna(0).values
         elif t_end_max_shock <= t < t_end_services_shock:
             # investment and goods
-            policy_old = max_investment_shock + self.mu_exports_goods*self.exports_goods
+            policy_old = max_investment_shock + shock_exports_goods*self.exports_goods
             policy_new = np.zeros(len(max_export_shock))
             shock_invgood = ramp_fun(t, t_end_max_shock, (t_end_investment_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
             # services
-            policy_old = 0.21*self.exports_services
+            policy_old = shock_exports_services*self.exports_services
             policy_new = np.zeros(len(max_export_shock))
             shock_serv = ramp_fun(t, t_end_max_shock, (t_end_services_shock - t_end_max_shock)/timedelta(days=1), policy_old, policy_new)
             total_shock = shock_govIZW + shock_invgood + shock_serv
