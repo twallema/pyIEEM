@@ -33,7 +33,7 @@ countries = ['SWE', 'BE']
 spatial_units_always = [['Stockholm'], ['Brussels',],]
 # simulation
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2020, 7, 1)
+end_simulation = datetime(2020, 12, 1)
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 # visualisation (epi only + spatial)

@@ -36,13 +36,13 @@ args = parser.parse_args()
 
 countries = ['SWE', 'BE']
 spatial_units_always = [['Stockholm'], ['Brussels',],]
-pars = ['nu',] # 'pi_work', 'pi_leisure', 'mu']
-values = [[7, 28, 62], ] # [0.02,], [0.06,], [0.86,]]
+pars = ['nu', 'pi_work', 'pi_leisure', 'mu']
+values = [[7, 28, 62], [0.025,0.050,0.075], [0.02,0.06,0.10], [0.5, 1, 1.5]]
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 states = states_epi + states_eco
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2020, 5, 1)
+end_simulation = datetime(2021, 8, 1)
 
 ######################
 ## helper functions ##
@@ -115,7 +115,10 @@ for country,su in zip(countries,spatial_units_always):
                                 'economy_BE_phaseII': np.zeros([63,1], dtype=float),
                                 'economy_BE_phaseIII': np.zeros([63,1], dtype=float),
                                 'economy_BE_phaseIV': np.zeros([63,1], dtype=float),
-                                'economy_BE_lockdown_Antwerp': np.zeros([63,1], dtype=float)
+                                'economy_BE_lockdown_Antwerp': np.zeros([63,1], dtype=float),
+                                'economy_BE_lockdown_2_1': np.zeros([63,1], dtype=float),
+                                'economy_BE_lockdown_2_2': np.zeros([63,1], dtype=float),
+                                'economy_BE_plateau': np.zeros([63,1], dtype=float),
         })
     # append to lists
     inhabitants.append(inhabitant)
@@ -158,6 +161,7 @@ for i, (par,vals) in enumerate(zip(pars,values)):
                 # normalise with initial amount if epi state 
                 elif state in states_eco:
                     out_copy /= out_copy.isel(date=0).values
+                    out_copy *= 100
                 # add to output
                 outputs.loc[(country,) + (v,) + (slice(None),), states[j]] = out_copy.values
             # reset parameters

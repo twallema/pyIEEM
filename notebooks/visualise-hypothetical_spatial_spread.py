@@ -19,10 +19,11 @@ weigh_demographic = False
 countries = ['BE', 'SWE']
 IC_ratio = 0.162
 population = [11.6e6, 10.4e6]
-IC_beds_nominal = [1200, 600]
+IC_beds_nominal = [1000, 600]
 IC_beds_extended = [2000, 1000]
-location_IC_annotation = 0 #datetime(2020, 2, 1)
-ylabels = ['ICU load (-)', 'Productivity (%)', 'Employment (%)']
+IC_multipliers = [IC_beds_nominal[1]/IC_beds_nominal[i] for i in range(len(IC_beds_nominal))]
+location_IC_annotation = 0
+ylabels = ['IC load (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
 ylims = [[0, 13.5], [87, 101], [87, 101]]
 highlights = [['Brussels',], ['Stockholm',]]
 
@@ -104,7 +105,7 @@ plt.close()
 # make figure
 fig, ax = plt.subplots(nrows=3, ncols=len(countries), figsize=(11.7, 8.3), sharex=True)
 
-for j, (simout, date, spatial_unit, highlight, country) in enumerate(zip(simouts,dates,spatial_units,highlights,countries)):
+for j, (simout, date, spatial_unit, highlight, country,IC_multiplier) in enumerate(zip(simouts,dates,spatial_units,highlights,countries,IC_multipliers)):
 
     ## plot all data
     for su in spatial_unit:
@@ -117,7 +118,7 @@ for j, (simout, date, spatial_unit, highlight, country) in enumerate(zip(simouts
             zorder = -1
         if su != 'Gotland':
             # IC load
-            ax[0,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'Ih']*IC_ratio, color=color, linewidth=1.5, zorder=zorder)
+            ax[0,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'Ih']*IC_ratio*IC_multiplier, color=color, linewidth=1.5, zorder=zorder)
             # GDP
             ax[1,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'x'], color=color, linewidth=1.5, zorder=zorder)
             # employment
@@ -127,16 +128,16 @@ for j, (simout, date, spatial_unit, highlight, country) in enumerate(zip(simouts
 
     ## HCS capacity
     # lines
-    ax[0, j].axhline(IC_beds_nominal[j]/population[j]*100000, xmin=0, xmax=1,
+    ax[0, j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
                         linestyle='--', color='black', linewidth=1)
-    ax[0, j].axhline(IC_beds_extended[j]/population[j]*100000, xmin=0, xmax=1,
+    ax[0, j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
                         linestyle='--', color='black', linewidth=1)
    # text
-    ax[0, j].text(x=location_IC_annotation, y=(IC_beds_nominal[j]+25)/population[j] *
-                100000, s='nominal IC capacity', size=8)
-    if country=='SWE':
-        ax[0, j].text(x=location_IC_annotation, y=(IC_beds_extended[j]+25)/population[j] *
-                    100000, s='extended IC capacity', size=8)                     
+    ax[0, j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
+                100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
+
+    ax[0, j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
+                100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8)                     
 
     ## x-axis
     # maximum number of xticks
@@ -153,6 +154,12 @@ for j, (simout, date, spatial_unit, highlight, country) in enumerate(zip(simouts
         if j == 0:
             ax[i, j].set_ylabel(ylabels[i])
         ax[i, j].set_ylim(ylims[i])  
+    # no ticks with IC load
+    ax[0,j].set_yticks([])
+    # align y labels
+    for j in range(2):
+        posx=-0.135
+        ax[0, j].yaxis.set_label_coords(posx, 0.5)
 
 plt.savefig(
     'visualise-hypothetical_spatial_spread_2.png', dpi=600

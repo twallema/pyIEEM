@@ -342,7 +342,7 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
     # ylabels left hand side only
     if i == 0:
         ax[0, i].set_ylabel('Hospital incidence\nper 100K inhab. (-)')
-        ax[1, i].set_ylabel('Gross aggregated output (%)')
+        ax[1, i].set_ylabel('Gross aggregated\noutput (%)')
         ax[2, i].set_ylabel('Labor compensation (%)')
 
 plt.savefig(
