@@ -86,9 +86,9 @@ labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{lei
 log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2,
                         log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2]
 
-theta = [21, 0.45, 0.07, 0.035, 0.07, 1, 0.20, -7, 0.20, 14, 14, 7] # where are my parameters? 
-mu_list = [21, 0.45, 0.07, 0.035, 0.06, 1, 0.20, 0, 0.20, 0, 14, 7] # where do I expect the parameters to be?
-sigma_list = [2, 0.03, 0.005, 0.0035, 0.006, 0.1, 0.02, 7, 0.03, 7, 2, 1] # How much noise do I expect there to be on the parameter value?
+theta = [24, 0.45, 0.07, 0.035, 0.06, 1, 0.20, -7, 0.20, 14, 7, 7] # where are my parameters? 
+mu_list = [24, 0.45, 0.07, 0.035, 0.06, 1, 0.20, 0, 0.20, 0, 7, 7] # where do I expect the parameters to be?
+sigma_list = [2, 0.03, 0.005, 0.0035, 0.006, 0.2, 0.02, 7, 0.03, 7, 2, 2] # How much noise do I expect there to be on the parameter value?
 l_list = [8, 10, 25, 25, 15, 10, 20, 16, 20, 14, 10, 10] # How strong are my beliefs?
 log_prior_prob_fnc_args=[]
 for mu,sigma,l in zip(mu_list,sigma_list, l_list):
