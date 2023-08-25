@@ -23,8 +23,8 @@ abs_dir = os.path.dirname(__file__)
 ##########################
 
 # settings calibration
-start_calibration = '2020-03-01'
-end_calibration_epi = '2021-02-01'
+start_calibration = '2020-03-07'
+end_calibration_epi = '2021-01-01'
 end_calibration_eco = '2020-12-01'
 processes = 36
 max_iter = 100
