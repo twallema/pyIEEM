@@ -36,13 +36,13 @@ args = parser.parse_args()
 
 countries = ['SWE', 'BE']
 spatial_units_always = [['Stockholm'], ['Brussels',],]
-pars = ['nu', 'pi_work', 'pi_leisure', 'mu']
-values = [[7, 28, 62], [0.025,0.050,0.075], [0.02,0.06,0.10], [0.5, 1, 1.5]]
+parameters = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'mu']
+values = [[7, 28, 62], [0.40, 0.45, 0.50], [0.04, 0.07, 0.10], [0.01,0.035,0.06], [0.01,0.06,0.11], [0, 1, 10]]
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 states = states_epi + states_eco
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2021, 8, 1)
+end_simulation = datetime(2022, 1, 1)
 
 ######################
 ## helper functions ##
@@ -132,7 +132,7 @@ print(f"starting simulations")
 
 # simulation loop
 copypar = models[0].parameters.copy()
-for i, (par,vals) in enumerate(zip(pars,values)):
+for i, (par,vals) in enumerate(zip(parameters,values)):
     print(f"working on parameter '{par}'")
     # pre-made dataframe with desired formatting
     lvl = [countries,] + [vals,] + [pd.date_range(start=start_simulation, end=end_simulation, freq='D'), ]
