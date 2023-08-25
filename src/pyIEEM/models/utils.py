@@ -30,7 +30,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # ===========================================
 
     # no simulation start --> default: one exposed divided over all spatial patches and age groups
-    if scenarios == 'hypothetical_spatial_spread':
+    if scenarios != 'hypothetical_spatial_spread':
         sim = xr.open_dataset(os.path.join(abs_dir, f'../../../data/interim/epi/initial_condition/{country}_INITIAL_CONDITION.nc'))
         for data_var in sim.keys():
             if spatial == True:
