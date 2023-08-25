@@ -94,6 +94,6 @@ for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
         if i==0:
             ax[i, j].set_title(country_names[j])
 
-plt.savefig('simulations-variate_parameters-{parameter_name}.png', dpi=600)
+plt.savefig(f'simulations-variate_parameters-{parameter_name}.png', dpi=600)
 plt.show()
 plt.close()

@@ -876,7 +876,7 @@ class make_other_demand_shock_function():
             policy_new = max_export_shock + max_investment_shock
             total_shock = shock_govIZW + ramp_fun(t, t_start_max_shock, 28, policy_old, policy_new)
             return (1 - (self.total - total_shock)/self.total).fillna(0).values
-        elif t_end_max_shock <= t < t_end_services_shock:
+        elif t_end_max_shock <= t <= t_end_services_shock:
             # investment and goods
             policy_old = max_investment_shock + shock_exports_goods*self.exports_goods
             policy_new = np.zeros(len(max_export_shock))
