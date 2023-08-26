@@ -1,9 +1,6 @@
 import os
-import numpy as np
 import pandas as pd
-from datetime import datetime
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 
 # define colorscale
 cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
@@ -29,7 +26,7 @@ countries = ['BE', 'SWE']
 country_names = ['Belgium', 'Sweden']
 colors = [cmap['blue'], cmap['green'], cmap['red'], cmap['black']]
 ylabels = ['IC load (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
-ylimits = [[0, 13.5], [94, 101], [94, 101]]
+ylimits = [[0, 13.5], [80, 101], [80, 101]]
 
 ###############
 ## internals ##
