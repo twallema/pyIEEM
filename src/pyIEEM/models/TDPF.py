@@ -146,7 +146,7 @@ class make_social_contact_function():
 
         # easter holiday increases the contacts at home slightly, which makes the model deviate slightly above the observed trajectory
         # this clearly deviates from the truth in BE (Easter fell during the lockdown)
-        if ((t.year==2020) & (t.month==4)):
+        if ((t.year==2020) & ((t.month==4) | (t.month==11) | (t.month==12))):
             vacation = False
 
         # slice right matrices and convert to right size
@@ -350,20 +350,24 @@ class make_social_contact_function():
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_relax_measures:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
-            M_eff[3:5] = 1-gompertz(np.zeros(2, dtype=float), xi_eff, pi_eff)
+            # extremely high second 2020 COVID-19 wave in Hainaut and Liege requires an ad-hoc tweak
+            M_eff[2] = 1-gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[3] = 1-0.75*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[4] = 1-0.80*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[6:8] = 1-gompertz(np.zeros(2, dtype=float), xi_eff, pi_eff)
             return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_1)
-            return {'home': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_BE_lockdown_2_1, l, policy_old['work'], policy_new['work'])}
+            return {'home': ramp_fun(t, t_BE_lockdown_2_1, 1, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_2_1, 1, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_2_1, 1, policy_old['work'], policy_new['work'])}
         elif t_BE_lockdown_2_2 <= t < t_BE_plateau:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_1)
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_2)
-            return {'home': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_BE_lockdown_2_2, l, policy_old['work'], policy_new['work'])}
+            return {'home': ramp_fun(t, t_BE_lockdown_2_2, 1, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_2_2, 1, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_2_2, 1, policy_old['work'], policy_new['work'])}
         else:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_2)
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_plateau)
