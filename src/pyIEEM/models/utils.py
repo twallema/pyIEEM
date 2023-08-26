@@ -901,7 +901,7 @@ def is_school_holiday(d, country):
         # Summer holiday is shifted two weaks in Sweden
         if ((d.isocalendar().week in holiday_weeks) | \
                 (d in public_holidays)) | \
-                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=9, day=1))):
+                    ((datetime(year=d.year, month=6, day=15) <= d < datetime(year=d.year, month=8, day=17))):
             return True
         else:
             return False        
