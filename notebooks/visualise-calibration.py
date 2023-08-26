@@ -30,8 +30,8 @@ args = parser.parse_args()
 ##########################
 
 # simulation
-N = 18
-processes = 18
+N = 6
+processes = 6
 # visualisation (epi only + spatial)
 n_draws_per_sample = 200
 overdispersion_spatial = 0.047
@@ -345,6 +345,7 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
         ax[1, i].set_ylabel('Gross aggregated\noutput (%)')
         ax[2, i].set_ylabel('Labor compensation (%)')
 
+plt.tight_layout()
 plt.savefig(
     f'calibration_epinomic_national.png', dpi=600)
 #plt.show()
@@ -444,7 +445,8 @@ for out, data, country, aggfunc, demography, ylimit in zip(outputs, [data_BE_epi
                 fig.delaxes(ax)
         n_figs += 1
         counter += nrows*ncols
+        plt.tight_layout()
         plt.savefig(
-            f'calibration_epinomic_{country}_part_{n_figs}.png', dpi=600)
+            f'calibration_epinomic_{country}_part_{n_figs}.png', dpi=300)
         # plt.show()
         plt.close()

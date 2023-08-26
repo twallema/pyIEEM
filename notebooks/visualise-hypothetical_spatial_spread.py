@@ -87,8 +87,8 @@ for i, (simout, spatial_unit,country,popdens) in enumerate(zip(simouts, spatial_
     # axes limits
     ax[1, 0].set_xlim([0,300])
     ax[1, 1].set_xlim([0,300])
-    ax[0, 0].set_ylim([20,135])
-    ax[0, 1].set_ylim([20,135])
+    ax[0, 0].set_ylim([20,160])
+    ax[0, 1].set_ylim([20,160])
     ax[1, 0].set_ylim([87,101])
     ax[1, 1].set_ylim([87,101])
 

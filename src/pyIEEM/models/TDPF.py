@@ -146,7 +146,7 @@ class make_social_contact_function():
 
         # easter holiday increases the contacts at home slightly, which makes the model deviate slightly above the observed trajectory
         # this clearly deviates from the truth in BE (Easter fell during the lockdown)
-        if ((t.year==2020) & (t.month == 4)):
+        if ((t.year==2020) & (t.month==4)):
             vacation = False
 
         # slice right matrices and convert to right size
@@ -346,7 +346,7 @@ class make_social_contact_function():
         elif t_BE_phase_IV <= t < t_BE_lockdown_Antwerp:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)        
         elif t_BE_lockdown_Antwerp <= t < t_BE_end_lockdown_Antwerp:
-            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions_Antwerp, telework_Antwerp, economy_BE_lockdown_Antwerp)
+            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions_Antwerp, 1, economy_BE_lockdown_Antwerp)
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_relax_measures:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
@@ -876,7 +876,7 @@ class make_other_demand_shock_function():
             policy_new = max_export_shock + max_investment_shock
             total_shock = shock_govIZW + ramp_fun(t, t_start_max_shock, 28, policy_old, policy_new)
             return (1 - (self.total - total_shock)/self.total).fillna(0).values
-        elif t_end_max_shock <= t < t_end_services_shock:
+        elif t_end_max_shock <= t <= t_end_services_shock:
             # investment and goods
             policy_old = max_investment_shock + shock_exports_goods*self.exports_goods
             policy_new = np.zeros(len(max_export_shock))
