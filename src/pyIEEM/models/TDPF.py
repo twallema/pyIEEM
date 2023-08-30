@@ -317,6 +317,8 @@ class make_social_contact_function():
         t_BE_lockdown_2_1 = datetime(2020, 10, 19)
         t_BE_lockdown_2_2 = datetime(2020, 11, 2)
         t_BE_plateau = datetime(2020, 11, 27)
+        t_BE_end_plateau = datetime(2021, 5, 15)
+        t_BE_end_pandemic  = datetime(2021, 7, 15)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
@@ -368,12 +370,20 @@ class make_social_contact_function():
             return {'home': ramp_fun(t, t_BE_lockdown_2_2, 1, policy_old['home'], policy_new['home']),
                     'other': ramp_fun(t, t_BE_lockdown_2_2, 1, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_lockdown_2_2, 1, policy_old['work'], policy_new['work'])}
-        else:
+        elif t_BE_plateau <= t < t_BE_end_plateau:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_2_2)
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_plateau)
             return {'home': ramp_fun(t, t_BE_plateau, l, policy_old['home'], policy_new['home']),
                     'other': ramp_fun(t, t_BE_plateau, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, t_BE_plateau, l, policy_old['work'], policy_new['work'])}
+        elif t_BE_end_plateau <= t < t_BE_end_pandemic:
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_plateau)
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            return {'home': ramp_fun(t, t_BE_end_plateau, 60, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_end_plateau, 60, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_end_plateau, 60, policy_old['work'], policy_new['work'])}
+        else:
+            return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
     def get_contacts_SWE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_SWE):
         """
@@ -599,7 +609,7 @@ class make_social_contact_function():
 
         return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
-    def get_contacts_trigger(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure):
+    def get_contacts_trigger(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, t_start_measures, length_measures):
         """
         Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
 
@@ -688,12 +698,24 @@ class make_social_contact_function():
         if ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (self.t_start==None)):
             self.t_start = t
 
-        if np.sum(np.sum(states['Hin'], axis=0)) >= trigger: 
+        if ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (t < t_start_measures)): 
             policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             return {'home': ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']),
                     'other': ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']),
                     'work': ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])}
+        elif ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (t_start_measures <= t < t_start_measures+timedelta(days=length_measures))):
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, np.zeros([63,1], dtype=float))
+            return {'home': ramp_fun(t, t_start_measures, l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_start_measures, l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_start_measures, l, policy_old['work'], policy_new['work'])} 
+        elif ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (t >= t_start_measures+timedelta(length_measures))):
+            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, np.zeros([63,1], dtype=float))
+            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+            return {'home': ramp_fun(t, t_start_measures+timedelta(length_measures), l, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_start_measures+timedelta(length_measures), l, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_start_measures+timedelta(length_measures), l, policy_old['work'], policy_new['work'])} 
         else:
             return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 

@@ -42,7 +42,7 @@ ncols = 4
 alpha_model_prediction = (0.05*18)/N
 end_visualisation_epi = datetime(2021, 7, 1)
 # visualiation (epi + eco national)
-end_visualisation_eco = datetime(2021, 3, 1)
+end_visualisation_eco = datetime(2021, 7, 1)
 # compute simulation time
 end_simulation = max(end_visualisation_epi, end_visualisation_eco)
 
@@ -317,7 +317,7 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
                                     100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
     # axes properties
     ax[1, i].set_xlim([start_calibration, end_visualisation_eco])
-    ax[1, i].set_ylim([60, 102])
+    ax[1, i].set_ylim([60, 115])
 
     ## employment
     data_calibration = data_eco_employment.loc[slice(start_calibration, end_calibration_eco)]
@@ -333,9 +333,19 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
         ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').isel(draws=k)/l_0,  color='blue', linewidth=1.5, alpha=alpha_model_prediction)
     ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
                                     100*out.l.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/l_0, color='blue', alpha=0.2)
+    ## shade
+    # VOCs and vaccines
+    ax[0, i].axvspan('2021-02-01', end_visualisation_epi, color='black', alpha=0.1)
+    # investments
+    ax[1, i].axvspan('2021-02-01', end_visualisation_epi, color='black', alpha=0.1)
+    # text
+    if i == 1:
+        ax[0, i].text(0.75, 0.85, 'Vaccination\n   Variants', transform=ax[0, i].transAxes, fontsize=7)
+        ax[1, i].text(0.72, 0.85, '    Investments\nPent-up demand', transform=ax[1, i].transAxes, fontsize=7)
+
     # axes properties
     ax[2, i].set_xlim([start_calibration, end_visualisation_eco])
-    ax[2, i].set_ylim([60, 102])
+    ax[2, i].set_ylim([60, 101])
     # rotate labels
     for tick in ax[2,i].get_xticklabels():
         tick.set_rotation(30)
@@ -344,6 +354,8 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
         ax[0, i].set_ylabel('Hospital incidence\nper 100K inhab. (-)')
         ax[1, i].set_ylabel('Gross aggregated\noutput (%)')
         ax[2, i].set_ylabel('Labor compensation (%)')
+    # limit axes
+
 
 plt.tight_layout()
 plt.savefig(

@@ -52,7 +52,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     # get all necessary parameters
     parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(parameters, country, spatial, scenarios)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 7, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
+    parameters.update({'l': 5, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
                         'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
@@ -72,6 +72,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         # disable vacations
         social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
                                                                 False, False, f_employees, convmat, simulation_start, country)
+        # disable triggering of any measures by default
+        parameters.update({'t_start_measures': simulation_start+timedelta(days=10e4), 'length_measures': 0})
         social_contact_function = social_contact_function.get_contacts_trigger
 
     # construct seasonality TDPF (epidemic)

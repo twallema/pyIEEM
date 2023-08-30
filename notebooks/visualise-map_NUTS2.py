@@ -143,22 +143,18 @@ for (country, textsize, figsize, na_position, na_xwidth, na_yheight, sb_position
     # number of spatial patch
     if country == 'BE':
         ax.text(515000, 6650000, '1', size=textsize, color=color)  # Antwerpen
-        ax.text(520000, 6593000, '2', size=textsize,
-                color=color)  # Vlaams-Brabant
-        ax.text(495000, 6547000, '3', size=textsize,
-                color=color)  # Waals-Brabant
+        ax.text(495000, 6547000, '2', size=textsize, color=color)  # Brabant Wallon
         # Brussel
-        ax.annotate('4', size=textsize, color=color, xy=(0.495, 0.61), xycoords='figure fraction', xytext=(-100, 150), textcoords='offset points', ha="left", va="bottom", arrowprops=arrow_args)
-        ax.text(330000, 6615000, '5', size=textsize,
-                color=color)  # West-Vlaanderen
-        ax.text(410000, 6615000, '6', size=textsize,
-                color=color)  # Oost-Vlaanderen
-        ax.text(428000, 6520000, '7', size=textsize, color=color)  # Hainaut
-        ax.text(620000, 6530000, '8', size=textsize, color=color)  # Liège
-        ax.text(595000, 6610000, '9', size=textsize, color=color)  # Limburg
-        ax.text(586000, 6430000, '10', size=textsize,
-                color=color)  # Luxembourg
-        ax.text(525000, 6495000, '11', size=textsize, color=color)  # Namur
+        ax.annotate('3', size=textsize, color=color, xy=(0.495, 0.61), xycoords='figure fraction', xytext=(-100, 150), textcoords='offset points', ha="left", va="bottom", arrowprops=arrow_args)
+        ax.text(430000, 6530000, '4', size=textsize, color=color)  # Hainaut
+        ax.text(630000, 6530000, '5', size=textsize, color=color)  # Liège
+        ax.text(595000, 6610000, '6', size=textsize, color=color)  # Limburg
+        ax.text(600000, 6430000, '7', size=textsize, color=color)  # Luxembourg
+        ax.text(535000, 6495000, '8', size=textsize, color=color)  # Namur
+        ax.text(410000, 6615000, '9', size=textsize, color=color)  # Oost-Vlaanderen
+        ax.text(520000, 6593000, '10', size=textsize, color=color)  # Vlaams-Brabant
+        ax.text(323000, 6615000, '11', size=textsize, color=color)  # West-Vlaanderen
+
     else:
         # Blekinge
         ax.annotate('1', size=textsize, color=color, xy=(0.44, 0.187), xycoords='figure fraction', xytext=(0, -100), textcoords='offset points', ha="left", va="bottom", arrowprops=arrow_args)
@@ -198,16 +194,17 @@ for (country, textsize, figsize, na_position, na_xwidth, na_yheight, sb_position
     if country == 'BE':
         textstr = '\n'.join(('Provinces:',
                              '1. Antwerpen',
-                             '2. Vlaams-Brabant',
-                             '3. Brabant Wallon',
-                             '4. Bruxelles',
-                             '5. West-Vlaanderen',
-                             '6. Oost-Vlaanderen',
-                             '7. Hainaut',
-                             '8. Liège',
-                             '9. Limburg',
-                             '10. Luxembourg',
-                             '11. Namur'))
+                             '2. Brabant Wallon',
+                             '3. Brussels',
+                             '4. Hainaut',
+                             '5. Liège',
+                             '6. Limburg',
+                             '7. Luxembourg',
+                             '8. Namur',
+                             '9. Oost-Vlaanderen',
+                             '10. Vlaams-Brabant',
+                             '11. West-Vlaanderen',
+                             ))
         props = dict(boxstyle='square', facecolor='none', alpha=1)
         # place a text box in upper left in axes coords
         ax.text(0.98, 0.93, textstr, transform=ax.transAxes, fontsize=13,
