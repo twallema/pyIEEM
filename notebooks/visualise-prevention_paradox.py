@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from datetime import timedelta
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
 # define colorscale
@@ -13,21 +13,20 @@ cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
 ## settings ##
 ##############
 
-# copy from simulation script
-t_start_measures = 200
+# countries and states included
+countries = ['BE', 'SWE']
+states = ['Ih',]
 # other settings
-IC_ratio = 0.162
+ICR = 0.162
 population = [11.6e6, 10.4e6]
 IC_beds_nominal = [1000, 600]
 IC_beds_extended = [2000, 1000]
 location_IC_annotation = 175
 IC_multipliers = [IC_beds_nominal[1]/IC_beds_nominal[i] for i in range(len(IC_beds_nominal))]
-states = ['Ih', 'x', 'l']
-countries = ['BE', 'SWE']
 country_names = ['Belgium', 'Sweden']
 colors = [cmap['blue'], cmap['green'], cmap['red'], cmap['black']]
 ylabels = ['IC load (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
-ylimits = [[0, 13.5], [80, 101], [80, 101]]
+ylimits = [[0, 8], [80, 101], [80, 101]]
 
 ###############
 ## internals ##
@@ -45,54 +44,45 @@ length_measures_list = simout.index.get_level_values('length_measures').unique()
 #########################
 
 # make figure
-fig, ax = plt.subplots(nrows=len(states), ncols=len(countries), figsize=(11.7, 8.3), sharex=True)
+fig, ax = plt.subplots(nrows=1, ncols=len(countries), figsize=(11.7, 8.3/2))
 
 for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
     for j, (country, IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
         for length_measures, color in zip(length_measures_list, colors):
             # visualise scenarios
-            if state == 'Ih':
-                ax[i,j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state]*IC_ratio*IC_multiplier, color=color)
-            else:
-                ax[i,j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state], color=color)
-        ## HCS capacity
-        if i==0:
+            ax[j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state]*ICR*IC_multiplier, color=color)
+
+        # HCS capacity
         # lines
-            ax[0, j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
-                                linestyle='--', color='black', linewidth=1)
-            ax[0, j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
-                                linestyle='--', color='black', linewidth=1)
-            # text
-            ax[0, j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
-                        100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
-            ax[0, j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
-                        100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8)   
-        ## Line denoting start of measures
-        if i==0:
-            ax[0, j].axvline(x=t_start_measures, linestyle='--', color='black', linewidth=1)
-        
+        ax[j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
+                            linestyle='--', color='black', linewidth=1)
+        ax[j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
+                            linestyle='--', color='black', linewidth=1)
+        # text
+        ax[j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
+                    100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
+        ax[j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
+                    100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8) 
+
         ## y-axis
         # ylimits
-        ax[i,j].set_ylim(ylimit)
+        ax[j].set_ylim(ylimit)
         # ylabels
         if j==0:
-            ax[i,j].set_ylabel(ylabel)
+            ax[j].set_ylabel(ylabel)
         # no yticks for IC load
-        if i==0:
-            ax[i,j].set_yticks([])
+        ax[j].set_yticks([])
         # align y labels
         posx=-0.105
-        ax[0, j].yaxis.set_label_coords(posx, 0.5)
+        ax[j].yaxis.set_label_coords(posx, 0.5)
         ## x-axis
         # xlabels
-        if i == len(states)-1:
-            ax[i, j].set_xlabel('time (days)')
+        ax[j].set_xlabel('time (days)')
         # legend
-        if ((i == len(states)-1) & (j == len(countries)-1)):
-            ax[i, j].legend(length_measures_list, title=f'Duration of measures:', framealpha=1)
+        if j == 1:
+            ax[j].legend(length_measures_list, title=f'Duration of measures:', framealpha=1)
         # title
-        if i==0:
-            ax[i, j].set_title(country_names[j])
+        ax[j].set_title(country_names[j])
 
 plt.savefig(f'simulations-prevention_paradox.png', dpi=300)
 plt.show()
