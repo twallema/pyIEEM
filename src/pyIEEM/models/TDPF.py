@@ -352,8 +352,8 @@ class make_social_contact_function():
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
             # extremely high second 2020 COVID-19 wave in Hainaut and Liege requires an ad-hoc tweak
             M_eff[2] = 1-gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
-            M_eff[3] = 1-0.70*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
-            M_eff[4] = 1-0.80*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[3] = 1-0.75*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[4] = 1-0.85*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
             M_eff[6:8] = 1-gompertz(np.zeros(2, dtype=float), xi_eff, pi_eff)
             return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
