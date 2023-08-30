@@ -699,23 +699,16 @@ class make_social_contact_function():
             if t < self.t_start + timedelta(days=length_measures): 
                 policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
                 policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, economic_closures)
-                N = ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']) + \
-                        ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']) + \
-                            ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])
                 return {'home': ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']),
                         'other': ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']),
                         'work': ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])}
             elif t >= self.t_start+timedelta(days=length_measures):
                 policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, economic_closures)
                 policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-                N = ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['home'], policy_new['home']) + \
-                        ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['other'], policy_new['other']) + \
-                            ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['work'], policy_new['work'])
                 return {'home': ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['home'], policy_new['home']),
                         'other': ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['other'], policy_new['other']),
                         'work': ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['work'], policy_new['work'])} 
         else:
-            N = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
