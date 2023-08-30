@@ -609,9 +609,10 @@ class make_social_contact_function():
 
         return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
-    def get_contacts_trigger(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, t_start_measures, length_measures):
+    def get_contacts_trigger(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, 
+                                trigger, length_measures, telework, social_restrictions, economic_closures):
         """
-        Function returning the number of social contacts during the 2020 COVID-19 pandemic in Belgium
+        Contact function triggering measures at Hin `trigger` for `length_measures` days
 
         input
         =====
@@ -683,12 +684,6 @@ class make_social_contact_function():
         ## policies ##
         ##############
 
-        # define awareness trigger (linear interpolation between first two datapoints for SWE)
-        if self.country == 'SWE':
-            trigger = 22
-        else:
-            trigger = (11.6/10.4)*22
-
         # reset self.t_start
         time_threshold=1
         if ((abs((t - self.simulation_start)/timedelta(days=1)) < time_threshold)):
@@ -697,26 +692,30 @@ class make_social_contact_function():
         # determine awareness trigger
         if ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (self.t_start==None)):
             self.t_start = t
+            print(f"measures triggered at {trigger} daily hosp. on date '{self.t_start}'")
 
-        if ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (t < t_start_measures)): 
-            policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            return {'home': ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])}
-        elif ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (t_start_measures <= t < t_start_measures+timedelta(days=length_measures))):
-            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, np.zeros([63,1], dtype=float))
-            return {'home': ramp_fun(t, t_start_measures, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_start_measures, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_start_measures, l, policy_old['work'], policy_new['work'])} 
-        elif ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (t >= t_start_measures+timedelta(length_measures))):
-            policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, np.zeros([63,1], dtype=float))
-            policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
-            return {'home': ramp_fun(t, t_start_measures+timedelta(length_measures), l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_start_measures+timedelta(length_measures), l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_start_measures+timedelta(length_measures), l, policy_old['work'], policy_new['work'])} 
+        # ease in and ease out
+        if self.t_start != None:
+            if t < self.t_start + timedelta(days=length_measures): 
+                policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+                policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, economic_closures)
+                N = ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']) + \
+                        ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']) + \
+                            ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])
+                return {'home': ramp_fun(t, self.t_start, l, policy_old['home'], policy_new['home']),
+                        'other': ramp_fun(t, self.t_start, l, policy_old['other'], policy_new['other']),
+                        'work': ramp_fun(t, self.t_start, l, policy_old['work'], policy_new['work'])}
+            elif t >= self.t_start+timedelta(days=length_measures):
+                policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, social_restrictions, telework, economic_closures)
+                policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, np.zeros([63,1], dtype=float))
+                N = ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['home'], policy_new['home']) + \
+                        ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['other'], policy_new['other']) + \
+                            ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['work'], policy_new['work'])
+                return {'home': ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['home'], policy_new['home']),
+                        'other': ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['other'], policy_new['other']),
+                        'work': ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old['work'], policy_new['work'])} 
         else:
+            N = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             return self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
 
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
@@ -1245,6 +1244,8 @@ class make_labor_supply_shock_function():
         t_BE_lockdown_2_1 = datetime(2020, 10, 19)
         t_BE_lockdown_2_2 = datetime(2020, 11, 2)
         t_BE_plateau = datetime(2020, 11, 27)
+        t_BE_end_plateau = datetime(2021, 5, 15)
+        t_BE_end_pandemic  = datetime(2021, 7, 15)
 
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
@@ -1284,8 +1285,14 @@ class make_labor_supply_shock_function():
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_2_1)
         elif t_BE_lockdown_2_2 <= t < t_BE_plateau:
             return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_lockdown_2_2)    
+        elif t_BE_plateau <= t < t_BE_end_plateau:
+            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_plateau)        
+        elif t_BE_end_plateau <= t < t_BE_end_pandemic:
+            policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_plateau)       
+            policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+            return ramp_fun(t, t_BE_end_plateau, 60, policy_old, policy_new)
         else:
-            return self.__call__(t, G, shock_absenteism, shock_sickness, economy_BE_plateau)
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
 
     def get_economic_policy_SWE(self, t, states, param, l, G, mu, nu, xi_work, pi_work, economy_SWE):
         """

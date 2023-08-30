@@ -73,7 +73,12 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
         social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
                                                                 False, False, f_employees, convmat, simulation_start, country)
         # disable triggering of any measures by default
-        parameters.update({'t_start_measures': simulation_start+timedelta(days=10e4), 'length_measures': 0})
+        if country == 'SWE':
+            parameters.update({'trigger': 22, 'length_measures': 0, 'economic_closures': np.zeros([63,1], dtype=float),
+                                'telework': 0, 'social_restrictions': 0})
+        else:
+            parameters.update({'trigger': (11.6/10.4)*22, 'length_measures': 0, 'economic_closures': np.zeros([63,1], dtype=float),
+                                'telework': 0, 'social_restrictions': 0})
         social_contact_function = social_contact_function.get_contacts_trigger
 
     # construct seasonality TDPF (epidemic)
