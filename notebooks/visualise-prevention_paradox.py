@@ -13,6 +13,10 @@ cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
 ## settings ##
 ##############
 
+# start measures
+start_measures = datetime(2020, 3, 21)
+# compute start of measures in integer time
+start_measures = (start_measures - datetime(2020, 2, 1))/timedelta(days=1)
 # countries and states included
 countries = ['BE', 'SWE']
 states = ['Ih',]
@@ -25,8 +29,8 @@ location_IC_annotation = 175
 IC_multipliers = [IC_beds_nominal[1]/IC_beds_nominal[i] for i in range(len(IC_beds_nominal))]
 country_names = ['Belgium', 'Sweden']
 colors = [cmap['blue'], cmap['green'], cmap['red'], cmap['black']]
-ylabels = ['IC load (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
-ylimits = [[0, 8], [80, 101], [80, 101]]
+ylabels = ['IC load per $10^5$ inhab. (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
+ylimits = [[0, 10], [80, 101], [80, 101]]
 
 ###############
 ## internals ##
@@ -50,20 +54,19 @@ for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
     for j, (country, IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
         for length_measures, color in zip(length_measures_list, colors):
             # visualise scenarios
-            ax[j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state]*ICR*IC_multiplier, color=color)
-
+            ax[j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state]*ICR, color=color)
+            
         # HCS capacity
-        # lines
-        ax[j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
-                            linestyle='--', color='black', linewidth=1)
-        ax[j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
-                            linestyle='--', color='black', linewidth=1)
-        # text
-        ax[j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
-                    100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
-        ax[j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
-                    100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8) 
-
+        # # lines
+        # ax[j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
+        #                     linestyle='--', color='black', linewidth=1)
+        # ax[j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
+        #                     linestyle='--', color='black', linewidth=1)
+        # # text
+        # ax[j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
+        #             100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
+        # ax[j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
+        #             100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8) 
         ## y-axis
         # ylimits
         ax[j].set_ylim(ylimit)
@@ -71,18 +74,24 @@ for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
         if j==0:
             ax[j].set_ylabel(ylabel)
         # no yticks for IC load
-        ax[j].set_yticks([])
+        #ax[j].set_yticks([])
         # align y labels
         posx=-0.105
         ax[j].yaxis.set_label_coords(posx, 0.5)
         ## x-axis
         # xlabels
         ax[j].set_xlabel('time (days)')
-        # legend
-        if j == 1:
-            ax[j].legend(length_measures_list, title=f'Duration of measures:', framealpha=1)
         # title
         ax[j].set_title(country_names[j])
+        # legend
+        if j == 1:
+            ax[j].legend(length_measures_list, title=f'Lockdown length (days)', framealpha=1)
+    
+    # do shading
+    for j, (country, IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
+        for length_measures, color in zip(length_measures_list, colors):        
+            ax[j].axvspan(start_measures, start_measures+length_measures, color='black', alpha=0.05)
+
 
 plt.savefig(f'simulations-prevention_paradox.png', dpi=300)
 plt.show()
