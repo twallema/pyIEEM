@@ -27,7 +27,7 @@ args = parser.parse_args()
 ## change settings here ##
 ##########################
 
-weigh_demographic = True
+weigh_demographic = False
 countries = ['SWE', 'BE']
 # where to drop initial condition
 spatial_units_always = [['Stockholm'], ['Brussels',],]
