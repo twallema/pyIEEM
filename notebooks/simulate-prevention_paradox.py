@@ -28,8 +28,10 @@ args = parser.parse_args()
 ##########################
 
 # measures
-trigger = 22 # Hin in BE on 2020-03-15
-length_measures_list = [1*28, 2*28, 3*28]
+multiplier = [0.91, 0.98] # ad-hoc to reach nominal IC capacity
+triggers = [70*(1000/600), 70] # Hin in BE on 2020-03-15 is equal to 70 days
+triggers = np.array(triggers)*np.array(multiplier)
+length_measures_list = [2*28, 3*28, 4*28]
 policies_df = pd.read_csv(os.path.join(abs_dir, f'../data/interim/eco/policies/policies_BE.csv'), index_col=[0], header=[0])
 economic_closures = np.expand_dims(policies_df['lockdown_1'].values, axis=1)
 telework = 1
@@ -41,7 +43,7 @@ states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 states = states_epi + states_eco
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2021, 2, 1)
+end_simulation = datetime(2020, 12, 1)
 
 ######################
 ## helper functions ##
@@ -95,8 +97,7 @@ for country,su in zip(countries,spatial_units_always):
     for par in pars:
         model.parameters.update({par: np.mean(samples_dict[par])})
     # set correct measures
-    model.parameters.update({'trigger': trigger,
-                             'economic_closures': economic_closures,
+    model.parameters.update({'economic_closures': economic_closures,
                              'telework': telework,
                              'social_restrictions': social_restrictions})
     # eliminate seasonality
@@ -142,11 +143,12 @@ outputs = pd.DataFrame(0, index=index, columns=states, dtype=float)
 # simulation loop
 for i, length_measures in enumerate(length_measures_list):
     print(f"length of measures: {length_measures}")
-    for country, model, inhabitant in zip(countries, models, inhabitants):
-        # set correct length of measures
-        model.parameters.update({'length_measures': length_measures})
+    for country, model, inhabitant, trigger in zip(countries, models, inhabitants, triggers):
+        # set correct length of measures and trigger
+        model.parameters.update({'length_measures': length_measures,
+                                 'trigger': trigger})
         # simulate
-        simout = model.sim([start_simulation, end_simulation])
+        simout = model.sim([start_simulation, end_simulation], rtol=1e-4)
         # aggregate and send to output
         for j, state in enumerate(states):
             # aggregate over all dimensions except time
