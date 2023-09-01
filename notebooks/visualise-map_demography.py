@@ -149,8 +149,8 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
     # compute demographic mean
-    print(sum(demography*lmc/sum(demography)))
-    print(lmc)
+    #print(sum(demography*lmc/sum(demography)))
+    #print(lmc)
     ## plot a nice map
     # boundaries
     gpdf.boundary.plot(ax=ax, color='black', linewidth=0.8)
@@ -179,11 +179,8 @@ ax = add_north_arrow(
     ax, na_position, yheight=na_yheight, xwidth=na_xwidth,)
 
 plt.savefig('map_lmc_GIRST.png', dpi=300)
-plt.show()
+#plt.show()
 plt.close()
-
-import sys
-sys.exit()
 
 ############################################
 ## population density + outbound mobility ##
@@ -207,15 +204,21 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     ## compute fraction of inhabitants crossing NUTS2 border during their commute
     # load mobility
     mob = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normtotal_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
+            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
+    
     # extract relative fraction of travellers per spatial patch
     travellers=[]
     for i, spatial_unit in enumerate(mob.columns):
         travellers.append(np.sum(mob.loc[spatial_unit]) - mob.loc[spatial_unit][i])
     travellers = np.array(travellers)
+
+    #print(100*np.sum(mob,axis=1))
+    #print(100*sum(np.sum(mob,axis=1)*(demography/sum(demography))))
+    #print(100*travellers)
+    #print(100*sum(travellers*(demography/sum(demography))))
 
     ## plot a nice map
     # boundaries
@@ -279,7 +282,7 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     ## compute fraction of inhabitants crossing NUTS2 border during their commute
     # load mobility
     mob = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normtotal_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
+            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
@@ -305,10 +308,10 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
         from mpl_toolkits.axes_grid1 import make_axes_locatable
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.4)
-        gpdf.plot(ax=ax, column='fraction_employed', vmin=39, vmax=51, cmap='Blues', legend=True, cax=cax,
-                    legend_kwds={"label": "Employed fraction (%)", "ticks": [40, 45, 50]})
+        gpdf.plot(ax=ax, column='fraction_employed', vmin=55, vmax=85, cmap='Blues', legend=True, cax=cax,
+                    legend_kwds={"label": "Employed fraction (%)", "ticks": [60, 70, 80]})
     else:
-        gpdf.plot(ax=ax, column='fraction_employed', vmin=39, vmax=51, cmap='Blues')
+        gpdf.plot(ax=ax, column='fraction_employed', vmin=55, vmax=85, cmap='Blues')
     
 # Adjust the position of the right subplot to align it at the bottom
 ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
@@ -344,7 +347,7 @@ for i, (country, color, marker) in enumerate(zip(countries, colors, markers)):
     ## compute fraction of inhabitants crossing NUTS2 border during their commute
     # load mobility
     mob = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normtotal_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
+            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
@@ -364,7 +367,7 @@ for i, (country, color, marker) in enumerate(zip(countries, colors, markers)):
     axs[0].set_ylabel('Outbound commuters (%)')
     axs[0].set_xlabel('Log. population density (inhab.km$^{-2}$)')
     axs[1].set_xlabel('Employed fraction (%)')
-    axs[1].legend()
+    axs[1].legend(framealpha=1)
 
 plt.tight_layout()
 plt.savefig('correlations_travellers.png', dpi=300)
