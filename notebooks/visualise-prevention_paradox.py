@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -29,8 +30,8 @@ location_IC_annotation = 175
 IC_multipliers = [IC_beds_nominal[1]/IC_beds_nominal[i] for i in range(len(IC_beds_nominal))]
 country_names = ['Belgium', 'Sweden']
 colors = [cmap['blue'], cmap['green'], cmap['red'], cmap['black']]
-ylabels = ['IC load per $10^5$ inhab. (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
-ylimits = [[0, 10], [80, 101], [80, 101]]
+ylabels = ['IC load (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
+ylimits = [[0, 7], [80, 101], [80, 101]]
 
 ###############
 ## internals ##
@@ -54,19 +55,19 @@ for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
     for j, (country, IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
         for length_measures, color in zip(length_measures_list, colors):
             # visualise scenarios
-            ax[j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state]*ICR, color=color)
+            ax[j].plot(range(len(dates)), simout.loc[(country, length_measures, slice(None)), state]*ICR*IC_multiplier, color=color)
             
         # HCS capacity
-        # # lines
-        # ax[j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
-        #                     linestyle='--', color='black', linewidth=1)
-        # ax[j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
-        #                     linestyle='--', color='black', linewidth=1)
-        # # text
-        # ax[j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
-        #             100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
-        # ax[j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
-        #             100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8) 
+        # lines
+        ax[j].axhline(IC_beds_nominal[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
+                            linestyle='--', color='black', linewidth=1)
+        #ax[j].axhline(IC_beds_extended[j]/population[j]*100000*IC_multiplier, xmin=0, xmax=1,
+        #                    linestyle='--', color='black', linewidth=1)
+        # text
+        ax[j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
+                    100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
+        #ax[j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
+        #            100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8) 
         ## y-axis
         # ylimits
         ax[j].set_ylim(ylimit)
@@ -74,7 +75,7 @@ for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
         if j==0:
             ax[j].set_ylabel(ylabel)
         # no yticks for IC load
-        #ax[j].set_yticks([])
+        ax[j].set_yticks([])
         # align y labels
         posx=-0.105
         ax[j].yaxis.set_label_coords(posx, 0.5)
@@ -85,7 +86,7 @@ for i,(state,ylimit,ylabel) in enumerate(zip(states,ylimits,ylabels)):
         ax[j].set_title(country_names[j])
         # legend
         if j == 1:
-            ax[j].legend(length_measures_list, title=f'Lockdown length (days)', framealpha=1)
+            ax[j].legend((np.array(length_measures_list)/28).astype(int), title=f'Lockdown (m.)', framealpha=1, loc='lower left')
     
     # do shading
     for j, (country, IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
