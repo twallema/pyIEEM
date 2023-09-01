@@ -223,6 +223,14 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
         else:
             initial_states.update({data_var: np.expand_dims(sim.sum(dim='spatial_unit').sel(date=simulation_start)[data_var].values, axis=1)})   
 
+    # add the IC multiplier
+    # =====================
+
+    # reference:
+    n_SWE = 600
+    n_BE = 1000
+    IC_multiplier = n_SWE/n_BE
+
     # construct social contact TDPF
     # =============================
 
@@ -233,8 +241,8 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
                         'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
-    social_contact_function = make_social_contact_function(age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
-                                                            False, f_employees, convmat, simulation_start, country)
+    social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
+                                                            False, True, f_employees, convmat, simulation_start, country)
     if country == 'SWE':
         social_contact_function = social_contact_function.get_contacts_SWE
     else:
@@ -244,12 +252,8 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     # ==========================
 
     from pyIEEM.models.TDPF import make_seasonality_function
-    seasonality_function = make_seasonality_function()
-    
-    if country == 'SWE':
-        parameters.update({'amplitude': 0.20, 'peak_shift': 7})
-    else: 
-        parameters.update({'amplitude': 0.20, 'peak_shift': -14})    
+    seasonality_function = make_seasonality_function(country)
+    parameters.update({'amplitude_BE': 0.20, 'peak_shift_BE': -14, 'amplitude_SWE': 0.20, 'peak_shift_SWE': 14}) 
 
     # initialize model
     # ================
@@ -579,7 +583,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     return initial_states, parameters, coordinates
 
 
-def get_social_contact_function_parameters(parameters, country, spatial, scenarios):
+def get_social_contact_function_parameters(parameters, country, spatial, scenarios=False):
     """
     A function to load, format and return all parameters necessary to construct the epidemiological model's time-dependent social contact function
     """
