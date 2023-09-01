@@ -208,7 +208,7 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `BE0101N1_20230719-185419_format.csv`: Total number of inhabitants per Swedish county in 2018. Cleaned version of `BE0101N1_20230719-185419.csv`.
 
-+ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-60 years old (active population) per county. Formatted from `data/interim/epi/demographic/age_structure_SWE_2019.csv`. # TODO: Perhaps change to 16-65 years old.
++ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-65 years old (active population) per county. Formatted from `data/interim/epi/demographic/age_structure_SWE_2019.csv`.
 
 + `recurrent_mobility_normtotal_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Recurrent mobility matrix `AM0207AC_20230705-141955_format.csv` normalised with the total population `BE0101N1_20230719-185419_format.csv`.
 
