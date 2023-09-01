@@ -527,8 +527,8 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     if country == 'BE':
         parameters = {'beta': 0.0335}
     else:
-        parameters = {'beta': 0.0306} 
-
+        parameters = {'beta': 0.0317} 
+                                
     # durations
     parameters.update({'alpha': 4.5,
                       'gamma': 0.7,
