@@ -8,8 +8,6 @@
 
 + `statistik-covid19-inskrivna.xlsx` Number of admissions to the hospital per week in the Swedish counties. Retrieved from: https://www.socialstyrelsen.se/globalassets/sharepoint-dokument/dokument-webb/statistik/statistik-covid19-avlidna.xlsx 
 
-+ `Statistikdatabasen_06_08_2023 00_28_51.xlsx`: Number of admissions to the hospital per month in the Swedish counties. If you download the .csv version all the numbers have changed, very weird, be sure to download the excel file. Retrieved from: https://sdb.socialstyrelsen.se/if_par/val_eng.aspx
-
 + `41598_2021_3499_MOESM1_ESM.pdf`: Figure S2 contains the weekly number of COVID-19 hospital admission in the 20 regions of Sweden. Supplementary materials of: "Predicting regional COVID-19 hospital admissions in Sweden using mobility data."
 
 + `COVID19BE_HOSP.csv`:  Hospitalisations for COVID-19 in Belgium by date and provinces. Retrieved from: https://epistat.sciensano.be/covid/
@@ -86,9 +84,19 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### SWE
 
-+ `AM0207AC_20230705-141955.csv`: Gainfully employed commuters in Sweden by county 16+ years by County of residence, County of work, sex and year. For 2018. Extracted from: https://www.statistikdatabasen.scb.se 
++ `AM0207AC_20230705-141955.csv`: Gainfully employed commuters in Sweden by county 16+ years by County of residence, County of work, sex and year. For 2018. Extracted from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0207__AM0207L/AM0207PendlLanA04/
 
 ### eco
+
+#### other_demand
+
++ `COMEXT_17082023124307665.csv`: Monthly foreign trade data for Belgium. Use to inform the magnitude of the export shock during the 2020 COVID-19 pandemic. Retrieved from: https://stat.nbb.be/Index.aspx?DataSetCode=EXTTRADEBENAT#
+
++ `DP_LIVE_16082023121712365.csv`: Quarterly investment data by OECD (Quarter-over-Quarter) for BE, SWE and the EU27. Retrieved from: https://data.oecd.org/gdp/investment-gfcf.htm#indicator-chart 
+
++ `figure_2_exports_OECD.png`: Change in exports of goods and services during the COVID-19 pandemic, normalised with the export in Jan 2020. (G7 countries). Retrieved from: https://www.oecd.org/coronavirus/policy-responses/international-trade-during-the-covid-19-pandemic-big-shifts-and-uncertainty-d1131663/#figure-d1e95
+
++ `ha0201_2023m06_di_01_en.xls`: Monthly foreign trade data for Sweden (Trend -> Export). Use to inform the magnitude of the export shock during the 2020 COVID-19 pandemic.
 
 #### labor_market_composition
 
@@ -128,11 +136,9 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 ##### SWE
 
-+ `AM04011G_20230706-132742.csv`: Unemployed persons aged 15-74 (LFS) in Sweden by month. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401L/
++ `am0401_2023m06_di_01_en_aku.xls`: Seasonally adjusted and smoothed monthly number of hours worked for Sweden. Retrieved from: https://www.scb.se/en/finding-statistics/statistics-by-subject-area/labour-market/labour-force-surveys/labour-force-surveys-lfs/pong/tables-and-graphs/seasonally-adjusted-data/time-series-on-the-number-of-hours-worked-persons-15-74-years/
 
-+ `AM0401UL_20230706-133417.csv`: Unemployed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
-
-+ `AM0401UL_20230706-133646.csv`: Not fully employed (number of persons), age stratified. Month 2001M01 - 2023M05. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__AM__AM0401__AM0401O/NAKUAkrUtbudM/ 
++ `000000X3_20230817-103925.csv`: Seasonally adjusted monthly GDP data at constant prices (2011=100) for Sweden. Retrieved from: https://www.statistikdatabasen.scb.se/pxweb/en/ssd/START__NR__NR9999__NR9999A/NR9999ENS2010BNPIndN/table/tableViewLayout1/
 
 ## Interim
 
@@ -176,11 +182,13 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `pichler_table_5_NACE64.csv`: Remote Labor Index (RLI) of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) S94, S95, S96 equal to G47. 3) R90-92, R93: Set to 0.05 to obtain an employee-weighted average remote labor index of R90-92, R93, S94, S95, S96 (R_S) of 39, which is equal to the value used by Pichler. 4) T: Set to 0.05. Essentiality score of activities converted to the NACE64 classification. Assumptions made during conversion: 1) N77, N78, N79 equal to N. 2) R90-92, R93 equal to I. 3) S94, S95, S96: Set to 63 to obtain an employee-weighted average essentiality score for R90-92, R93, S94, S95, S96 (R_S) of 47, which is equal to the value used by Pichler.
 
-`ermg_remote_labor.csv`: Fraction of workers working from home during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when no data was available. Assumptions listed in the data file.
++ `ermg_remote_labor.csv`: Fraction of workers working from home during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used. The Remote Labor Index from `pichler_table_5_NACE64.csv` was used to infer the fraction of telework attainable when no data was available. Assumptions listed in the data file.
 
-`ermg_at_workplace.csv`: Fraction of workers working in the workplace during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used.Assumptions listed in the data file.
++ `ermg_at_workplace.csv`: Fraction of workers working in the workplace during the first Belgian 2020 COVID-19 lockdown (`ermg-tables.xlsx`). Where data was available, the average reported fraction of telework from four surveys performed in April 2020 were used.Assumptions listed in the data file.
 
-`ermg_summary.csv`: Combines `ermg_remote_labor.csv` and `ermg_at_workplace.csv` into a cleaner format.
++ `ermg_summary.csv`: Combines `ermg_remote_labor.csv` and `ermg_at_workplace.csv` into a cleaner format.
+
++ `leisure_association_vectors.csv`: Contains the degree association between economic activities of leisurely nature and changes in contacts and consumption patterns.
 
 #### mobility
 
@@ -200,13 +208,27 @@ Contains the interaction matrix (in the place and time suggested by the folder a
 
 + `BE0101N1_20230719-185419_format.csv`: Total number of inhabitants per Swedish county in 2018. Cleaned version of `BE0101N1_20230719-185419.csv`.
 
-+ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-60 years old (active population) per county. Formatted from `data/interim/epi/demographic/age_structure_SWE_2019.csv`. # TODO: Perhaps change to 16-65 years old.
++ `active_population_2019_format.csv`: Number of Swedish inhabitants between 16-65 years old (active population) per county. Formatted from `data/interim/epi/demographic/age_structure_SWE_2019.csv`.
 
 + `recurrent_mobility_normtotal_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Recurrent mobility matrix `AM0207AC_20230705-141955_format.csv` normalised with the total population `BE0101N1_20230719-185419_format.csv`.
 
 + `recurrent_mobility_normactive_SWE.csv`: contains the normalized recurrent mobility matrix between the Swedish counties for 2018. Recurrent mobility matrix `AM0207AC_20230705-141955_format.csv` normalised with the total active population `active_population_2019_format.csv`.
 
 ### eco
+
+#### policies
+
+`policies_SWE.csv`: Contains the closure of schools for upper secundary and higher education during the 2020 COVID-19 lockdown, approximated as schools remaining 80% open. An overview of policies can be found in: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7537539/ 
+
+`policies_BE.csv`: Contains the many Belgian economic policies during the 2020 COVID-19 pandemic. Retrieved from: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8280466/ and https://www.sciencedirect.com/science/article/pii/S1755436521000542#appSB 
+
+`policies_BE_scenarios.csv`: Four scenarios for economic shutdown: L1: Complete economic lockdown. L2: Closure of all B2C activities (a: schools closed, b: schools open). L3: Closure of sectors I, R, S94 only (a: schools closed, b: schools open), L4: No economic lockdown.
+
+#### calibration_data
+
++ `SWE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Sweden. National-level GDP obtained from `am0401_2023m06_di_01_en_aku.xls`, unemployment data obtained from `am0401_2023m06_di_01_en_aku.xls`. 
+
++ `BE.csv`: Contains the nation-level GDP and unemployed fraction of the active population for Belgium. Copied from our COVID-19 project. Synthetic GDP is obtained from the statistics website of the Belgian National Bank (be.stat) while unemployment is proxied by the number of temporarily unemployed workers(survey by the ERMG).
 
 #### labor_market_composition
 
@@ -237,14 +259,18 @@ sector_structure_by_work_SWE_2019.csv
 
 #### pichler
 
-+ `IHS_critical_NACE64.csv` contains the IHS Market Analysts data (`IHS_Markit_results_compact.csv`), reformatted from WIOD 55 to the NACE 64 classification. Columns represent the critical inputs to a sector. Dependecy of L68 (real estate) on H53 (Postal services) was removed. The Real estate sector did not face a big decline in economic activity, as detailed in https://www.nbb.be/doc/ts/publications/economicreview/2021/ecorevii2021.pdf (chart 5). Dependecy of H49 (Land Transport) and H51 (Air Transport) on I55-56 (Accodomodation) was removed as the closure of Accomodation during the lockdown led to overly large declines in economic activity. Sector Rental and Leasing (N77) critically depends on C33 (Repair of Machinery) and G45 (Retail of vehicles) only. Travel agencies (N79) critically depend on Air, Water and Land transport (H49/H50/H51) and importantly depend on I55-56, N77/N78. All dependencies of Public Administration (O84) and Education (P85) were relaxed as the government sector didn't face any shocks during the COVID-19 pandemic (https://www.nbb.be/doc/ts/publications/economicreview/2021/ecorevii2021.pdf).
++ `IHS_critical_NACE64.csv` contains the IHS Market Analysts data (`IHS_Markit_results_compact.csv`), reformatted from WIOD 55 to the NACE 64 classification. Rows $i$ represent to what extent sectors $j$ depend on the goods of $i$ to produce good $j$. There are three dependencies: None (0), Important (0.5) and Critical (1). Critical dependecy of L68 (real estate) on H53 (Postal services) was removed. Dependency of H49 (Land Transport) and H51 (Air Transport) on I55-56 (Accodomodation) was removed because the closure of I55-56 during the lockdown led to overly large declines in economic activity. Sector Rental and Leasing (N77) critically depends on C33 (Repair of Machinery) and G45 (Retail of vehicles) only. Travel agencies (N79) critically depend on Air, Water and Land transport (H49/H50/H51) and importantly depend on I55-56, N77/N78. All dependencies of Public Administration (O84) and Education (P85) were relaxed as the government sector didn't face any shocks during the COVID-19 pandemic (https://www.nbb.be/doc/ts/publications/economicreview/2021/ecorevii2021.pdf). An "important" dependency of C29 (Production and repair of motor vehicles) and G45 (Retail of motor vehicles) on I55-56 was relaxed because it lowered the employment and GDP on the 2020 COVID-19 lockdown plateau in Belgium by over 10% too much (!).
 
 + `desired_stock_NACE64.csv`: For every sector in the NACE 64 classification, the number of days production can continue when no inputs are delivered (= stock). Converted version of `table_ratio_inv_go.csv`.
 
 + `on_site_consumption_NACE64.csv`: For every sector in the NACE 64 classification, if the consumption happens on-site.
+
++ `other_demand_shock.csv`: Other demand shock used by Pichler et. al. 
 
 #### misc
 
 + `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the NACE 64 to NACE 21 classification.
 
 + `conversion_matrix_NACE21_NACE10.csv`:  contains conversion matrices to aggregate data from NACE 21 to NACE 10.
+
++ `sector_labels_names.xlsx`: contains the full name of all NACE 64 sectors.

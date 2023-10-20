@@ -1,5 +1,5 @@
 from pySODM.optimization import pso, nelder_mead
-from pyIEEM.models.utils import initialize_model
+from pyIEEM.models.utils import initialize_epidemic_model
 from pyIEEM.data.data import get_hospitalisation_incidence
 from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
@@ -15,8 +15,8 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 # settings calibration
 start_calibration = '2020-02-01'
-processes = 6
-max_iter = 50
+processes = 18
+max_iter = 200
 
 # settings visualisation
 nrows = 3
@@ -69,36 +69,50 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 ## Calibration ##
 #################
 
-
-for country in ['SWE', 'BE']:
+for country in ['BE', 'SWE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
 
     # slice data until calibration end
     if country == 'SWE':
-        end_calibration = '2020-04-01'
+        end_calibration = '2020-05-16'
     else:
-        end_calibration = '2020-03-22'
+        end_calibration = '2020-04-02'
     data = data.loc[slice(start_calibration, end_calibration)]
 
     # setup model
     age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-    model = initialize_model(country, age_classes, True, start_calibration)
+    model = initialize_epidemic_model(country, age_classes, True, start_calibration)
 
-    # disable seasonality and shift of peak
-    #model.parameters.update({'amplitude': 0.0, 'peak_shift': 0})
+    # disable any awareness triggering (discontinued)
+    # model.parameters.update({'l': 21, 'mu': 1, 'nu': 24, 'xi_work': 100, 'xi_eff': 100, 'xi_leisure': 100,
+    #                     'pi_work': 1, 'pi_eff': 1, 'pi_leisure': 1})
+
+    # use good parameter values found during an earlier calibration (this is an iterative way of finding a suitable initial condition)
+    # define all relevant parameters of the social contact function TDPF here
+    model.parameters.update({'l': 5, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
+                        'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
+    
+    # set a good parameter estimate
+    pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
+    theta = [22, 0.45, 0.07, 0.025, 0.06]
+    for par,t in zip(pars,theta):
+        model.parameters.update({par: t})
 
     # compute number of spatial patches
     G = model.initial_states['E'].shape[1]
 
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
-        # nicely consistent with one infected in Stockholm
-        theta = 0.080*np.array([0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0, 0, 0.075, 0, 0.05, 1, 0.05, 0, 0, 0, 0, 0])
+        # data is quite consistent with one infected in Stockholm --> start NM from here
+        theta = 0.22*np.array([0, 0, 0.02, 0, 0, 0, 0, 0, 0, 0, 0.03, 0.12, 0.01, 0.15, 1, 0.05, 0, 0, 0, 0, 0.02]) + 1e-9
     else:
-        theta = 0.15*np.array([0.30, 0, 0, 1.75, 0.75, 0.80, 0.25, 0, 0.85, 0, 0.25]) # ll: 215, seasonality: 0.0
+        theta = 0.16*np.array([0.85, 0, 0, 3.25, 1.75, 2.50, 0.25, 0, 1.50, 0.25, 0.50]) + 1e-9 # "best" fit
+        theta = [1.60090552e-01, 7.52869047e-10, 1.50237870e-09, 4.69319925e-01,
+                    3.00200083e-01, 3.00129689e-01, 6.00489179e-02, 2.00130982e-09,
+                    2.55561357e-01, 4.91375446e-05, 9.30272369e-02]
 
     # nelder-mead minimization
     #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
