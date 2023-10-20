@@ -42,7 +42,7 @@ states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 states = states_epi + states_eco
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2022, 1, 1)
+end_simulation = datetime(2023, 1, 1)
 
 ######################
 ## helper functions ##

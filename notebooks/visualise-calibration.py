@@ -315,6 +315,9 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
 
     ax[1, i].fill_between(out.date, 100*out.x.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/x_0,
                                     100*out.x.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/x_0, color='blue', alpha=0.2)
+    # compute quarterly and yearly results
+    print(100 - 100*(out.x.sum(dim='NACE64').mean(dim='draws')/x_0).resample(date="Q").mean())
+    print(100 - 100*(out.x.sum(dim='NACE64').mean(dim='draws')/x_0).resample(date="Y").mean())
     # axes properties
     ax[1, i].set_xlim([start_calibration, end_visualisation_eco])
     ax[1, i].set_ylim([60, 115])
@@ -333,6 +336,9 @@ for i, (out, data_epi, data_eco_GDP, data_eco_employment, country, demography) i
         ax[2, i].plot(out.date, 100*out.l.sum(dim='NACE64').isel(draws=k)/l_0,  color='blue', linewidth=1.5, alpha=alpha_model_prediction)
     ax[2, i].fill_between(out.date, 100*out.l.sum(dim='NACE64').quantile(dim='draws', q=confint/2)/l_0,
                                     100*out.l.sum(dim='NACE64').quantile(dim='draws', q=1-confint/2)/l_0, color='blue', alpha=0.2)
+    # compute quarterly and yearly results
+    print(100 - 100*(out.l.sum(dim='NACE64').mean(dim='draws')/l_0).resample(date="Q").mean())
+    print(100 - 100*(out.l.sum(dim='NACE64').mean(dim='draws')/l_0).resample(date="Y").mean())
     ## shade
     # VOCs and vaccines
     ax[0, i].axvspan('2021-02-01', end_visualisation_epi, color='black', alpha=0.1)

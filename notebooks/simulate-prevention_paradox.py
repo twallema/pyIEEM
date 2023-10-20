@@ -3,8 +3,7 @@ import json
 import argparse
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from itertools import product
+from datetime import datetime
 from pyIEEM.models.utils import initialize_epinomic_model
 
 # Hope to disable threading thing
@@ -28,10 +27,10 @@ args = parser.parse_args()
 ##########################
 
 # measures
-multiplier = [0.91, 0.98] # ad-hoc to reach nominal IC capacity
+multiplier = [0.94, 1.01] # ad-hoc to reach nominal IC capacity
 triggers = [70*(1000/600), 70] # Hin in BE on 2020-03-15 is equal to 70 days
 triggers = np.array(triggers)*np.array(multiplier)
-length_measures_list = [2*28, 3*28, 4*28]
+length_measures_list = [2*28, 3*28, 4*28, 5*28]
 policies_df = pd.read_csv(os.path.join(abs_dir, f'../data/interim/eco/policies/policies_BE.csv'), index_col=[0], header=[0])
 economic_closures = np.expand_dims(policies_df['lockdown_1'].values, axis=1)
 telework = 1
@@ -43,7 +42,7 @@ states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 states = states_epi + states_eco
 start_simulation = datetime(2020, 2, 1)
-end_simulation = datetime(2020, 12, 1)
+end_simulation = datetime(2021, 3, 1)
 
 ######################
 ## helper functions ##
@@ -86,7 +85,7 @@ for country,su in zip(countries,spatial_units_always):
     # load model SWE with default initial condition
     age_classes = pd.IntervalIndex.from_tuples([(0, 5), (5, 10), (10, 15), (15, 20), (20, 25), (25, 30), (30, 35), (
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
-    model = initialize_epinomic_model(country, age_classes, True, simulation_start=start_simulation, scenarios=f'hypothetical_spatial_spread')
+    model = initialize_epinomic_model(country, age_classes, True, simulation_start=start_simulation, scenarios=f'prevention_paradox')
     # set initial infected in Stockholm and Brussels
     init_E = update_initial_condition(su, model.coordinates['spatial_unit'], model.initial_states['E'], model.parameters['N'])
     model.initial_states.update({'E': init_E})
@@ -111,20 +110,6 @@ for country,su in zip(countries,spatial_units_always):
         'shock_exports_services': 0,
         'shock_investment': 0,
     })
-    # eliminate labor supply shock
-    if country == 'SWE':
-        model.parameters.update({'economy_SWE': np.zeros([63,1], dtype=float)})
-    elif country == 'BE':
-        model.parameters.update({'economy_BE_lockdown_1': np.zeros([63,1], dtype=float),
-                                'economy_BE_phaseI': np.zeros([63,1], dtype=float),
-                                'economy_BE_phaseII': np.zeros([63,1], dtype=float),
-                                'economy_BE_phaseIII': np.zeros([63,1], dtype=float),
-                                'economy_BE_phaseIV': np.zeros([63,1], dtype=float),
-                                'economy_BE_lockdown_Antwerp': np.zeros([63,1], dtype=float),
-                                'economy_BE_lockdown_2_1': np.zeros([63,1], dtype=float),
-                                'economy_BE_lockdown_2_2': np.zeros([63,1], dtype=float),
-                                'economy_BE_plateau': np.zeros([63,1], dtype=float),
-        })
     # append to lists
     inhabitants.append(inhabitant)
     models.append(model)
@@ -159,7 +144,7 @@ for i, length_measures in enumerate(length_measures_list):
             # normalise with demographics if epi state
             if state in states_epi:
                 out_copy /= inhabitant/100000
-            # normalise with initial amount if epi state 
+            # normalise with initial amount if eco state 
             elif state in states_eco:
                 out_copy /= out_copy.isel(date=0).values
                 out_copy *= 100

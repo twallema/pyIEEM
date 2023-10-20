@@ -4,16 +4,16 @@ import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
-cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
-        "green" : "#009E73", "yellow" : "#F0E442",
-        "blue" : "#0072B2", "red" : "#D55E00",
-        "pink" : "#CC79A7", "black" : "#000000"}
+cmap = {"orange": "#E69F00", "light_blue": "#56B4E9",
+        "green": "#009E73", "yellow": "#F0E442",
+        "blue": "#0072B2", "red": "#D55E00",
+        "pink": "#CC79A7", "black": "#000000"}
 
 abs_dir = os.path.dirname(__file__)
 
 # settings
 countries = ['SWE', 'BE']
-sectors = ['G', 'I', 'R', 'S', 'T']
+sectors = ['A', 'B', 'C']
 # size figure
 figsize = (11.7, 8.3)
 # north arrow
@@ -117,16 +117,16 @@ def add_north_arrow(ax, xy, yheight=0.05, xwidth=0.04, marg=0.01):
             transform=ax.transAxes, zorder=1, size=20)
     return ax
 
-
 ##############################
 ## labor market composition ##
 ##############################
 
-fig, axs = plt.subplots(nrows=1, ncols=len(countries), figsize=figsize, gridspec_kw={'width_ratios':[1, 1]})
+fig, axs = plt.subplots(nrows=1, ncols=len(countries),
+                        figsize=figsize, gridspec_kw={'width_ratios': [1, 1]})
 # loop over countries
 for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries, sb_positions, sb_lengths, facs, numdivs, lws):
 
-    ## load geospatial data
+    # load geospatial data
 
     # Load geojson file
     gpdf = gpd.read_file(os.path.join(
@@ -137,11 +137,11 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # sort alphabetically
     gpdf = gpdf.sort_index()
 
-    ## compute fraction of inhabitants working in sectors `sectors`
+    # compute fraction of inhabitants working in sectors `sectors`
     # load labor market composition
     lmc = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0,1]).sort_index()['rel']
-    # sum over `sectors` 
+        abs_dir, f'../data/interim/eco/labor_market_composition/sector_structure_by_work_{country}.csv'), index_col=[0, 1]).sort_index()['rel']
+    # sum over `sectors`
     lmc = 100*lmc.loc[slice(None), sectors].groupby(by='spatial_unit').sum()
     # assign to gdpf
     gpdf['lmc'] = lmc.values
@@ -149,9 +149,9 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
     # compute demographic mean
-    #print(sum(demography*lmc/sum(demography)))
-    #print(lmc)
-    ## plot a nice map
+    # print(sum(demography*lmc/sum(demography)))
+    # print(lmc)
+    # plot a nice map
     # boundaries
     gpdf.boundary.plot(ax=ax, color='black', linewidth=0.8)
     # add scalebar
@@ -160,16 +160,16 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # legend
     ax.axis('off')
 
-    ## plot data
+    # plot data
     # population density
     if country == 'BE':
         from mpl_toolkits.axes_grid1 import make_axes_locatable
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.4)
-        gpdf.plot(ax=ax, column='lmc', vmin=14, vmax=25, cmap='Blues', legend=True, cax=cax,
-                    legend_kwds={"label": "Fraction employed in sectors G, I, R, S and T (%)"})
+        gpdf.plot(ax=ax, column='lmc', vmin=5, vmax=20, cmap='Blues', legend=True, cax=cax,
+                  legend_kwds={"label": "Fraction employed in sectors A, B, and C (%)"})
     else:
-        gpdf.plot(ax=ax, column='lmc', vmin=14, vmax=25, cmap='Blues')
+        gpdf.plot(ax=ax, column='lmc', vmin=5, vmax=20, cmap='Blues')
 
 # Adjust the position of the right subplot to align it at the bottom
 ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
@@ -178,19 +178,20 @@ ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
 ax = add_north_arrow(
     ax, na_position, yheight=na_yheight, xwidth=na_xwidth,)
 
-plt.savefig('map_lmc_GIRST.png', dpi=300)
-#plt.show()
+plt.savefig('map_lmc_ABC.pdf', dpi=300)
+# plt.show()
 plt.close()
 
 ############################################
 ## population density + outbound mobility ##
 ############################################
 
-fig, axs = plt.subplots(nrows=1, ncols=len(countries), figsize=figsize, gridspec_kw={'width_ratios':[1, 1]})
+fig, axs = plt.subplots(nrows=1, ncols=len(countries),
+                        figsize=figsize, gridspec_kw={'width_ratios': [1, 1]})
 # loop over countries
 for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries, sb_positions, sb_lengths, facs, numdivs, lws):
-    
-    ## load geospatial data
+
+    # load geospatial data
 
     # Load geojson file
     gpdf = gpd.read_file(os.path.join(
@@ -201,26 +202,27 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # sort alphabetically
     gpdf = gpdf.sort_index()
 
-    ## compute fraction of inhabitants crossing NUTS2 border during their commute
+    # compute fraction of inhabitants crossing NUTS2 border during their commute
     # load mobility
     mob = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
+        abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
-    
+
     # extract relative fraction of travellers per spatial patch
-    travellers=[]
+    travellers = []
     for i, spatial_unit in enumerate(mob.columns):
-        travellers.append(np.sum(mob.loc[spatial_unit]) - mob.loc[spatial_unit][i])
+        travellers.append(
+            np.sum(mob.loc[spatial_unit]) - mob.loc[spatial_unit][i])
     travellers = np.array(travellers)
 
-    #print(100*np.sum(mob,axis=1))
-    #print(100*sum(np.sum(mob,axis=1)*(demography/sum(demography))))
-    #print(100*travellers)
-    #print(100*sum(travellers*(demography/sum(demography))))
+    # print(100*np.sum(mob,axis=1))
+    # print(100*sum(np.sum(mob,axis=1)*(demography/sum(demography))))
+    # print(100*travellers)
+    # print(100*sum(travellers*(demography/sum(demography))))
 
-    ## plot a nice map
+    # plot a nice map
     # boundaries
     gpdf.boundary.plot(ax=ax, color='black', linewidth=0.8)
     # add scalebar
@@ -229,7 +231,7 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # legend
     ax.axis('off')
 
-    ## plot data
+    # plot data
     # population density
     gpdf.pop_density = np.log10(gpdf.pop_density.values)
     if country == 'BE':
@@ -237,17 +239,18 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.4)
         gpdf.plot(ax=ax, column='pop_density', vmin=0, vmax=3.1, cmap='Blues', legend=True, cax=cax,
-                    legend_kwds={"label": "Log. population density (inhab. km$^{-2}$)", "ticks": [0, 1, 2, 3]})
+                  legend_kwds={"label": "Log. population density (inhab. km$^{-2}$)", "ticks": [0, 1, 2, 3]})
     else:
         gpdf.plot(ax=ax, column='pop_density', vmin=0, vmax=3.1, cmap='Blues')
 
     # mobility
-    c_x=[]
-    c_y=[]
+    c_x = []
+    c_y = []
     for coord in gpdf.centroid:
         c_x.append(coord.x)
         c_y.append(coord.y)
-    ax.scatter(c_x, c_y, s=800*travellers, marker="o", edgecolors='black', facecolors='red', alpha=0.8, zorder=1 )
+    ax.scatter(c_x, c_y, s=800*travellers, marker="o",
+               edgecolors='black', facecolors='red', alpha=0.8, zorder=1)
 
 # Adjust the position of the right subplot to align it at the bottom
 ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
@@ -256,19 +259,20 @@ ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
 ax = add_north_arrow(
     ax, na_position, yheight=na_yheight, xwidth=na_xwidth,)
 
-plt.savefig('map_popdens.png', dpi=300)
-#plt.show()
+plt.savefig('map_popdens.pdf', dpi=300)
+# plt.show()
 plt.close()
 
 ################
 ## employment ##
 ################
 
-fig, axs = plt.subplots(nrows=1, ncols=len(countries), figsize=figsize, gridspec_kw={'width_ratios':[1, 1]})
+fig, axs = plt.subplots(nrows=1, ncols=len(countries),
+                        figsize=figsize, gridspec_kw={'width_ratios': [1, 1]})
 # loop over countries
 for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries, sb_positions, sb_lengths, facs, numdivs, lws):
-    
-    ## load geospatial data
+
+    # load geospatial data
 
     # Load geojson file
     gpdf = gpd.read_file(os.path.join(
@@ -279,10 +283,10 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # sort alphabetically
     gpdf = gpdf.sort_index()
 
-    ## compute fraction of inhabitants crossing NUTS2 border during their commute
+    # compute fraction of inhabitants crossing NUTS2 border during their commute
     # load mobility
     mob = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
+        abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
@@ -293,7 +297,7 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # append to geopandas dataframe
     gpdf['fraction_employed'] = 100*employment
 
-    ## plot a nice map
+    # plot a nice map
     # boundaries
     gpdf.boundary.plot(ax=ax, color='black', linewidth=0.8)
     # add scalebar
@@ -302,17 +306,18 @@ for (ax, country, sb_position, sb_length, fac, numdiv, lw) in zip(axs, countries
     # legend
     ax.axis('off')
 
-    ## plot data
+    # plot data
     # employment
     if country == 'BE':
         from mpl_toolkits.axes_grid1 import make_axes_locatable
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.4)
         gpdf.plot(ax=ax, column='fraction_employed', vmin=55, vmax=85, cmap='Blues', legend=True, cax=cax,
-                    legend_kwds={"label": "Employed fraction (%)", "ticks": [60, 70, 80]})
+                  legend_kwds={"label": "Employed fraction (%)", "ticks": [60, 70, 80]})
     else:
-        gpdf.plot(ax=ax, column='fraction_employed', vmin=55, vmax=85, cmap='Blues')
-    
+        gpdf.plot(ax=ax, column='fraction_employed',
+                  vmin=55, vmax=85, cmap='Blues')
+
 # Adjust the position of the right subplot to align it at the bottom
 ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
 
@@ -320,8 +325,8 @@ ax.set_position([0.5, 0.125, 0.5, 0.5])  # [left, bottom, width, height]
 ax = add_north_arrow(
     ax, na_position, yheight=na_yheight, xwidth=na_xwidth,)
 
-plt.savefig('map_employment.png', dpi=300)
-#plt.show()
+plt.savefig('map_employment.pdf', dpi=300)
+# plt.show()
 plt.close()
 
 #####################################################################
@@ -331,11 +336,12 @@ plt.close()
 markers = ['o', '^']
 colors = [cmap['red'], 'black']
 
-fig, axs = plt.subplots(nrows=1, ncols=len(countries), figsize=(11.7, 8.3/2), sharey=True)
+fig, axs = plt.subplots(nrows=1, ncols=len(countries),
+                        figsize=(11.7, 8.3/2), sharey=True)
 
 # loop over countries
 for i, (country, color, marker) in enumerate(zip(countries, colors, markers)):
-    ## load geospatial data
+    # load geospatial data
     # Load geojson file
     gpdf = gpd.read_file(os.path.join(
         abs_dir, f'../data/interim/epi/shape/{country}.json'))
@@ -344,24 +350,27 @@ for i, (country, color, marker) in enumerate(zip(countries, colors, markers)):
     gpdf.index.name = 'spatial_unit'
     # sort alphabetically
     gpdf = gpdf.sort_index()
-    ## compute fraction of inhabitants crossing NUTS2 border during their commute
+    # compute fraction of inhabitants crossing NUTS2 border during their commute
     # load mobility
     mob = pd.read_csv(os.path.join(
-            abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
+        abs_dir, f'../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0).sort_index(axis=0).sort_index(axis=1)
     # load demography per spatial patch
     demography = pd.read_csv(os.path.join(
         abs_dir, f'../data/interim/epi/demographic/age_structure_{country}_2019.csv'), index_col=[0, 1]).groupby(by='spatial_unit').sum().sort_index().squeeze()
     # compute employed fraction per spatial patch
     employment = 100*mob.sum(axis=1)
     # extract relative fraction of travellers per spatial patch
-    travellers=[]
+    travellers = []
     for i, spatial_unit in enumerate(mob.columns):
-        travellers.append(np.sum(mob.loc[spatial_unit]) - mob.loc[spatial_unit][i])
+        travellers.append(
+            np.sum(mob.loc[spatial_unit]) - mob.loc[spatial_unit][i])
     travellers = 100*np.array(travellers)
 
     # visualise
-    axs[0].scatter(np.log10(gpdf.pop_density), travellers, marker=marker, color=color, s=90, alpha=0.9)
-    axs[1].scatter(employment, travellers, marker=marker, color=color, label=country, s=90, alpha=0.9)
+    axs[0].scatter(np.log10(gpdf.pop_density), travellers,
+                   marker=marker, color=color, s=90, alpha=0.9)
+    axs[1].scatter(employment, travellers, marker=marker,
+                   color=color, label=country, s=90, alpha=0.9)
     # labels
     axs[0].set_ylim([0, 21])
     axs[0].set_ylabel('Outbound commuters (%)')
@@ -370,6 +379,6 @@ for i, (country, color, marker) in enumerate(zip(countries, colors, markers)):
     axs[1].legend(framealpha=1)
 
 plt.tight_layout()
-plt.savefig('correlations_travellers.png', dpi=300)
-#plt.show()
+plt.savefig('correlations_travellers.pdf', dpi=300)
+# plt.show()
 plt.close()

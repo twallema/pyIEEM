@@ -30,13 +30,14 @@ args = parser.parse_args()
 ##########################
 
 scenarios = ['L1', 'L2b', 'L3b', 'L4a', 'L4b']
-t_start_lockdowns = [datetime(2020, 3, 18), datetime(2020, 3, 15), datetime(2020, 3, 12)]
-l_economics = [14,]
+t_start_lockdowns = [datetime(2020, 3, 18), datetime(2020, 3, 15), datetime(2020, 3, 12), datetime(2020, 3, 9), datetime(2020, 3, 6), datetime(2020, 3, 3)]
+for i,val in enumerate(t_start_lockdowns):
+    t_start_lockdowns[i] = val + timedelta(days=1)
 # simulation
 N = 3
 processes = 3
 start_simulation = datetime(2020, 3, 1)
-end_simulation = datetime(2021, 2, 1)
+end_simulation = datetime(2021, 3, 1)
 states_epi = ['Hin', 'Ih']
 states_eco = ['x', 'l']
 # visualisation (epi only + spatial)

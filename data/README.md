@@ -272,3 +272,5 @@ sector_structure_by_work_SWE_2019.csv
 + `conversion_matrix_NACE64_NACE21.csv`:  contains conversion matrices to aggregate data from the NACE 64 to NACE 21 classification.
 
 + `conversion_matrix_NACE21_NACE10.csv`:  contains conversion matrices to aggregate data from NACE 21 to NACE 10.
+
++ `sector_labels_names.xlsx`: contains the full name of all NACE 64 sectors.

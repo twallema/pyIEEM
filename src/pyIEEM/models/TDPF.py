@@ -1465,6 +1465,74 @@ class make_labor_supply_shock_function():
             policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
             return ramp_fun(t, t_end_lockdown, l_release, policy_old, policy_new)            
 
+    def get_economic_policy_trigger(self, t, states, param, l, G, mu, nu, xi_work, pi_work, trigger, length_measures, economic_closures):
+        """
+        Function triggering `economic policy` at ``
+        """
+
+        #################################
+        ## memory and behavioral model ##
+        #################################
+
+        # get number of hospitalisations per spatial patch per 100 K inhabitants
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state], axis=0)
+        Ih = 1e5*np.sum(states['Ih'], axis=0)/T
+        # initialize memory if necessary
+        memory_index, memory_values, I_star = self.initialize_memory(t, Ih, self.simulation_start, self.G, time_threshold=31)
+        # update memory
+        self.memory_index, self.memory_values, self.I_star, self.t_prev = update_memory(memory_index, memory_values, t, self.t_prev, Ih, I_star, self.G, nu)
+        # compute average perceived hospital load per spatial patch 
+        Ih_star_average = compute_perceived_hospital_load(self.I_star, G, mu)
+        # correct for number of available IC beds
+        Ih_star_average *= self.IC_multiplier
+        # voluntary switch to either telework or absenteism
+        M_work = gompertz(Ih_star_average, xi_work, (pi_work*self.hesitancy).values) # 63 x 11
+        # only accounts for absenteism above telework threshold
+        shock_absenteism = np.where(M_work < self.f_remote[:, np.newaxis], 0, M_work - self.f_remote[:, np.newaxis])
+
+        ##############
+        ## sickness ##
+        ##############
+
+        # get fraction of symptomatic individuals in the active population (20-60 years old) per spatial patch
+        T = np.zeros(self.G, dtype=float)
+        for state in ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R']:
+            T += np.sum(states[state][4:12], axis=0)
+        # TODO: do a proper demographic conversion
+        Im = np.sum(states['Im'][4:12] + states['Ih'][4:12], axis=0)/T
+        # expand to 63 x 11 for convenience --> assumes sickness affects all sectors equally --> sickness will not play any noticable role in COVID-19 but this should be addressed at a later point
+        # Idea: normalized (around 1) amount of prepandemic social contact multiplied with M_work? --> ignores government policies
+        shock_sickness = np.tile(Im, (63, 1))
+
+        ##############
+        ## policies ##
+        ##############
+
+        # reset self.t_start
+        time_threshold=1
+        if ((abs((t - self.simulation_start)/timedelta(days=1)) < time_threshold)):
+            self.t_start = None
+
+        # determine awareness trigger
+        if ((np.sum(np.sum(states['Hin'], axis=0)) >= trigger) & (self.t_start==None)):
+            self.t_start = t
+            print(f"measures triggered at {trigger} daily hosp. on date '{self.t_start}'")
+
+        # ease in and ease out
+        if self.t_start != None:
+            if t < self.t_start + timedelta(days=length_measures): 
+                policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+                policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, economic_closures)
+                return ramp_fun(t, self.t_start, l, policy_old, policy_new)
+            elif t >= self.t_start+timedelta(days=length_measures):
+                policy_old = self.__call__(t, G, shock_absenteism, shock_sickness, economic_closures)
+                policy_new = self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+                return ramp_fun(t, self.t_start+timedelta(days=length_measures), l, policy_old, policy_new)
+        else:
+            return self.__call__(t, G, shock_absenteism, shock_sickness, np.zeros([63,1], dtype=float))
+
     def initialize_memory(self, t, I, simulation_start, G, time_threshold):
         """
         A function to initialize the memory at an appropriate moment in time

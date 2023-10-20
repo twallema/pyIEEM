@@ -17,15 +17,16 @@ cmap = {"orange" : "#E69F00", "light_blue" : "#56B4E9",
 
 weigh_demographic = False
 countries = ['BE', 'SWE']
+country_names = ['Belgium', 'Sweden']
 IC_ratio = 0.162
 population = [11.6e6, 10.4e6]
 IC_beds_nominal = [1000, 600]
 IC_beds_extended = [2000, 1000]
 IC_multipliers = [IC_beds_nominal[1]/IC_beds_nominal[i] for i in range(len(IC_beds_nominal))]
 location_IC_annotation = 0
-ylabels = ['IC load (beds)', 'Gross aggregated output (%)', 'Labor compensation (%)']
+ylabels = ['IC load (beds)', 'Labor\ncompensation (%)']
 ylims = [[0, 13.5], [87, 101], [87, 101]]
-highlights = [['Brussels',], ['Stockholm',]]
+highlights = [['Brussels',], ['Stockholm']]
 
 ###############
 ## internals ##
@@ -52,9 +53,9 @@ for country in countries:
 pop_density_BE = [254.50514263, 146.83923914, 3088.06815663, 142.204992, 117.19390958, 142.34518126, 26.63181018,
                     55.56176989, 200.43268078, 207.28383628, 148.23435747]
 pop_density_SWE = [54.4, 10.3, 15.9, 61.5, 2.7, 34.8, 22, 23.9, 2.6, 35.8, 44.1, 125.7, 49, 364.9, 46.9, 16.1, 5, 11.4, 53.9, 72.5]           
-# Gotland: originally position 4 with popdens 19
+# Gotland: originally position 4 (starting at one) with popdens 19
 
-fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11.7, 8.3/2), sharex=True)
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8.3, 11.7/2.5), sharex=True)
 
 for i, (simout, spatial_unit,country,popdens) in enumerate(zip(simouts, spatial_units,countries,[pop_density_BE, pop_density_SWE])):
     
@@ -80,20 +81,21 @@ for i, (simout, spatial_unit,country,popdens) in enumerate(zip(simouts, spatial_
     ax[1, i].scatter(popdens, min_employment, color='black')
 
     # axes labels
-    ax[1, i].set_xlabel(f"Population density (inhab./km2)")
-    ax[0, 0].set_ylabel('Fraction of nominal\nIC capacity (%)')
-    ax[1, 0].set_ylabel('Fraction of population\nemployed (%)')
+    ax[1, i].set_xlabel(f"Population density (inhab./km2)", size=14)
+    ax[0, 0].set_ylabel('Fraction of nominal\nIC capacity (%)', size=14)
+    ax[1, 0].set_ylabel('Labor\ncompensation (%)', size=14)
 
     # axes limits
     ax[1, 0].set_xlim([0,300])
     ax[1, 1].set_xlim([0,300])
     ax[0, 0].set_ylim([20,160])
     ax[0, 1].set_ylim([20,160])
-    ax[1, 0].set_ylim([87,101])
-    ax[1, 1].set_ylim([87,101])
+    ax[1, 0].set_ylim([80,101])
+    ax[1, 1].set_ylim([80,101])
 
+plt.tight_layout()
 plt.savefig(
-    'visualise-hypothetical_spatial_spread_1.png', dpi=600
+    'visualise-hypothetical_spatial_spread_1.pdf',
 )
 #plt.show()
 plt.close()
@@ -103,7 +105,7 @@ plt.close()
 #########################
 
 # make figure
-fig, ax = plt.subplots(nrows=3, ncols=len(countries), figsize=(11.7, 8.3), sharex=True)
+fig, ax = plt.subplots(nrows=2, ncols=len(countries), figsize=(8.3, 11.7/2.5), sharex=True)
 
 for j, (simout, date, spatial_unit, highlight, country,IC_multiplier) in enumerate(zip(simouts,dates,spatial_units,highlights,countries,IC_multipliers)):
 
@@ -120,9 +122,9 @@ for j, (simout, date, spatial_unit, highlight, country,IC_multiplier) in enumera
             # IC load
             ax[0,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'Ih']*IC_ratio*IC_multiplier, color=color, linewidth=1.5, zorder=zorder)
             # GDP
-            ax[1,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'x'], color=color, linewidth=1.5, zorder=zorder)
+            #ax[1,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'x'], color=color, linewidth=1.5, zorder=zorder)
             # employment
-            ax[2,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'l'], color=color, linewidth=1.5, zorder=zorder)
+            ax[1,j].plot(range(len(date)), simout.loc[(su, slice(None)), 'l'], color=color, linewidth=1.5, zorder=zorder)
             # append maximum peak IC load
             max_ICU.append(max(simout.loc[(su, slice(None)), 'Ih']*IC_ratio))
 
@@ -134,35 +136,49 @@ for j, (simout, date, spatial_unit, highlight, country,IC_multiplier) in enumera
                         linestyle='--', color='black', linewidth=1)
    # text
     ax[0, j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
-                100000*IC_multiplier+0.20, s=f'nominal IC capacity: {IC_beds_nominal[j]} beds', size=8)
+                100000*IC_multiplier+0.20, s=f'nominal IC capacity', size=10)
 
     ax[0, j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
-                100000*IC_multiplier+0.20, s=f'extended IC capacity: {IC_beds_extended[j]} beds', size=8)                     
+                100000*IC_multiplier+0.20, s=f'extended IC capacity', size=10)                     
+
+    # title
+    ax[0,j].set_title(country_names[j], size=14)
 
     ## x-axis
     # maximum number of xticks
-    ax[2, j].xaxis.set_major_locator(MaxNLocator(7))
+    ax[1, j].xaxis.set_major_locator(MaxNLocator(7))
     # rotate xticks
     #for tick in ax[2, j].get_xticklabels():
     #    tick.set_rotation(30)
     # xlabels
-    ax[2, j].set_xlabel('time (days)')
+    ax[1, j].set_xlabel('time (days)', size=14)
 
     ## y-axis
     # labels and limits
-    for i in range(3):
+    for i in range(2):
         if j == 0:
-            ax[i, j].set_ylabel(ylabels[i])
+            ax[i, j].set_ylabel(ylabels[i], size=14)
         ax[i, j].set_ylim(ylims[i])  
     # no ticks with IC load
     ax[0,j].set_yticks([])
+    # no yticks on right hand side of figure
+    ax[1,1].set_yticks([])
+    #ax[2,1].set_yticks([])
     # align y labels
     for j in range(2):
-        posx=-0.135
+        posx=-0.075
         ax[0, j].yaxis.set_label_coords(posx, 0.5)
+    # hide spines
+    ax[0, 1].spines[['right', 'top']].set_visible(False)
+    ax[1, 1].spines[['right', 'top']].set_visible(False)
+    #ax[2, 1].spines[['right', 'top']].set_visible(False)
+    ax[0, 0].spines[['right', 'top']].set_visible(False)
+    ax[1, 0].spines[['right', 'top']].set_visible(False)
+    #ax[2, 0].spines[['right', 'top']].set_visible(False)
 
+plt.tight_layout()
 plt.savefig(
-    'visualise-hypothetical_spatial_spread_2.png', dpi=600
+    'visualise-hypothetical_spatial_spread_2.pdf'
 )
 #plt.show()
 plt.close()
