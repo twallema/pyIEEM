@@ -72,7 +72,7 @@ for j, (country,IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
     ax[j].set_ylim(ylimit[j])
     # ylabels
     if j==0:
-        ax[j].set_ylabel(ylabels[0], size=14)
+        ax[j].set_ylabel(ylabels[0], size=10)
     # no yticks for IC load
     ax[j].set_yticks([])
     # align y labels
@@ -80,9 +80,9 @@ for j, (country,IC_multiplier) in enumerate(zip(countries, IC_multipliers)):
     ax[j].yaxis.set_label_coords(posx, 0.5)
     ## x-axis
     # xticksize
-    ax[j].tick_params(axis='both', which='major', labelsize=14)
+    ax[j].tick_params(axis='both', which='major', labelsize=10)
     # xlabels
-    ax[j].set_xlabel('time (days)', size=14)
+    ax[j].set_xlabel('time (days)', size=10)
     # legend
     #if j == len(countries)-1:
     #    ax[j].legend(parameter_values, title=f'{parameter_name_fancy} ({parameter_unit})', framealpha=1, loc=4)

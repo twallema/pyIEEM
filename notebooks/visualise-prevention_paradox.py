@@ -131,7 +131,7 @@ for i, (state, ylimit, ylabel) in enumerate(zip(states, ylimits, ylabels)):
         ax[j].set_ylim(ylimit[j])
         # ylabels
         if j == 0:
-            ax[j].set_ylabel(ylabel, size=14)
+            ax[j].set_ylabel(ylabel, size=10)
         # no yticks for IC load
         ax[j].set_yticks([])
         # align y labels
@@ -139,7 +139,7 @@ for i, (state, ylimit, ylabel) in enumerate(zip(states, ylimits, ylabels)):
         ax[j].yaxis.set_label_coords(posx, 0.5)
         # x-axis
         # xlabels
-        ax[j].set_xlabel('time (days)', size=14)
+        ax[j].set_xlabel('time (days)', size=10)
         # eliminate spines
         ax[j].spines[['right', 'top']].set_visible(False)
         # title
@@ -147,7 +147,7 @@ for i, (state, ylimit, ylabel) in enumerate(zip(states, ylimits, ylabels)):
         # xlimit
         ax[j].set_xlim([20, None])
         # xticksize
-        ax[j].tick_params(axis='both', which='major', labelsize=14)
+        ax[j].tick_params(axis='both', which='major', labelsize=10)
         # legend
         # if j == 1:
         #    ax[j].legend((np.array(length_measures_list)/28).astype(int), title=f'Lockdown (m.)', framealpha=1, loc='lower left')
@@ -214,7 +214,7 @@ for i, (state, ylimit, ylabel) in enumerate(zip(states, ylimits, ylabels)):
             ax[i,j].set_ylim(ylimit)
         # ylabels
         if j == 0:
-            ax[i,j].set_ylabel(ylabel, size=14)
+            ax[i,j].set_ylabel(ylabel, size=10)
         # no yticks for IC load
         if i == 0:
             ax[i,j].set_yticks([])
@@ -223,7 +223,7 @@ for i, (state, ylimit, ylabel) in enumerate(zip(states, ylimits, ylabels)):
         #ax[i,j].yaxis.set_label_coords(posx, 0.5)
         # x-axis
         # xlabels
-        ax[i,j].set_xlabel('time (days)', size=14)
+        ax[i,j].set_xlabel('time (days)', size=10)
         # eliminate spines
         ax[i,j].spines[['right', 'top']].set_visible(False)
         # title
@@ -232,7 +232,7 @@ for i, (state, ylimit, ylabel) in enumerate(zip(states, ylimits, ylabels)):
         # xlimit
         ax[i,j].set_xlim([20, None])
         # xticksize
-        ax[i,j].tick_params(axis='both', which='major', labelsize=14)
+        ax[i,j].tick_params(axis='both', which='major', labelsize=10)
         # align y labels
         for j in range(len(countries)):
             posx = -0.20

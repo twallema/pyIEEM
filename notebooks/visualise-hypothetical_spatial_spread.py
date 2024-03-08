@@ -81,9 +81,9 @@ for i, (simout, spatial_unit,country,popdens) in enumerate(zip(simouts, spatial_
     ax[1, i].scatter(popdens, min_employment, color='black')
 
     # axes labels
-    ax[1, i].set_xlabel(f"Population density (inhab./km2)", size=14)
-    ax[0, 0].set_ylabel('Fraction of nominal\nIC capacity (%)', size=14)
-    ax[1, 0].set_ylabel('Labor\ncompensation (%)', size=14)
+    ax[1, i].set_xlabel(f"Population density (inhab./km2)", size=10)
+    ax[0, 0].set_ylabel('Fraction of nominal\nIC capacity (%)', size=10)
+    ax[1, 0].set_ylabel('Labor\ncompensation (%)', size=10)
 
     # axes limits
     ax[1, 0].set_xlim([0,300])
@@ -136,13 +136,13 @@ for j, (simout, date, spatial_unit, highlight, country,IC_multiplier) in enumera
                         linestyle='--', color='black', linewidth=1)
    # text
     ax[0, j].text(x=location_IC_annotation, y=(IC_beds_nominal[j])/population[j] *
-                100000*IC_multiplier+0.20, s=f'nominal IC capacity', size=10)
+                100000*IC_multiplier+0.20, s=f'nominal IC capacity', size=8)
 
     ax[0, j].text(x=location_IC_annotation, y=(IC_beds_extended[j])/population[j] *
-                100000*IC_multiplier+0.20, s=f'extended IC capacity', size=10)                     
+                100000*IC_multiplier+0.20, s=f'extended IC capacity', size=8)                     
 
     # title
-    ax[0,j].set_title(country_names[j], size=14)
+    ax[0,j].set_title(country_names[j], size=10)
 
     ## x-axis
     # maximum number of xticks
@@ -151,13 +151,13 @@ for j, (simout, date, spatial_unit, highlight, country,IC_multiplier) in enumera
     #for tick in ax[2, j].get_xticklabels():
     #    tick.set_rotation(30)
     # xlabels
-    ax[1, j].set_xlabel('time (days)', size=14)
+    ax[1, j].set_xlabel('time (days)', size=10)
 
     ## y-axis
     # labels and limits
     for i in range(2):
         if j == 0:
-            ax[i, j].set_ylabel(ylabels[i], size=14)
+            ax[i, j].set_ylabel(ylabels[i], size=10)
         ax[i, j].set_ylim(ylims[i])  
     # no ticks with IC load
     ax[0,j].set_yticks([])
