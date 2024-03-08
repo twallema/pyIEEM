@@ -95,7 +95,7 @@ class epinomic_model(ODE):
 
         # compute number of infections
         n_inf = S * (IP_other + IP_home) + S_work * IP_work
-
+        
         # model equations
         dS = - n_inf + (1/zeta)*R
         dE = n_inf - (1/alpha)*E
