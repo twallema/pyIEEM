@@ -3,10 +3,9 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11.4
+  - python=3.12
   - pandas  
   - numpy  
-  - xarray  
   - matplotlib
   - openpyxl
   - jupyter
