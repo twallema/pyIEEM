@@ -1,5 +1,7 @@
+import warnings
 import numpy as np
 from pySODM.models.base import ODE
+
 
 class epidemic_model(ODE):
     """
@@ -8,7 +10,8 @@ class epidemic_model(ODE):
 
     # state variables and parameters
     states = ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R', 'D', 'Hin']
-    parameters = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
+    parameters = ['alpha', 'beta', 'gamma', 'delta',
+                  'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
     dimensions = ['age_class', 'spatial_unit']
 
     @staticmethod
@@ -16,7 +19,7 @@ class epidemic_model(ODE):
 
         # compute total population
         T = S + E + Ip + Ia + Im + Ih + R + D
-        
+
         # compute work populations
         T_work = np.matmul(T, G)
         S_work = np.matmul(S, G)
@@ -24,12 +27,20 @@ class epidemic_model(ODE):
         Ia_work = np.matmul(Ia, G)
 
         # compute infection pressure in home patch and work patch
-        IP_work = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip_work + Ia_work)/T_work), N['work'])
-        IP_home = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia + Im)/T), N['home'])
-        IP_other = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia)/T), N['other'])
+        IP_work = s*beta * \
+            np.einsum('ij, jki -> ki',
+                      np.transpose((Ip_work + Ia_work)/T_work), N['work'])
+        IP_home = s*beta*np.einsum('ij, jki -> ki',
+                                   np.transpose((Ip + Ia + Im)/T), N['home'])
+        IP_other = s*beta*np.einsum('ij, jki -> ki',
+                                    np.transpose((Ip + Ia)/T), N['other'])
+
+        # redistribute infections at work back to residency patch
+        n_work = S_work * IP_work
+        n_work = S * np.transpose(G @ np.transpose(n_work/S_work))
 
         # compute number of infections
-        n_inf = S * (IP_other + IP_home) + S_work * IP_work
+        n_inf = S * (IP_other + IP_home) + n_work
 
         # model equations
         dS = - n_inf + (1/zeta)*R
@@ -38,7 +49,8 @@ class epidemic_model(ODE):
         dIa = a*(1/gamma)*Ip - (1/delta)*Ia
         dIm = (1-a)*(1/gamma)*Ip - (1/delta)*Im
         dIh = h*(1/delta)*Im - (1/epsilon)*Ih
-        dR = (1/delta)*Ia + (1-h)*(1/delta)*Im + (1-m)*(1/epsilon)*Ih - (1/zeta)*R
+        dR = (1/delta)*Ia + (1-h)*(1/delta)*Im + \
+            (1-m)*(1/epsilon)*Ih - (1/zeta)*R
         dD = m*(1/epsilon)*Ih
 
         # derivative states
@@ -46,9 +58,10 @@ class epidemic_model(ODE):
 
         return dS, dE, dIp, dIa, dIm, dIh, dR, dD, dHin
 
+
 # All NaN slices in np.nanmin() return a RunTimeWarning
-import warnings
 warnings.filterwarnings("ignore")
+
 
 class epinomic_model(ODE):
     """
@@ -56,24 +69,28 @@ class epinomic_model(ODE):
     """
 
     # states
-    states_epi = ['S','E','Ip','Ia','Im','Ih','R','D','Hin']
-    states_eco = ['x','c', 'f', 'd', 'l','O', 'St']
+    states_epi = ['S', 'E', 'Ip', 'Ia', 'Im', 'Ih', 'R', 'D', 'Hin']
+    states_eco = ['x', 'c', 'f', 'd', 'l', 'O', 'St']
     states = states_epi + states_eco
     # parameters
-    parameters_epi = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
-    parameters_eco = ['x_0', 'c_0', 'f_0', 'l_0', 'C', 'St_0', 'delta_S', 'eta', 'iota_F','iota_H', 'A', 'prodfunc', 'kappa_S', 'kappa_D', 'kappa_F']
+    parameters_epi = ['alpha', 'beta', 'gamma', 'delta',
+                      'epsilon', 'zeta', 's', 'a', 'h', 'm', 'N', 'G']
+    parameters_eco = ['x_0', 'c_0', 'f_0', 'l_0', 'C', 'St_0', 'delta_S', 'eta',
+                      'iota_F', 'iota_H', 'A', 'prodfunc', 'kappa_S', 'kappa_D', 'kappa_F']
     parameters = parameters_epi + parameters_eco
     # dimensions
     dimensions = ['age_class', 'spatial_unit', 'NACE64', 'NACE64_star']
     dimensions_per_state = [
-        ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'],
-        ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64','NACE64_star']
+        ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class',
+                                                                                                                                     'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'], ['age_class', 'spatial_unit'],
+        ['NACE64',], ['NACE64',], ['NACE64',], ['NACE64',], [
+            'NACE64',], ['NACE64',], ['NACE64', 'NACE64_star']
     ]
 
     @staticmethod
     def integrate(t, S, E, Ip, Ia, Im, Ih, R, D, Hin, x, c, f, d, l, O, St,
-                    alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G, 
-                    x_0, c_0, f_0, l_0, C, St_0, delta_S, eta, iota_F, iota_H, A, prodfunc, kappa_S, kappa_D, kappa_F):
+                  alpha, beta, gamma, delta, epsilon, zeta, s, a, h, m, N, G,
+                  x_0, c_0, f_0, l_0, C, St_0, delta_S, eta, iota_F, iota_H, A, prodfunc, kappa_S, kappa_D, kappa_F):
 
         #######################
         ## epidemic dynamics ##
@@ -81,7 +98,7 @@ class epinomic_model(ODE):
 
         # compute total population
         T = S + E + Ip + Ia + Im + Ih + R + D
-        
+
         # compute work populations
         T_work = np.matmul(T, G)
         S_work = np.matmul(S, G)
@@ -89,13 +106,21 @@ class epinomic_model(ODE):
         Ia_work = np.matmul(Ia, G)
 
         # compute infection pressure in home patch and work patch
-        IP_work = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip_work + Ia_work)/T_work), N['work'])
-        IP_home = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia + Im)/T), N['home'])
-        IP_other = s*beta*np.einsum('ij, jki -> ki', np.transpose((Ip + Ia)/T), N['other'])
+        IP_work = s*beta * \
+            np.einsum('ij, jki -> ki',
+                      np.transpose((Ip_work + Ia_work)/T_work), N['work'])
+        IP_home = s*beta*np.einsum('ij, jki -> ki',
+                                   np.transpose((Ip + Ia + Im)/T), N['home'])
+        IP_other = s*beta*np.einsum('ij, jki -> ki',
+                                    np.transpose((Ip + Ia)/T), N['other'])
+
+        # redistribute infections at work back to residency patch
+        n_work = S_work * IP_work
+        n_work = S * np.transpose(G @ np.transpose(n_work/S_work))
 
         # compute number of infections
-        n_inf = S * (IP_other + IP_home) + S_work * IP_work
-        
+        n_inf = S * (IP_other + IP_home) + n_work
+
         # model equations
         dS = - n_inf + (1/zeta)*R
         dE = n_inf - (1/alpha)*E
@@ -103,7 +128,8 @@ class epinomic_model(ODE):
         dIa = a*(1/gamma)*Ip - (1/delta)*Ia
         dIm = (1-a)*(1/gamma)*Ip - (1/delta)*Im
         dIh = h*(1/delta)*Im - (1/epsilon)*Ih
-        dR = (1/delta)*Ia + (1-h)*(1/delta)*Im + (1-m)*(1/epsilon)*Ih - (1/zeta)*R
+        dR = (1/delta)*Ia + (1-h)*(1/delta)*Im + \
+            (1-m)*(1/epsilon)*Ih - (1/zeta)*R
         dD = m*(1/epsilon)*Ih
 
         # derivative states
@@ -136,8 +162,8 @@ class epinomic_model(ODE):
         c_desired = (1 - epsilon_D) * theta * sum(c_0)
 
         # 6. Compute B2B demand
-        # ---------------------   
-        O_desired = calc_intermediate_demand(d, St, A, St_0, eta) # 2D
+        # ---------------------
+        O_desired = calc_intermediate_demand(d, St, A, St_0, eta)  # 2D
 
         # 7. Compute total demand
         # -----------------------
@@ -149,7 +175,8 @@ class epinomic_model(ODE):
 
         # 9. Perform rationing
         # --------------------
-        O_new, c_new, f_new = rationing(x_new, d_new, O_desired, c_desired, f_desired)
+        O_new, c_new, f_new = rationing(
+            x_new, d_new, O_desired, c_desired, f_desired)
 
         # 10. Update inventories
         # ----------------------
@@ -157,16 +184,17 @@ class epinomic_model(ODE):
 
         # 11. Hire/fire workers
         # ---------------------
-        l_new = hiring_firing(l, l_0, x_0, x_inp, x_cap, d_new, iota_F, iota_H, kappa_S)
+        l_new = hiring_firing(l, l_0, x_0, x_inp, x_cap,
+                              d_new, iota_F, iota_H, kappa_S)
 
         # 12. Convert order matrix to total order per sector (2D --> 1D)
         # --------------------------------------------------------------
-        O_new = np.sum(O_new,axis=1)
+        O_new = np.sum(O_new, axis=1)
 
         return dS, dE, dIp, dIa, dIm, dIh, dR, dD, dHin, x_new-x, c_new-c, f-f_new, d_new-d, l_new-l, O_new-O, St_new-St,
 
 
-def calc_labor_restriction(x_0,l_0,l_t):
+def calc_labor_restriction(x_0, l_0, l_t):
     """
     A function to compute sector output with the available labor force.
 
@@ -185,6 +213,7 @@ def calc_labor_restriction(x_0,l_0,l_t):
         sector output at time t (in M€/d)
     """
     return (l_t/l_0)*x_0
+
 
 def calc_input_restriction(S_t, A, C, x_0, prodfunc='half_critical'):
     """
@@ -210,40 +239,43 @@ def calc_input_restriction(S_t, A, C, x_0, prodfunc='half_critical'):
     # Loop over all sectors
     if prodfunc == 'linear':
         for i in range(A.shape[0]):
-            x_t[i] = np.sum(S_t[:,i])/np.sum(A[:,i])
+            x_t[i] = np.sum(S_t[:, i])/np.sum(A[:, i])
     elif prodfunc == 'weakly_critical':
         for i in range(A.shape[0]):
-            critical = list(np.where(C[:,i] == 1)[0])
-            x_t[i] = np.nanmin(S_t[critical,i]/A[critical,i])
+            critical = list(np.where(C[:, i] == 1)[0])
+            x_t[i] = np.nanmin(S_t[critical, i]/A[critical, i])
             if np.isnan(x_t[i]):
-                x_t[i]=np.inf
+                x_t[i] = np.inf
     elif prodfunc == 'half_critical':
         cond_1 = np.zeros(A.shape[0])
         cond_2 = np.zeros(A.shape[0])
         for i in range(A.shape[0]):
-            critical = list(np.where(C[:,i] == 1)[0])
-            important = list(np.where(C[:,i] == 0.5)[0])
-            cond_1[i] = np.nanmin(S_t[critical,i]/A[critical,i])
+            critical = list(np.where(C[:, i] == 1)[0])
+            important = list(np.where(C[:, i] == 0.5)[0])
+            cond_1[i] = np.nanmin(S_t[critical, i]/A[critical, i])
             if len(important) == 0:
                 x_t[i] = cond_1[i]
             else:
-                cond_2[i] = np.nanmin(0.5*(np.array(S_t[important,i]/A[important,i]) + x_0[i]))
+                cond_2[i] = np.nanmin(
+                    0.5*(np.array(S_t[important, i]/A[important, i]) + x_0[i]))
                 x_t[i] = np.nanmin(np.array([cond_1[i], cond_2[i]]))
             if np.isnan(x_t[i]):
-                x_t[i]=np.inf
+                x_t[i] = np.inf
     elif prodfunc == 'strongly_critical':
         for i in range(A.shape[0]):
-            critical = list(np.where(C[:,i] == 1)[0])
-            important = list(np.where(C[:,i] == 0.5)[0])
-            x_t[i] = np.nanmin(S_t[critical+important,i]/A[critical+important,i])
+            critical = list(np.where(C[:, i] == 1)[0])
+            important = list(np.where(C[:, i] == 0.5)[0])
+            x_t[i] = np.nanmin(S_t[critical+important, i] /
+                               A[critical+important, i])
             if np.isnan(x_t[i]):
-                x_t[i]=np.inf
+                x_t[i] = np.inf
     elif prodfunc == 'leontief':
         for i in range(A.shape[0]):
-            x_t[i] = np.nanmin(S_t[:,i]/A[:,i])
+            x_t[i] = np.nanmin(S_t[:, i]/A[:, i])
             if np.isnan(x_t[i]):
-                x_t[i]=np.inf    
+                x_t[i] = np.inf
     return x_t
+
 
 def household_preference_shock(epsilon_D, theta_0):
     """
@@ -262,10 +294,11 @@ def household_preference_shock(epsilon_D, theta_0):
         household consumption preference vector
     """
 
-    theta=np.zeros(epsilon_D.shape[0])
+    theta = np.zeros(epsilon_D.shape[0])
     for i in range(epsilon_D.shape[0]):
         theta[i] = (1-epsilon_D[i])*theta_0[i]/(sum((1-epsilon_D)*theta_0))
     return theta
+
 
 def aggregate_demand_shock(mu_D, theta_0, delta_S):
     """
@@ -290,6 +323,7 @@ def aggregate_demand_shock(mu_D, theta_0, delta_S):
     """
     return delta_S*(1-sum((1-mu_D)*theta_0))
 
+
 def calc_intermediate_demand(d_previous, St, A, St_0, iota):
     """
     A function to calculate the intermediate demand between sectors (B2B demand).
@@ -313,11 +347,12 @@ def calc_intermediate_demand(d_previous, St, A, St_0, iota):
     O : np.array
         matrix of B2B orders
     """
-    O = np.zeros([A.shape[0],A.shape[0]])
+    O = np.zeros([A.shape[0], A.shape[0]])
     for i in range(A.shape[0]):
         for j in range(A.shape[0]):
-            O[i,j] = A[i,j]*d_previous[j] + (1/iota)*(St_0[i,j] - St[i,j])
+            O[i, j] = A[i, j]*d_previous[j] + (1/iota)*(St_0[i, j] - St[i, j])
     return O
+
 
 def calc_total_demand(O, c_t, f_t):
     """
@@ -337,10 +372,10 @@ def calc_total_demand(O, c_t, f_t):
     d_t : np.array
         total demand
     """
-    return np.sum(O,axis=1) + c_t + f_t
+    return np.sum(O, axis=1) + c_t + f_t
 
 
-def rationing(x_t,d_t,O,c_t,f_t):
+def rationing(x_t, d_t, O, c_t, f_t):
     """
     A function to ration the output if output doesn't meet demand.
     No prioritizing between B2B restocking, households and others (government/exports) is performed.
@@ -368,23 +403,23 @@ def rationing(x_t,d_t,O,c_t,f_t):
         fraction r of other demand met
     """
 
-    scheme='proportional_strict'
+    scheme = 'proportional_strict'
 
     if scheme == 'proportional_strict':
         r = x_t/d_t
         r[np.where(r > 1)] = 1
-        Z_t = np.zeros([O.shape[0],O.shape[0]])
+        Z_t = np.zeros([O.shape[0], O.shape[0]])
         for i in range(O.shape[0]):
-                Z_t[i,:] = O[i,:]*r[i]
-        return Z_t,r*c_t,r*f_t
+            Z_t[i, :] = O[i, :]*r[i]
+        return Z_t, r*c_t, r*f_t
 
     elif scheme == 'proportional_priority_B2B':
         # B2B priority
         r = x_t/np.sum(O, axis=1)
         r[np.where(r > 1)] = 1
-        Z_t = np.zeros([O.shape[0],O.shape[0]])
+        Z_t = np.zeros([O.shape[0], O.shape[0]])
         for i in range(O.shape[0]):
-                Z_t[i,:] = O[i,:]*r[i]
+            Z_t[i, :] = O[i, :]*r[i]
         # Proportional rationing
         l = x_t - np.sum(Z_t, axis=1)
         l[np.where(l < 0)] = 0
@@ -395,7 +430,7 @@ def rationing(x_t,d_t,O,c_t,f_t):
     elif scheme == 'random_priority_B2B':
         # Why the f*@ck is this necessary?
         x_t_copy = x_t.copy()
-        Z_t = np.zeros([O.shape[0],O.shape[0]])
+        Z_t = np.zeros([O.shape[0], O.shape[0]])
         # Generate a random priority vector
         priority = list(range(O.shape[0]))
         for i in range(O.shape[0]):
@@ -404,13 +439,13 @@ def rationing(x_t,d_t,O,c_t,f_t):
                 # Get sector index of current priority
                 j = priority.index(j)
                 # Check if industry i produces enough to satisfy the demand of sector j
-                r = x_t_copy[i]/O[i,j]
+                r = x_t_copy[i]/O[i, j]
                 if r > 1:
-                    r=1
-                if ((np.isinf(r))|(np.isnan(r))|(r < 0)):
-                    r=0
-                Z_t[i,j] = r*O[i,j]
-                x_t_copy[i] -= Z_t[i,j]
+                    r = 1
+                if ((np.isinf(r)) | (np.isnan(r)) | (r < 0)):
+                    r = 0
+                Z_t[i, j] = r*O[i, j]
+                x_t_copy[i] -= Z_t[i, j]
         # Ration rest
         r = x_t_copy/(c_t + f_t)
         r[np.where(r > 1)] = 1
@@ -419,25 +454,26 @@ def rationing(x_t,d_t,O,c_t,f_t):
     elif scheme == 'largest_first_priority_B2B':
         # Why the f*@ck is this necessary?
         x_t_copy = x_t.copy()
-        Z_t = np.zeros([O.shape[0],O.shape[0]])
+        Z_t = np.zeros([O.shape[0], O.shape[0]])
         for i in range(O.shape[0]):
-            customer_value = list(O[i,:])
+            customer_value = list(O[i, :])
             customer_value.sort(reverse=True)
             for value in customer_value:
                 # Get sector index of current priority
-                j = list(O[i,:]).index(value)
+                j = list(O[i, :]).index(value)
                 # Check if industry i produces enough to satisfy the demand of sector j
-                r = x_t_copy[i]/O[i,j]
+                r = x_t_copy[i]/O[i, j]
                 if r > 1:
-                    r=1
-                if ((np.isinf(r))|(np.isnan(r))|(r < 0)):
-                    r=0
-                Z_t[i,j] = r*O[i,j]
-                x_t_copy[i] = x_t_copy[i] - Z_t[i,j]
+                    r = 1
+                if ((np.isinf(r)) | (np.isnan(r)) | (r < 0)):
+                    r = 0
+                Z_t[i, j] = r*O[i, j]
+                x_t_copy[i] = x_t_copy[i] - Z_t[i, j]
         # Ration rest
         r = x_t_copy/(c_t + f_t)
         r[np.where(r > 1)] = 1
         return Z_t, r*c_t, r*f_t
+
 
 def leontief(x_t_labor, x_t_input, d_t):
     """
@@ -457,7 +493,8 @@ def leontief(x_t_labor, x_t_input, d_t):
     x_t : np.array
         sector output at time t (in M€)
     """
-    return np.amin([x_t_labor, x_t_input, d_t],axis = 0)
+    return np.amin([x_t_labor, x_t_input, d_t], axis=0)
+
 
 def inventory_updating(St_old, Z_t, x_t, A):
     """
@@ -477,12 +514,12 @@ def inventory_updating(St_old, Z_t, x_t, A):
     Returns
     -------
     S_new : np.array
-        
+
     """
-    St_new = np.zeros([St_old.shape[0],St_old.shape[0]])
+    St_new = np.zeros([St_old.shape[0], St_old.shape[0]])
     for i in range(St_old.shape[0]):
         for j in range(St_old.shape[0]):
-            St_new[i,j] = St_old[i,j] + Z_t[i,j] - A[i,j]*x_t[j]
+            St_new[i, j] = St_old[i, j] + Z_t[i, j] - A[i, j]*x_t[j]
     St_new[np.where(St_new < 0)] = 0
     return St_new
 
@@ -516,19 +553,20 @@ def hiring_firing(l_old, l_0, x_0, x_t_input, x_t_labor, d_t, kappa_F, kappa_H, 
     -------
     l_new : np.array
         labor income at time t + 1
-        
+
     """
     # Normal hiring/firing procedure
-    delta_l = (l_0/x_0)*(np.minimum(x_t_input,d_t)-x_t_labor)
-    l_new=np.zeros([delta_l.shape[0]])
+    delta_l = (l_0/x_0)*(np.minimum(x_t_input, d_t)-x_t_labor)
+    l_new = np.zeros([delta_l.shape[0]])
     for i in range(delta_l.shape[0]):
         if delta_l[i] > 0:
             l_new[i] = l_old[i] + 1/kappa_H*delta_l[i]
         elif delta_l[i] <= 0:
             l_new[i] = l_old[i] + 1/kappa_F*delta_l[i]
-    l_new=np.expand_dims(l_new,axis=1)
-    l_0=np.expand_dims(l_0,axis=1)
-    mu_S=np.expand_dims(mu_S,axis=1)
+    l_new = np.expand_dims(l_new, axis=1)
+    l_0 = np.expand_dims(l_0, axis=1)
+    mu_S = np.expand_dims(mu_S, axis=1)
     # Labor force reduction due to lockdown
-    l_new[np.greater(l_new,(1-mu_S)*l_0)] =  ((1-mu_S)*l_0)[np.greater(l_new,(1-mu_S)*l_0)]
-    return l_new[:,0]
+    l_new[np.greater(l_new, (1-mu_S)*l_0)] = ((1-mu_S) *
+                                              l_0)[np.greater(l_new, (1-mu_S)*l_0)]
+    return l_new[:, 0]
