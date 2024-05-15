@@ -59,8 +59,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(
         parameters, country, spatial, scenarios)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 5, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
-                       'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
+    parameters.update({'l': 5, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
+                       'pi_work': 0.032, 'pi_eff': 0.07, 'pi_leisure': 0.055})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
@@ -265,8 +265,8 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(
         parameters, country, spatial)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 7, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
-                       'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
+    parameters.update({'l': 5, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
+                       'pi_work': 0.032, 'pi_eff': 0.07, 'pi_leisure': 0.055})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
     social_contact_function = make_social_contact_function(IC_multiplier, age_classes, demography, contact_type, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav,
@@ -283,6 +283,8 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     seasonality_function = make_seasonality_function(country)
     parameters.update({'amplitude_BE': 0.20, 'peak_shift_BE': -14,
                       'amplitude_SWE': 0.20, 'peak_shift_SWE': 14})
+                      
+    parameters.update({'l_0': np.ones(64)})
 
     # initialize model
     # ================

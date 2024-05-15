@@ -9,6 +9,12 @@ import numpy as np
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
 
+#########################################################################################################
+## In order to run the script, you must set f_employed to np.ones(63) in the TDPF for social contacts! ##
+#########################################################################################################
+
+#f_employed = np.ones(63)
+
 ##########################
 ## change settings here ##
 ##########################
@@ -16,7 +22,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # settings calibration
 start_calibration = '2020-02-01'
 processes = 18
-max_iter = 200
+max_iter = 3000
 
 # settings visualisation
 nrows = 3
@@ -86,18 +92,9 @@ for country in ['BE', 'SWE']:
         35, 40), (40, 45), (45, 50), (50, 55), (55, 60), (60, 65), (65, 70), (70, 75), (75, 80), (80, 120)], closed='left')
     model = initialize_epidemic_model(country, age_classes, True, start_calibration)
 
-    # disable any awareness triggering (discontinued)
-    # model.parameters.update({'l': 21, 'mu': 1, 'nu': 24, 'xi_work': 100, 'xi_eff': 100, 'xi_leisure': 100,
-    #                     'pi_work': 1, 'pi_eff': 1, 'pi_leisure': 1})
-
-    # use good parameter values found during an earlier calibration (this is an iterative way of finding a suitable initial condition)
-    # define all relevant parameters of the social contact function TDPF here
-    model.parameters.update({'l': 5, 'mu': 1, 'nu': 24, 'xi_work': 5, 'xi_eff': 0.50, 'xi_leisure': 5,
-                        'pi_work': 0.02, 'pi_eff': 0.06, 'pi_leisure': 0.30})
-    
-    # set a good parameter estimate
+    # set good parameter estimates found during full length calibration
     pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure']
-    theta = [22, 0.45, 0.07, 0.025, 0.06]
+    theta = [21, 0.39, 0.07, 0.032, 0.055]
     for par,t in zip(pars,theta):
         model.parameters.update({par: t})
 
@@ -107,16 +104,13 @@ for country in ['BE', 'SWE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = 0.22*np.array([0, 0, 0.02, 0, 0, 0, 0, 0, 0, 0, 0.03, 0.12, 0.01, 0.15, 1, 0.05, 0, 0, 0, 0, 0.02]) + 1e-9
+        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0265, 0, 0, 0.39, 0, 0, 0, 0, 0, 0]) 
     else:
-        theta = 0.16*np.array([0.85, 0, 0, 3.25, 1.75, 2.50, 0.25, 0, 1.50, 0.25, 0.50]) + 1e-9 # "best" fit
-        theta = [1.60090552e-01, 7.52869047e-10, 1.50237870e-09, 4.69319925e-01,
-                    3.00200083e-01, 3.00129689e-01, 6.00489179e-02, 2.00130982e-09,
-                    2.55561357e-01, 4.91375446e-05, 9.30272369e-02]
+        theta = [0.006286, 0, 0.84130424, 0.16050701, 0.18094713, 0.27251741, 0.05542059, 0, 0.00824314, 0.00149754, 0.03477044]
 
     # nelder-mead minimization
-    #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
-    #                             args=(data, model, start_calibration, end_calibration), processes=processes, max_iter=max_iter)[0]
+    theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
+                                 args=(data, model, start_calibration, end_calibration), processes=processes, max_iter=max_iter)[0]
 
     # set found initial condition
     model.initial_states['E'] = update_initial_condition(
