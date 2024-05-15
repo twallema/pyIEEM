@@ -59,7 +59,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(
         parameters, country, spatial, scenarios)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 5, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
+    parameters.update({'l': 2, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
                        'pi_work': 0.032, 'pi_eff': 0.07, 'pi_leisure': 0.055})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
@@ -265,7 +265,7 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
     parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(
         parameters, country, spatial)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 5, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
+    parameters.update({'l': 2, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
                        'pi_work': 0.032, 'pi_eff': 0.07, 'pi_leisure': 0.055})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function

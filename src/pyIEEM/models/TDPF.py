@@ -306,7 +306,7 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 15)
+        t_BE_lockdown_1 = datetime(2020, 3, 16)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
@@ -352,11 +352,10 @@ class make_social_contact_function():
         elif t_BE_end_lockdown_Antwerp <= t < t_BE_relax_measures:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
-            # extremely high second 2020 COVID-19 wave in Hainaut and Liege requires an ad-hoc tweak
-            M_eff[2] = 1-gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
-            M_eff[3] = 1-0.75*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
-            M_eff[4] = 1-0.85*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
-            M_eff[6:8] = 1-gompertz(np.zeros(2, dtype=float), xi_eff, pi_eff)
+            # On Sep. 23 2020 BE politicians declare "pandemic over"
+            # Hainaut and Liege experience very high second COVID-19 waves 
+            M_eff = 1-gompertz(np.zeros(len(I_star_average), dtype=float), xi_eff, pi_eff)
+            M_eff[3:5] = 1-0.85*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
             return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
@@ -459,7 +458,7 @@ class make_social_contact_function():
         ## policies ##
         ##############
 
-        t_start = datetime(2020, 3, 10)
+        t_start = datetime(2020, 3, 9)
         t_end = datetime(2021, 9, 1)
  
         if t_start <= t < t_end:

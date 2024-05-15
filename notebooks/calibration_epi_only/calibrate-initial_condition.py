@@ -75,7 +75,7 @@ def poisson_ll(theta, data, model, start_calibration, end_calibration):
 ## Calibration ##
 #################
 
-for country in ['BE', 'SWE']:
+for country in ['SWE', 'BE']:
 
     # get data
     data = get_hospitalisation_incidence(country)
@@ -104,7 +104,7 @@ for country in ['BE', 'SWE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0265, 0, 0, 0.39, 0, 0, 0, 0, 0, 0]) 
+        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.03, 0, 0, 0.666, 0, 0, 0, 0, 0, 0]) 
     else:
         theta = [0.006286, 0, 0.84130424, 0.16050701, 0.18094713, 0.27251741, 0.05542059, 0, 0.00824314, 0.00149754, 0.03477044]
 

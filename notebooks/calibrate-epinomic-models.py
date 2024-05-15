@@ -25,14 +25,14 @@ abs_dir = os.path.dirname(__file__)
 # settings calibration
 start_calibration = '2020-03-01'
 end_calibration_epi = end_calibration_eco = '2021-02-01'
-processes = 36
+processes = 12
 max_iter = 100
 multiplier_mcmc = 3
 n_mcmc = 100
-print_n = 5
+print_n = 10
 
 # paths
-identifier = 'calibration_ICU'
+identifier = 'calibration_redistributed_infected'
 run_date = str(date.today())
 fig_path = f''
 samples_path = f''
@@ -86,7 +86,7 @@ log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L
                         log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2]
 
 
-theta = [18, 0.40, 0.06, 0.035, 0.06, 0.7, 0.16, -14, 0.23, 14, 7, 7] # where are my parameters? 
+theta = [18, 0.40, 0.06, 0.035, 0.06, 0.7, 0.16, 7, 0.23, 14, 7, 7] # where are my parameters? 
 mu_list = [22, 0.45, 0, 0.035, 0.06, 1, 0.18, 0, 0.22, 0, 7, 7] # where do I expect the parameters to be?
 sigma_list = [1, 0.01, 0.015, 0.0035, 0.006, 0.1, 0.03, 7/2, 0.03, 7/2, 2, 2] # How much noise do I expect there to be on the parameter value?
 l_list = [10, 10, 25, 25, 15, 10, 20, 15, 20, 15, 10, 10] # How strong are my beliefs?
@@ -107,85 +107,82 @@ if __name__ == '__main__':
     ####################
     
     # starting point
-    #theta = [22, 0.45, 0.07, 0.025, 0.06]
     #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
-    # visualisation epi data
-    # for i, country in enumerate(['BE', 'SWE']):
+    #visualisation epi data
+    for i, country in enumerate(['BE', 'SWE']):
 
-    #     # set right model and data
-    #     model = models[i]
-    #     data = dt_epi[i]
+        # set right model and data
+        model = models[i]
+        data = dt_epi[i]
 
-    #     # set optimal parameters
-    #     for k, par in enumerate(pars):
-    #         model.parameters.update({par: theta[k]})
+        # set optimal parameters
+        for k, par in enumerate(pars):
+            model.parameters.update({par: theta[k]})
 
-    #     # simulate model
-    #     out = model.sim([start_calibration, end_calibration_epi])
+        # simulate model
+        out = model.sim([start_calibration, end_calibration_epi])
 
-    #     # visualise eco
-    #     fig,ax=plt.subplots(ncols=2)
-    #     # gdp
-    #     ax[0].scatter([data_BE_eco_GDP, data_SWE_eco_GDP][i].index.get_level_values('date').unique(), [data_BE_eco_GDP, data_SWE_eco_GDP][i],
-    #                 edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-    #     ax[0].plot(out.date, out.x.sum(dim='NACE64'), color='red')
-    #     # employment
-    #     ax[1].scatter([data_BE_eco_employment, data_SWE_eco_employment][i].index.get_level_values('date').unique(), [data_BE_eco_employment, data_SWE_eco_employment][i],
-    #                 edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-    #     ax[1].plot(out.date, out.l.sum(dim='NACE64'), color='red')
-    #     plt.savefig(
-    #             f'epinomic_eco_{country}.png', dpi=600)
-    #     #plt.show()
-    #     plt.close()
+        # visualise eco
+        fig,ax=plt.subplots(ncols=2)
+        # gdp
+        ax[0].scatter([data_BE_eco_GDP, data_SWE_eco_GDP][i].index.get_level_values('date').unique(), [data_BE_eco_GDP, data_SWE_eco_GDP][i],
+                    edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+        ax[0].plot(out.date, out.x.sum(dim='NACE64'), color='red')
+        # employment
+        ax[1].scatter([data_BE_eco_employment, data_SWE_eco_employment][i].index.get_level_values('date').unique(), [data_BE_eco_employment, data_SWE_eco_employment][i],
+                    edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+        ax[1].plot(out.date, out.l.sum(dim='NACE64'), color='red')
+        plt.savefig(
+                f'epinomic_eco_{country}.png', dpi=600)
+        #plt.show()
+        plt.close()
 
-    #     # aggregate model
-    #     out = aggregation_functions[i](out.Hin)
+        # aggregate model
+        out = aggregation_functions[i](out.Hin)
 
-    #     # visualise epi
-    #     dates = data.index.get_level_values('date').unique()
-    #     spatial_units = data.index.get_level_values('spatial_unit').unique()
-    #     n_figs = 0
-    #     counter = 0
-    #     while counter <= len(spatial_units):
-    #         fig, axes = plt.subplots(
-    #             nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
-    #         axes = axes.flatten()
-    #         for j, ax in enumerate(axes):
-    #             if j+counter <= len(spatial_units):
-    #                 if j + counter < len(spatial_units):
-    #                     # plot data
-    #                     ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
-    #                             edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-    #                     # plot model prediction
-    #                     ax.plot(out.date, out.sum(dim='age_class').sel(
-    #                         spatial_unit=spatial_units[j+counter]), color='red')
-    #                     # set title
-    #                     ax.set_title(spatial_units[j+counter])
-    #                 else:
-    #                     # plot data
-    #                     ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
-    #                         None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
-    #                     # plot model prediction
-    #                     ax.plot(out.date, out.sum(
-    #                         dim=['age_class', 'spatial_unit']), color='red')
-    #                     # set title
-    #                     ax.set_title(country)
-    #                 # set maximum number of labels
-    #                 ax.xaxis.set_major_locator(MaxNLocator(5))
-    #                 # rotate labels
-    #                 for tick in ax.get_xticklabels():
-    #                     tick.set_rotation(60)
-    #             else:
-    #                 fig.delaxes(ax)
-    #         n_figs += 1
-    #         counter += nrows*ncols
-    #         plt.savefig(
-    #             f'epinomic_epi_{country}_part_{n_figs}.png', dpi=600)
-    #         #plt.show()
-    #         plt.close()
-
-    # sys.exit()
+        # visualise epi
+        dates = data.index.get_level_values('date').unique()
+        spatial_units = data.index.get_level_values('spatial_unit').unique()
+        n_figs = 0
+        counter = 0
+        while counter <= len(spatial_units):
+            fig, axes = plt.subplots(
+                nrows=nrows, ncols=ncols, figsize=(11.7, 8.3), sharex=True)
+            axes = axes.flatten()
+            for j, ax in enumerate(axes):
+                if j+counter <= len(spatial_units):
+                    if j + counter < len(spatial_units):
+                        # plot data
+                        ax.scatter(dates, data.loc[slice(None), spatial_units[j+counter]],
+                                edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+                        # plot model prediction
+                        ax.plot(out.date, out.sum(dim='age_class').sel(
+                            spatial_unit=spatial_units[j+counter]), color='red')
+                        # set title
+                        ax.set_title(spatial_units[j+counter])
+                    else:
+                        # plot data
+                        ax.scatter(dates, data.groupby(by='date').sum().loc[slice(
+                            None)], edgecolors='black', facecolors='white', marker='o', s=10, alpha=0.8)
+                        # plot model prediction
+                        ax.plot(out.date, out.sum(
+                            dim=['age_class', 'spatial_unit']), color='red')
+                        # set title
+                        ax.set_title(country)
+                    # set maximum number of labels
+                    ax.xaxis.set_major_locator(MaxNLocator(5))
+                    # rotate labels
+                    for tick in ax.get_xticklabels():
+                        tick.set_rotation(60)
+                else:
+                    fig.delaxes(ax)
+            n_figs += 1
+            counter += nrows*ncols
+            plt.savefig(
+                f'epinomic_epi_{country}_part_{n_figs}.png', dpi=600)
+            plt.show()
+            plt.close()
 
     ##########
     ## MCMC ##
