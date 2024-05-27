@@ -90,8 +90,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function(country)
 
-    parameters.update({'amplitude_BE': 0.20, 'peak_shift_BE': -14,
-                      'amplitude_SWE': 0.20, 'peak_shift_SWE': 14})
+    parameters.update({'amplitude_BE': 0.15, 'peak_shift_BE': -7,
+                      'amplitude_SWE': 0.20, 'peak_shift_SWE': 0})
 
     # construct labor supply shock TDPF (economic)
     # ============================================
@@ -281,8 +281,8 @@ def initialize_epidemic_model(country, age_classes, spatial, simulation_start, c
 
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function(country)
-    parameters.update({'amplitude_BE': 0.20, 'peak_shift_BE': -14,
-                      'amplitude_SWE': 0.20, 'peak_shift_SWE': 14})
+    parameters.update({'amplitude_BE': 0.15, 'peak_shift_BE': 0,
+                      'amplitude_SWE': 0.15, 'peak_shift_SWE': 0})
                       
     parameters.update({'l_0': np.ones(64)})
 

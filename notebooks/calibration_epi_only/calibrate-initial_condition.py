@@ -22,7 +22,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 # settings calibration
 start_calibration = '2020-02-01'
 processes = 18
-max_iter = 3000
+max_iter = 300
 
 # settings visualisation
 nrows = 3
@@ -104,13 +104,14 @@ for country in ['SWE', 'BE']:
     # method used: started from an initial guess, did some manual tweaks to the output, gave that back to the NM optimizer, etc.
     if country == 'SWE':
         # data is quite consistent with one infected in Stockholm --> start NM from here
-        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.03, 0, 0, 0.666, 0, 0, 0, 0, 0, 0]) 
+        theta = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.05, 0, 0, 1.09, 0, 0, 0, 0, 0, 0]) 
     else:
-        theta = [0.006286, 0, 0.84130424, 0.16050701, 0.18094713, 0.27251741, 0.05542059, 0, 0.00824314, 0.00149754, 0.03477044]
+        theta = [1.26460318e-02, 0, 9.09908432e-01, 7.85013861e-02, 1.42502135e-01, 2.04611273e-01, 5.70028662e-02 , 0, 4.56781867e-06, 
+                    1.84279617e-03, 2.18822531e-02]
 
     # nelder-mead minimization
-    theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
-                                 args=(data, model, start_calibration, end_calibration), processes=processes, max_iter=max_iter)[0]
+    #theta = nelder_mead.optimize(poisson_ll, np.array(theta), 1*np.ones(len(theta)), bounds=G*[(0, 100)],
+    #                             args=(data, model, start_calibration, end_calibration), processes=processes, max_iter=max_iter)[0]
 
     # set found initial condition
     model.initial_states['E'] = update_initial_condition(

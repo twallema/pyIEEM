@@ -30,8 +30,8 @@ args = parser.parse_args()
 ##########################
 
 # simulation
-N = 6
-processes = 6
+N = 12
+processes = 12
 # visualisation (epi only + spatial)
 n_draws_per_sample = 200
 overdispersion_spatial = 0.047
@@ -249,8 +249,8 @@ def draw_function(param_dict, samples_dict):
     param_dict['amplitude_SWE'] = samples_dict['amplitude_SWE'][i]
     param_dict['peak_shift_BE'] = samples_dict['peak_shift_BE'][i]
     param_dict['peak_shift_SWE'] = samples_dict['peak_shift_SWE'][i]
-    param_dict['iota_H'] = samples_dict['iota_H'][i]
-    param_dict['iota_F'] = samples_dict['iota_F'][i]
+    #param_dict['iota_H'] = samples_dict['iota_H'][i]
+    #param_dict['iota_F'] = samples_dict['iota_F'][i]
     return param_dict
 
 #####################

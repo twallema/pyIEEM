@@ -355,7 +355,7 @@ class make_social_contact_function():
             # On Sep. 23 2020 BE politicians declare "pandemic over"
             # Hainaut and Liege experience very high second COVID-19 waves 
             M_eff = 1-gompertz(np.zeros(len(I_star_average), dtype=float), xi_eff, pi_eff)
-            M_eff[3:5] = 1-0.85*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[2:5] = 1-0.8*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
             return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
@@ -768,7 +768,7 @@ class make_seasonality_function():
         amplitude : float
             maximum deviation of output with respect to the average (1)
         peak_shift: float
-            shift of maximum infectivity relative to Jan. 14th
+            shift of maximum infectivity relative to Feb. 1
         """
 
         # select right amplitude and peak_shift
@@ -779,7 +779,7 @@ class make_seasonality_function():
             amplitude = amplitude_SWE
             peak_shift = peak_shift_SWE
 
-        maxdate = datetime(2021, 1, 14) + timedelta(days=peak_shift)
+        maxdate = datetime(2021, 2, 1) + timedelta(days=peak_shift)
         # One period is one year long (seasonality)
         t = (t - maxdate)/timedelta(days=1)/365
         rescaling = 1 + amplitude*np.cos( 2*np.pi*(t))
