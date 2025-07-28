@@ -59,7 +59,7 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     parameters, demography, contacts, lmc_stratspace, lmc_strateco, f_workplace, f_remote, hesitancy, lav, f_employees, convmat = get_social_contact_function_parameters(
         parameters, country, spatial, scenarios)
     # define all relevant parameters of the social contact function TDPF here
-    parameters.update({'l': 2, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
+    parameters.update({'l': 1, 'mu': 1, 'nu': 21, 'xi_work': 10, 'xi_leisure': 10, 'xi_eff': 0.39,
                        'pi_work': 0.032, 'pi_eff': 0.07, 'pi_leisure': 0.055})
     # make social contact function
     from pyIEEM.models.TDPF import make_social_contact_function
@@ -90,8 +90,8 @@ def initialize_epinomic_model(country, age_classes, spatial, simulation_start, c
     from pyIEEM.models.TDPF import make_seasonality_function
     seasonality_function = make_seasonality_function(country)
 
-    parameters.update({'amplitude_BE': 0.15, 'peak_shift_BE': -7,
-                      'amplitude_SWE': 0.20, 'peak_shift_SWE': 0})
+    parameters.update({'amplitude_BE': 0, 'peak_shift_BE': 0,
+                      'amplitude_SWE': 0, 'peak_shift_SWE': 0})
 
     # construct labor supply shock TDPF (economic)
     # ============================================
@@ -470,7 +470,7 @@ def get_epi_params(country, age_classes, spatial, contact_type):
     mob = pd.read_csv(os.path.join(
         abs_dir, f'../../../data/interim/epi/mobility/{country}/recurrent_mobility_normactive_{country}.csv'), index_col=0)
     mob = mob.loc[sorted(mob.index), sorted(mob.columns)]
-
+    
     if spatial == True:
         mob = mob.values
     elif spatial == False:

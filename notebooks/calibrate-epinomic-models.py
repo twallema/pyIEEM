@@ -25,11 +25,11 @@ abs_dir = os.path.dirname(__file__)
 # settings calibration
 start_calibration = '2020-03-01'
 end_calibration_epi = end_calibration_eco = '2021-02-01'
-processes = 12
-max_iter = 100
-multiplier_mcmc = 3
-n_mcmc = 100
-print_n = 10
+processes = 24
+max_iter = 150
+multiplier_mcmc = 4
+n_mcmc = 150
+print_n = 25
 
 # paths
 identifier = 'calibration_redistributed_infected'
@@ -76,20 +76,22 @@ log_likelihood_fnc_args = [[0.05, 0.039, 0.024, 0.061, 0.068, 0.014, 0.10, 0.03,
 weights = [1/len(data_epi_BE), 1/len(data_epi_SWE), 1/len(data_BE_eco_GDP), 1/len(data_SWE_eco_GDP), 1/len(data_BE_eco_employment), 1/len(data_SWE_eco_employment)]
 
 # parameter properties
-pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'mu', 'amplitude_BE', 'peak_shift_BE', 'amplitude_SWE', 'peak_shift_SWE'] #, 'iota_H', 'iota_F']
-bounds = ((1, 100), (0, 100), (0, 100), (0, 100), (0, 100), (0,2), (0,0.40), (-31,31), (0,0.40), (-31,31))#, (1,31),(1,31))
-labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$', r'$\mu$', r'$A_{BE}$',  r'$\Delta A_{BE}$', r'$A_{SWE}$',  r'$\Delta A_{SWE}$'] #, r'$\iota_H$', r'$\iota_F$']
+pars = ['nu', 'xi_eff', 'pi_eff', 'pi_work', 'pi_leisure', 'mu'] # 'amplitude_BE', 'peak_shift_BE', 'amplitude_SWE', 'peak_shift_SWE']
+bounds = ((1, 120), (0, 100), (0, 100), (0, 100), (0, 100), (0,100)) # (0,0.40), (-31,31), (0,0.40), (-31,31))
+labels = [r'$\nu$', r'$\xi_{eff}$', r'$\pi_{eff}$', r'$\pi_{work}$', r'$\pi_{leisure}$', r'$\mu$'] # r'$A_{BE}$',  r'$\Delta A_{BE}$', r'$A_{SWE}$',  r'$\Delta A_{SWE}$'] #, r'$\iota_H$', r'$\iota_F$']
 # reguralised prior probabilities (this does require some feeling)
 # all prior probabilities parameters were set so that a score of roughly -250 (on a total of -16000) is added to the posterior probability when the parameter leaves the range I would expect them to fall in
 # this will have to be balanced by trial-and-error
-log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2,
-                        log_prior_normal_L2, log_prior_normal_L2] #, log_prior_normal_L2, log_prior_normal_L2]
+log_prior_prob_fnc=[log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2] #,
+                    #log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2, log_prior_normal_L2]
 
-
-theta = [18, 0.40, 0.06, 0.035, 0.06, 0.7, 0.16, -7, 0.20, -7] #, 7, 7] # where are my parameters? 
-mu_list = [18, 0.40, 0, 0.035, 0.06, 1, 0, 0, 0, 0] #, 7, 7] # where do I expect/should the parameters to be?
-sigma_list = [1, 0.005, 0.01, 0.0035, 0.006, 0.1, 0.08, 7/2, 0.08, 7/2] #, 2, 2] # How much noise do I expect there to be on the parameter value?
-l_list = [10, 10, 25, 25, 15, 10, 20, 15, 20, 15]# , 10, 10] # How strong are my beliefs?
+# theta = [50, 0.50, 0.03, 0.035, 0.06, 1]
+# theta = [60, 0.55, 0.03, 0.03, 0.03, 1]
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+theta = [60, 0.55, 0.03, 0.08, 0.09, 1.5] # where are my parameters? 
+mu_list = [60, 0.55, 0, 0.07, 0.09, 1.5] # where do I expect/should the parameters to be?
+sigma_list = [1, 0.01, 0.01, 0.01, 0.01, 0.01] # How much noise do I expect there to be on the parameter value?
+l_list = [100, 100, 100, 100, 100, 100] # How strong are my beliefs?
 
 log_prior_prob_fnc_args=[]
 for mu,sigma,l in zip(mu_list,sigma_list, l_list):
@@ -106,11 +108,11 @@ if __name__ == '__main__':
     ## NM calibration ##
     ####################
     
-    # starting point
-    #theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
+    # # # starting point
+    # # # theta = nelder_mead.optimize(objective_function, np.array(theta), len(bounds)*[1,], processes=processes, max_iter=max_iter)[0]
 
     # #visualisation epi data
-    # for i, country in enumerate(['BE', 'SWE']):
+    # for i, country in enumerate([ 'BE', 'SWE']):
 
     #     # set right model and data
     #     model = models[i]
@@ -135,7 +137,7 @@ if __name__ == '__main__':
     #     ax[1].plot(out.date, out.l.sum(dim='NACE64'), color='red')
     #     plt.savefig(
     #             f'epinomic_eco_{country}.png', dpi=600)
-    #     #plt.show()
+    #     plt.show()
     #     plt.close()
 
     #     # aggregate model
@@ -202,17 +204,8 @@ if __name__ == '__main__':
     sys.stdout.flush()
 
     # Setup sampler
-    #sampler = run_EnsembleSampler(pos, n_mcmc, identifier, objective_function, print_n=print_n, backend=None, processes=processes,
-    #                              samples_path=samples_path, fig_path=fig_path, progress=True, settings_dict=settings)
-
-    # Sample up to 40*n_mcmc more
-    import emcee
-    run_date = '2024-05-21'
-    for i in range(40):
-        backend = emcee.backends.HDFBackend(os.path.join(
-            os.getcwd(), samples_path+identifier+'_BACKEND_'+run_date+'.hdf5'))
-        sampler = run_EnsembleSampler(pos, n_mcmc, identifier, objective_function, print_n=print_n, backend=backend, processes=processes,
-                                      samples_path=samples_path, fig_path=fig_path, progress=True, settings_dict=settings)
+    sampler = run_EnsembleSampler(pos, n_mcmc, identifier, objective_function, print_n=print_n, backend=None, processes=processes,
+                                  samples_path=samples_path, fig_path=fig_path, progress=True, settings_dict=settings)
 
     #####################
     ## Process results ##

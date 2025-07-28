@@ -164,8 +164,12 @@ class make_social_contact_function():
 
         # assert degree of school opennness (before imposing telework obligation)
         f_school = economic_closures[np.where(self.f_workplace.index == 'P85')[0][0], :]
-    
-        # winter holiday was elongated with one week
+
+        # close schools for summer holidays
+        if ((t.month==7) | (t.month==8)):
+            f_school = 0
+
+        # winter holiday in Belgium was elongated with one week
         if ((datetime(2020, 11, 8) <= t <= datetime(2020, 11, 15)) & (self.country=='BE')):
             f_school = 0
 
@@ -226,7 +230,7 @@ class make_social_contact_function():
         ## leisure_private
         N_leisure_private *= f_leisure_private
 
-        return {'home': N_home, 'work': M_eff*N_work, 'other': M_eff*(N_school + N_leisure_private + N_leisure_public)}
+        return {'home': M_eff * N_home, 'work': M_eff*N_work, 'other': M_eff*(N_school + N_leisure_private + N_leisure_public)}
 
     def get_contacts_BE(self, t, states, param, l_0, l, G, mu, nu, xi_work, pi_work, xi_eff, pi_eff, xi_leisure, pi_leisure, economy_BE_lockdown_1, economy_BE_phaseI, economy_BE_phaseII, economy_BE_phaseIII, economy_BE_phaseIV, economy_BE_lockdown_Antwerp, economy_BE_lockdown_2_1, economy_BE_lockdown_2_2, economy_BE_plateau):
         """
@@ -306,12 +310,12 @@ class make_social_contact_function():
         ##############
 
         # key dates
-        t_BE_lockdown_1 = datetime(2020, 3, 16)
+        t_BE_lockdown_1 = datetime(2020, 3, 18)
         t_BE_phase_I = datetime(2020, 5, 4)
         t_BE_phase_II = datetime(2020, 5, 18)
         t_BE_phase_III = datetime(2020, 6, 8)
         t_BE_phase_IV = datetime(2020, 7, 1)
-        t_BE_lockdown_Antwerp = datetime(2020, 8, 3)
+        t_BE_lockdown_Antwerp = datetime(2020, 7, 27)
         t_BE_end_lockdown_Antwerp = datetime(2020, 8, 24)
         t_BE_relax_measures = datetime(2020, 9, 23)
         t_BE_lockdown_2_1 = datetime(2020, 10, 19)
@@ -323,7 +327,6 @@ class make_social_contact_function():
         # construct vector of social restrictions in Antwerp only
         social_restrictions_Antwerp = np.zeros(self.G)
         social_restrictions_Antwerp[0] = 1
-        telework_Antwerp = social_restrictions_Antwerp
 
         # construct "lockdown" economic closures in Antwerp and continuation of phase IV in the rest of Belgium
         economy_BE_lockdown_Antwerp_mat = np.zeros([63, self.G], dtype=float)
@@ -336,9 +339,9 @@ class make_social_contact_function():
         elif t_BE_lockdown_1 <= t < t_BE_phase_I:
             policy_old = self.__call__(t, f_employed, M_work, np.ones(self.G, dtype=float), M_leisure, 0, 0, np.zeros([63,1], dtype=float))
             policy_new = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_lockdown_1)
-            return {'home': ramp_fun(t, t_BE_lockdown_1, l, policy_old['home'], policy_new['home']),
-                    'other': ramp_fun(t, t_BE_lockdown_1, l, policy_old['other'], policy_new['other']),
-                    'work': ramp_fun(t, t_BE_lockdown_1, l, policy_old['work'], policy_new['work'])}
+            return {'home': ramp_fun(t, t_BE_lockdown_1, 7, policy_old['home'], policy_new['home']),
+                    'other': ramp_fun(t, t_BE_lockdown_1, 7, policy_old['other'], policy_new['other']),
+                    'work': ramp_fun(t, t_BE_lockdown_1, 7, policy_old['work'], policy_new['work'])}
         elif t_BE_phase_I <= t < t_BE_phase_II:
             return self.__call__(t, f_employed, M_work, M_eff, M_leisure, 1, 1, economy_BE_phaseI)
         elif t_BE_phase_II <= t < t_BE_phase_III:
@@ -354,8 +357,9 @@ class make_social_contact_function():
         elif t_BE_relax_measures <= t < t_BE_lockdown_2_1:
             # On Sep. 23 2020 BE politicians declare "pandemic over"
             # Hainaut and Liege experience very high second COVID-19 waves 
-            M_eff = 1-gompertz(np.zeros(len(I_star_average), dtype=float), xi_eff, pi_eff)
-            M_eff[2:5] = 1-0.8*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            #M_eff = 1-gompertz(np.zeros(len(I_star_average), dtype=float), xi_eff, pi_eff)
+            #M_eff[2:5] = 1-0.8*gompertz(np.zeros(1, dtype=float), xi_eff, pi_eff)
+            M_eff[2:5] = M_eff[2:5] * 1.3
             return self.__call__(t, f_employed,  M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
         elif t_BE_lockdown_2_1 <= t < t_BE_lockdown_2_2:
             policy_old = self.__call__(t, f_employed, M_work, M_eff, M_leisure, 0, 0, economy_BE_phaseIV)
@@ -458,7 +462,7 @@ class make_social_contact_function():
         ## policies ##
         ##############
 
-        t_start = datetime(2020, 3, 9)
+        t_start = datetime(2020, 3, 11)
         t_end = datetime(2021, 9, 1)
  
         if t_start <= t < t_end:

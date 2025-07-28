@@ -38,7 +38,7 @@ class epidemic_model(ODE):
         # redistribute infections at work back to residency patch
         n_work = S_work * IP_work
         n_work = S * np.transpose(G @ np.transpose(n_work/S_work))
-
+ 
         # compute number of infections
         n_inf = S * (IP_other + IP_home) + n_work
 
